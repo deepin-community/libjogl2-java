@@ -1,0 +1,16 @@
+Index: jogl-v2.0-rc2/make/build.xml
+===================================================================
+--- jogl-v2.0-rc2.orig/make/build.xml	2011-04-17 16:06:37.000000000 +0200
++++ jogl-v2.0-rc2/make/build.xml	2011-04-17 16:06:45.000000000 +0200
+@@ -8,9 +8,9 @@
+        - Main build target.
+       -->
+ 
+-    <target name="all" description="Build nativewindow, jogl and newt projects, incl. all junit tests " depends="init,build.nativewindow,build.jogl,build.newt,test.compile,one.dir,tag.build,developer-zip-archive" />
++    <target name="all" description="Build nativewindow, jogl and newt projects, incl. all junit tests " depends="init,build.nativewindow,build.jogl,build.newt,test.compile,tag.build,developer-zip-archive" />
+ 
+-    <target name="all.but-archives" description="Build nativewindow, jogl and newt projects, incl. all junit tests " depends="init,build.nativewindow,build.jogl,build.newt,test.compile,one.dir,tag.build" />
++    <target name="all.but-archives" description="Build nativewindow, jogl and newt projects, incl. all junit tests " depends="init,build.nativewindow,build.jogl,build.newt,test.compile,tag.build" />
+ 
+     <target name="all.ide" description="Build nativewindow, jogl and newt projects, including all junit tests, but don't copy libs or JARs or tag the build" depends="init,build.nativewindow,build.jogl,build.newt,test.compile" />
+ 

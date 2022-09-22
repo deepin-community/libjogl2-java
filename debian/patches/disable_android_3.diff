@@ -1,0 +1,77 @@
+Index: libjogl2-java-2.0-rc8/src/test/com/jogamp/opengl/test/junit/jogl/demos/es2/GearsES2.java
+===================================================================
+--- libjogl2-java-2.0-rc8.orig/src/test/com/jogamp/opengl/test/junit/jogl/demos/es2/GearsES2.java	2012-05-02 03:28:29.000000000 +0200
++++ libjogl2-java-2.0-rc8/src/test/com/jogamp/opengl/test/junit/jogl/demos/es2/GearsES2.java	2012-05-23 16:13:20.000000000 +0200
+@@ -205,23 +205,23 @@
+         st.uniform(gl, pmvMatrixUniform);
+         st.useProgram(gl, false);
+         
+-        if(useAndroidDebug) {
++/*        if(useAndroidDebug) {
+             try {
+                 android.os.Debug.startMethodTracing("GearsES2.trace");
+                 // android.os.Debug.startAllocCounting();
+                 useAndroidDebug = true;
+             } catch (NoClassDefFoundError e) { useAndroidDebug=false; }
+-        }
++            }*/
+         
+         System.err.println(Thread.currentThread()+" GearsES2.reshape FIN");
+     }
+     private boolean useAndroidDebug = false;
+ 
+     public void dispose(GLAutoDrawable drawable) {
+-        if(useAndroidDebug) {
++/*        if(useAndroidDebug) {
+             // android.os.Debug.stopAllocCounting();
+             android.os.Debug.stopMethodTracing();
+-        }
++            }*/
+         
+         System.err.println(Thread.currentThread()+" GearsES2.dispose ... ");
+         if (drawable instanceof Window) {
+Index: libjogl2-java-2.0-rc8/src/test/com/jogamp/opengl/test/junit/jogl/demos/es2/RedSquareES2.java
+===================================================================
+--- libjogl2-java-2.0-rc8.orig/src/test/com/jogamp/opengl/test/junit/jogl/demos/es2/RedSquareES2.java	2012-05-02 03:28:29.000000000 +0200
++++ libjogl2-java-2.0-rc8/src/test/com/jogamp/opengl/test/junit/jogl/demos/es2/RedSquareES2.java	2012-05-23 16:13:20.000000000 +0200
+@@ -173,23 +173,23 @@
+         st.uniform(gl, pmvMatrixUniform);
+         st.useProgram(gl, false);
+         
+-        if(useAndroidDebug) {
++/*        if(useAndroidDebug) {
+             try {
+                 android.os.Debug.startMethodTracing("RedSquareES2.trace");
+                 // android.os.Debug.startAllocCounting();
+                 useAndroidDebug = true;
+             } catch (NoClassDefFoundError e) { useAndroidDebug=false; }
+-        }
++            }*/
+         
+         System.err.println(Thread.currentThread()+" RedSquareES2.reshape FIN");
+     }
+     private boolean useAndroidDebug = false;
+ 
+     public void dispose(GLAutoDrawable glad) {
+-        if(useAndroidDebug) {
++/*        if(useAndroidDebug) {
+             // android.os.Debug.stopAllocCounting();
+             android.os.Debug.stopMethodTracing();
+-        }
++            }*/
+         System.err.println(Thread.currentThread()+" RedSquareES2.dispose ... ");
+         if (null != glWindow) {
+             glWindow.removeMouseListener(myMouse);
+Index: libjogl2-java-2.0-rc8/make/build-test.xml
+===================================================================
+--- libjogl2-java-2.0-rc8.orig/make/build-test.xml	2012-05-23 16:13:20.000000000 +0200
++++ libjogl2-java-2.0-rc8/make/build-test.xml	2012-05-23 16:13:53.000000000 +0200
+@@ -79,7 +79,7 @@
+         <javac destdir="${classes}"
+                fork="yes"
+                includeAntRuntime="false"
+-               excludes="${java.excludes.all}"
++               excludes="${java.excludes.all} com/jogamp/opengl/test/android/**"
+                memoryMaximumSize="${javac.memorymax}"
+                encoding="UTF-8"
+                source="${target.sourcelevel}" 

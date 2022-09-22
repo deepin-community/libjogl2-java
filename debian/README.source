@@ -1,0 +1,3 @@
+rm $(find . -iname '*.lib') doc/deployment/lstjars/*.log make/lib/swt/*/swt-debug.jar
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Tue, 19 Apr 2011 09:19:54 +0200

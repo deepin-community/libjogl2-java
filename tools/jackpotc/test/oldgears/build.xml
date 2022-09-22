@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    invoke the shell scripts 'setup' prior to building this project.
+    @author Michael Bien
+-->
+<project name="oldgears" default="build" basedir=".">
+
+    <description>Builds, tests, and runs the project oldgears.</description>
+
+    <target name="build" depends="clean">
+        <exec dir="${basedir}/../../" executable="/bin/sh" spawn="false" failonerror="true">
+            <arg value="bttf"/>
+        </exec>
+        <javac srcdir="src/jogl111"  destdir="build/jogl111" classpath="lib/old/jogl.jar:lib/old/gluegen-rt.jar" includeantruntime="false"/>
+        <javac srcdir="gensrc/jogl2" destdir="build/jogl2" classpath="lib/new/jogl.all.jar:lib/new/jogl.awt.jar:lib/new/gluegen-rt.jar" includeantruntime="false"/>
+    </target>
+
+    <target name="clean">
+        <delete dir="build" quiet="true"/>
+        <delete dir="gensrc" quiet="true"/>
+        <mkdir dir="build"/>
+        <mkdir dir="gensrc"/>
+        <mkdir dir="build/jogl111"/>
+        <mkdir dir="build/jogl2"/>
+    </target>
+
+</project>

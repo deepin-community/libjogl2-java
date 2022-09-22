@@ -1,0 +1,13 @@
+Index: jogl-v2.0-rc12/make/build-common.xml
+===================================================================
+--- jogl-v2.0-rc12.orig/make/build-common.xml	2013-07-01 14:28:38.000000000 +0200
++++ jogl-v2.0-rc12/make/build-common.xml	2013-07-01 14:28:38.000000000 +0200
+@@ -16,7 +16,7 @@
+     <property name="gluegen.root" value="/usr/share/gluegen2/" />
+     <import file="${gluegen.root}/make/gluegen-cpptasks.xml" />
+     <import file="${gluegen.root}/make/jogamp-archivetasks.xml" />
+-    <import file="${gluegen.root}/make/jogamp-androidtasks.xml" />
++<!--    <import file="${gluegen.root}/make/jogamp-androidtasks.xml" />-->
+     <import file="${gluegen.root}/make/jogamp-env.xml" />
+ 
+     <!-- Add JOAL (optional) -->

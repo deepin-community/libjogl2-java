@@ -1,0 +1,5 @@
+version=3
+opts="dversionmangle=s/\+dfsg\d*$//" \
+http://jogamp.org/deployment/jogamp-current/archive/Sources/ jogl-v(.*).tar.xz \
+debian debian/orig-tar.sh
+

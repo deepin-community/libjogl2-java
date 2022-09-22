@@ -1,0 +1,43 @@
+Version 2.0:
+
+- SIGG slides / video 
+- ES3 / GL 4.3
+
+
++++
+
+NVIDIA Tegra: discard problem (still exist?):
+  OK:
+    GL_RENDERER: NVIDIA Tegra
+    GL_VERSION: OpenGL ES 2.0 14.01002
+
++++
+
+TestSharedContextVBOES2NEWT crashes the NV driver sporadically.
+
+++
+
+WIP:
+
++++
+
+Random, somewhat old to-do list:
+
+- Non-const array types must be properly released with JNI_COMMIT in
+  order to see side effects if the array was copied.
+
+- Need a disciplined mechanism for converting char* argument types. For
+  example, many C functions accept a "char*" argument with the semantic that
+  output data will be written into the buffer pointed to by the
+  argument. The type "const char*" is used when the argument's data will be
+  unchanged. Our system needs a new directive, such as
+  "ArgumentIsStringBuffer" to be used for type conversion in those cases
+  where the native code needs to write output into the "char*" argument. Not
+  sure how to handle this on the native side -- it may require hints to the
+  native code generator as to how large the StringBuffer's backing buffer
+  needs to be, so we can assert this condition before passing the backing
+  buffer to the C function we are wrapping.
+
+- Throw an exception if native calls to GetPrimitiveArrayCritical
+  return null.
+

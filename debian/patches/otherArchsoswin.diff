@@ -1,0 +1,49 @@
+Index: libjogl2-java-2.0-rc2/make/build-nativewindow.xml
+===================================================================
+--- libjogl2-java-2.0-rc3.orig/make/build-nativewindow.xml	2011-10-06 16:17:29.000000000 +0200
++++ libjogl2-java-2.0-rc3/make/build-nativewindow.xml	2011-10-06 16:20:23.000000000 +0200
+@@ -465,7 +465,43 @@
+       <property name="linker.cfg.id.oswin"                  value="linker.cfg.linux.nativewindow.x11" />
+     </target>
+ 
+-    <target name="c.configure.linux" depends="c.configure.linux.armv7,c.configure.linux.x86,c.configure.linux.amd64,c.configure.linux.ia64,c.configure.x11" if="isLinux" />
++    <target name="c.configure.linux.hppa" if="isLinuxHPPA">
++      <echo message="Linux.HPPA" />
++      <property name="compiler.cfg.id"                      value="compiler.cfg.linux" />
++      <property name="linker.cfg.id.oswin"                  value="linker.cfg.linux.nativewindow.x11" />
++    </target>
++
++    <target name="c.configure.linux.mips" if="isLinuxMIPS">
++      <echo message="Linux.MIPS" />
++      <property name="compiler.cfg.id"                      value="compiler.cfg.linux" />
++      <property name="linker.cfg.id.oswin"                  value="linker.cfg.linux.nativewindow.x11" />
++    </target>
++
++    <target name="c.configure.linux.mipsel" if="isLinuxMIPSEL">
++      <echo message="Linux.MIPSEL" />
++      <property name="compiler.cfg.id"                      value="compiler.cfg.linux" />
++      <property name="linker.cfg.id.oswin"                  value="linker.cfg.linux.nativewindow.x11" />
++    </target>
++
++    <target name="c.configure.linux.ppc" if="isLinuxPPC">
++      <echo message="Linux.PPC" />
++      <property name="compiler.cfg.id"                      value="compiler.cfg.linux" />
++      <property name="linker.cfg.id.oswin"                  value="linker.cfg.linux.nativewindow.x11" />
++    </target>
++
++    <target name="c.configure.linux.s390" if="isLinuxS390">
++      <echo message="Linux.S390" />
++      <property name="compiler.cfg.id"                      value="compiler.cfg.linux" />
++      <property name="linker.cfg.id.oswin"                  value="linker.cfg.linux.nativewindow.x11" />
++    </target>
++
++    <target name="c.configure.linux.sparc" if="isLinuxSPARC">
++      <echo message="Linux.SPARC" />
++      <property name="compiler.cfg.id"                      value="compiler.cfg.linux" />
++      <property name="linker.cfg.id.oswin"                  value="linker.cfg.linux.nativewindow.x11" />
++    </target>
++
++    <target name="c.configure.linux" depends="c.configure.linux.armv7,c.configure.linux.x86,c.configure.linux.amd64,c.configure.linux.ia64,c.configure.linux.hppa,c.configure.linux.mips,c.configure.linux.mipsel,c.configure.linux.ppc,c.configure.linux.s390,c.configure.linux.sparc,c.configure.x11" if="isLinux" />
+ 
+     <target name="c.configure.android" if="isAndroid">
+       <echo message="Android" />

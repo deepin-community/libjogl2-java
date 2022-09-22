@@ -1,0 +1,126 @@
+Index: jogl-v2.0-rc5/make/build-nativewindow.xml
+===================================================================
+--- jogl-v2.0-rc5.orig/make/build-nativewindow.xml	2011-12-26 01:56:35.000000000 +0100
++++ jogl-v2.0-rc5/make/build-nativewindow.xml	2011-12-26 01:57:04.666059156 +0100
+@@ -398,10 +398,10 @@
+       </linker>
+ 
+       <linker id="linker.cfg.linux.armv7.nativewindow.x11" extends="linker.cfg.linux.armv7">
+-        <syslibset dir="${env.TARGET_PLATFORM_LIBS}" libs="X11" />
+-        <syslibset dir="${env.TARGET_PLATFORM_LIBS}" libs="Xxf86vm" />
+-        <syslibset dir="${env.TARGET_PLATFORM_LIBS}" libs="Xinerama" />
+-        <syslibset dir="${env.TARGET_PLATFORM_LIBS}" libs="Xrender" />
++        <syslibset libs="X11" />
++        <syslibset libs="Xxf86vm" />
++        <syslibset libs="Xinerama" />
++        <syslibset libs="Xrender" />
+       </linker>
+ 
+       <linker id="linker.cfg.solaris.nativewindow.x11" extends="linker.cfg.solaris">
+@@ -668,6 +668,7 @@
+         </patternset>
+ 
+         <echo message="Compiling @{output.lib.name}" />
++        <echo message="java.lib.dir.platform: ${java.lib.dir.platform}" />      
+ 
+         <!-- have to wrap cc task with outofdate, because otherwise cc links a new library
+              even when no files have been compiled -->
+@@ -707,7 +708,7 @@
+                 <!-- This must come last to not override real include paths -->
+                 <!-- includepath path="stub_includes/macosx" if="isOSX" / -->
+               </compiler>
+-      
++
+               <linker extends="@{linker.cfg.id}">
+                 <syslibset dir="${java.lib.dir.platform}" libs="jawt" if="@{output.lib.name}.useLibJAWT"/>
+                 <syslibset dir="${java.lib.dir.platform}/server" libs="jvm" if="@{output.lib.name}.useLibJVM"/>
+Index: jogl-v2.0-rc5/make/build-newt.xml
+===================================================================
+--- jogl-v2.0-rc5.orig/make/build-newt.xml	2011-12-26 01:56:33.000000000 +0100
++++ jogl-v2.0-rc5/make/build-newt.xml	2011-12-26 01:58:23.326061322 +0100
+@@ -271,8 +271,8 @@
+       </linker>
+ 
+       <linker id="linker.cfg.linux.armv7.newt.x11" extends="linker.cfg.linux.armv7">
+-        <syslibset dir="${env.TARGET_PLATFORM_LIBS}" libs="X11" />
+-        <syslibset dir="${env.TARGET_PLATFORM_LIBS}" libs="Xrandr" />
++        <syslibset libs="X11" />
++        <syslibset libs="Xrandr" />
+       </linker>
+ 
+       <linker id="linker.cfg.android.newt" extends="linker.cfg.android">
+@@ -368,13 +368,73 @@
+       <echo message="linker.cfg.id.oswin ${linker.cfg.id.oswin}" />
+     </target>
+ 
++    <target name="c.configure.linux.hppa" if="isLinuxHppa">
++      <echo message="Linux.hppa" />
++      <property name="compiler.cfg.id"                      value="compiler.cfg.linux" />
++      <condition property="linker.cfg.id.oswin"             value="linker.cfg.linux.newt.x11"
++                                                            else="linker.cfg.linux">
++          <isset property="isX11" />
++      </condition>
++      <echo message="linker.cfg.id.oswin ${linker.cfg.id.oswin}" />
++    </target>
++
++    <target name="c.configure.linux.mips" if="isLinuxMips">
++      <echo message="Linux.mips" />
++      <property name="compiler.cfg.id"                      value="compiler.cfg.linux" />
++      <condition property="linker.cfg.id.oswin"             value="linker.cfg.linux.newt.x11"
++                                                            else="linker.cfg.linux">
++          <isset property="isX11" />
++      </condition>
++      <echo message="linker.cfg.id.oswin ${linker.cfg.id.oswin}" />
++    </target>
++
++    <target name="c.configure.linux.mipsel" if="isLinuxMipsel">
++      <echo message="Linux.mips" />
++      <property name="compiler.cfg.id"                      value="compiler.cfg.linux" />
++      <condition property="linker.cfg.id.oswin"             value="linker.cfg.linux.newt.x11"
++                                                            else="linker.cfg.linux">
++          <isset property="isX11" />
++      </condition>
++      <echo message="linker.cfg.id.oswin ${linker.cfg.id.oswin}" />
++    </target>
++
++    <target name="c.configure.linux.ppc" if="isLinuxPpc">
++      <echo message="Linux.ppc" />
++      <property name="compiler.cfg.id"                      value="compiler.cfg.linux" />
++      <condition property="linker.cfg.id.oswin"             value="linker.cfg.linux.newt.x11"
++                                                            else="linker.cfg.linux">
++          <isset property="isX11" />
++      </condition>
++      <echo message="linker.cfg.id.oswin ${linker.cfg.id.oswin}" />
++    </target>
++
++    <target name="c.configure.linux.s390" if="isLinuxs390">
++      <echo message="Linux.S390" />
++      <property name="compiler.cfg.id"                      value="compiler.cfg.linux" />
++      <condition property="linker.cfg.id.oswin"             value="linker.cfg.linux.newt.x11"
++                                                            else="linker.cfg.linux">
++          <isset property="isX11" />
++      </condition>
++      <echo message="linker.cfg.id.oswin ${linker.cfg.id.oswin}" />
++    </target>
++
++    <target name="c.configure.linux.sparc" if="isLinuxSparc">
++      <echo message="Linux.sparc" />
++      <property name="compiler.cfg.id"                      value="compiler.cfg.linux" />
++      <condition property="linker.cfg.id.oswin"             value="linker.cfg.linux.newt.x11"
++                                                            else="linker.cfg.linux">
++          <isset property="isX11" />
++      </condition>
++      <echo message="linker.cfg.id.oswin ${linker.cfg.id.oswin}" />
++    </target>
++
+     <target name="c.configure.linux.ia64" if="isLinuxIA64">
+       <echo message="Linux.IA64" />
+       <property name="compiler.cfg.id"                      value="compiler.cfg.linux" />
+       <property name="linker.cfg.id.oswin"                  value="linker.cfg.linux.newt.x11" />
+     </target>
+ 
+-    <target name="c.configure.linux" depends="c.configure.linux.x86,c.configure.linux.amd64,c.configure.linux.armv7,c.configure.linux.ia64,c.configure.x11" if="isLinux"/>
++    <target name="c.configure.linux" depends="c.configure.linux.x86,c.configure.linux.amd64,c.configure.linux.armv7,c.configure.linux.hppa,c.configure.linux.mips,c.configure.linux.mipsel,c.configure.linux.ppc,c.configure.linux.s390,c.configure.linux.sparc,c.configure.linux.ia64,c.configure.x11" if="isLinux"/>
+ 
+     <target name="c.configure.android" if="isAndroid">
+       <echo message="Android" />

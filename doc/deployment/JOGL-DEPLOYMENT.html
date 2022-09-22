@@ -1,0 +1,357 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link href="../../../style.css" rel="stylesheet" type="text/css"/>
+        <title>JOGL Deployment</title>
+    </head>
+    <body>
+        <div id="container">
+            <div id="header">
+                <div id="slogan">.. bundle .. deploy</div>
+                <div id="logo"><a href="http://jogamp.org/">JOGL Deployment</a></div>
+            </div>
+            <div id="menu">
+                <ul>
+                    <li><a href="http://jogamp.org/">Home</a></li>
+                    <li><a href="../../../gluegen/www/">Gluegen</a></li>
+                    <li><a href="../../../joal/www/">JOAL</a></li>
+                    <li><a href="../../../jocl/www/">JOCL</a></li>
+                    <li><a href="../../../jogl/www/">JOGL</a></li>
+                    <li><a href="../../../demos/www/">Demos</a></li>
+                    <li><a href="../../../wiki/">Wiki</a></li>
+                    <li><a href="../../../deployment/jogl-next/javadoc_public/">JavaDoc</a></li>
+                    <li><a href="../../../blog/">Blogs</a></li>
+                    <li><a href="../../../forum.html">Forums</a></li>
+                </ul>
+            </div>
+            <div id="main">
+                <div id="text" class="fill">
+
+                    <h1><a name="NApplets">New Applets</a></h1>
+
+                    <p>
+                    You may choose to use traditional <a href="http://java.sun.com/applets/">Java Applets</a> to deploy your 
+                    in-browser applet and reference the JOGL resources.<p/>
+
+                    <p>
+                    This method simply requires a Java plugin and uses JogAmp's
+                    <a href="../userguide/index.html#automatednativelibraryloading">build-in method to automatically load</a>
+                    the <a href="#NativeJARFiles">native JAR files</a>.
+                    </p>
+
+                    <a href="http://jogamp.org/deployment/jogamp-current/jogl-demos/applet-gears-napplet.html">AWT/JOGL NApplet Example</a>:
+                    <pre>
+                        &lt;object classid="clsid:8AD9C840-044E-11D1-B3E9-00805F499D93"
+                              width="600" height="400"&gt;
+                           &lt;param name="code" value="demos.applets.GearsApplet"&gt;
+                           &lt;param name="archive" value="../jar/gluegen-rt.jar,
+                                                           ../jar/jogl-all.jar,
+                                                           jar/jogl-demos.jar"&gt;
+                           &lt;comment&gt;
+                             &lt;embed code="demos.applets.GearsApplet"
+                                  width="600" height="400"
+                                  type="application/x-java-applet;version=1.6"
+                                  pluginspage="http://java.sun.com/javase/downloads/ea.jsp"
+                                  archive="../jar/gluegen-rt.jar,
+                                           ../jar/jogl-all.jar,
+                                           jar/jogl-demos.jar"&gt;
+                                &lt;noembed&gt;Sorry, no Java support detected.&lt;/noembed&gt;
+                             &lt;/embed&gt;
+                           &lt;/comment&gt;
+                        &lt;/object&gt;
+                    </pre>
+                    <p>
+                    NEWT/JOGL NApplet Examples:
+                    <ul>
+                        <li><a href="http://jausoft.com/jogamp/jogl-applet-runner-newt-gears-normal-napplet.html">Demo on jausoft.com and modules on jogamp.org</a></li>
+                        <li><a href="http://jogamp.org/deployment/jogamp-current/jogl-applet-runner-newt-gears-normal-napplet.html">Demo and modules on jogamp.org</a></li>
+                    </ul>
+                    </p>
+
+                    <h1><a name="JNLPFiles">JNLP Files</a></h1>
+
+                    <p>
+                    You may choose to use JNLP to deploy your application or in-browser applet
+                    and reference the JOGL resources.<p/>
+
+                    <p>
+                    You have the choice to use <a href="http://jdk6.dev.java.net/plugin2/jnlp/">JNLP Applets</a>
+                    or <a href="http://java.sun.com/products/javawebstart/">Java Webstart</a>.<p/>
+
+                    <p>
+                    You might want to have a look at our <a href="http://jogamp.org/deployment/jogamp-current/jogl-test-applets.html">Test page for JOGL Applets</a>. Here is a <a href="http://jogamp.org/deployment/jogamp-current/jogl-applet-runner-newt-gears-normal.html">documented example</a><p/>
+
+                    Supported JNLP bases are:
+                    <ul>
+                        <li> <code><b> http://jogamp.org/deployment/jogamp-current/ </b></code> Current Version </li>
+                        <li> <code><b> http://jogamp.org/deployment/jogamp-next/ </b></code> Next Version </li>
+                        <li> <code><b> http://jogamp.org/deployment/v2.0-rc10/ </b></code> Specific Version </li>
+                    </ul>
+
+                    <h2>Desktop All in One</h2>
+
+                    <h3>With AWT</h3>
+                    <ul>
+                        <li><code>jogl-all-awt.jnlp</code><br/>
+                            <ul>
+                                <li><code>gluegen-rt.jnlp</code></li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <h3>Without AWT</h3>
+                    <ul>
+                        <li><code>jogl-all-noawt.jnlp</code><br/>
+                            <ul>
+                                <li><code>gluegen-rt.jnlp</code></li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <h3>Mobile</h3>
+                    <ul>
+                        <li><code>jogl-all-mobile.jnlp</code><br/>
+                            <ul>
+                                <li><code>gluegen-rt.jnlp</code></li>
+                            </ul>
+                        </li>
+                    </ul>
+                    <p>
+                        The above JNLP files will load the <a href="#GluegenJARs">GlueGen JARs</a>
+                        as well as the <a href="#JOGLAllInOneJARs">JOGL All-In-One JARs</a>.
+                    </p>
+
+                    <hr/>
+                    <h1><a name="JARFiles">JAR Files</a></h1>
+
+                    <h2><a name="NativeJARFiles">Native JAR Files</a></h2>
+                    All JAR files containing platform dependent native libraries 
+                    contain the string <code>natives</code> and the 
+                    <a href="#NativeJARFileNameConvention"><b><i>os.and.arch</i></b></a>
+                    identifier in their name.
+
+                    The actual native library files are <a href="#NativeLibraryFiles">listed below</a>.
+
+                    <h3><a name="NativeJARFileNameConvention">Naming Convention</a></h3>
+                    JogAmp's build system has the notion of <b><i>os.and.arch</i></b> string identifier,
+                    to name platform dependent build artifacts.<br/> 
+                    Currently used and supported names are:
+                    <ul>
+                        <li>freebsd-i586</li>
+                        <li>freebsd-amd64</li>
+                        <li>hpux-hppa</li>
+                        <li>linux-amd64</li>
+                        <li>linux-ia64</li>
+                        <li>linux-i586</li>
+                        <li>linux-armv6</li>
+                        <li>linux-armv6hf</li>
+                        <li>android-armv6</li>
+                        <li>macosx-universal</li>
+                        <li>solaris-sparc</li>
+                        <li>solaris-sparcv9</li>
+                        <li>solaris-amd64</li>
+                        <li>solaris-i586</li>
+                        <li>windows-amd64</li>
+                        <li>windows-i586</li>
+                    </ul>
+
+                    <h2><a name="GluegenJARs">Gluegen JARs - Mandatory</a></h2>
+                    <ul>
+                        <li><code>gluegen-rt.jar</code><br/>
+                            <ul>
+                                <li><code>gluegen-rt-natives-<b><i>os.and.arch</i></b>.jar</code></li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <h3><a name="JOGLAllInOneJARs">JOGL JARs - All-In-One</a></h3>
+
+                    <p>
+                        This might be the best solution
+                        for desktop (applets and webstart).<br/>
+
+                        It is much faster to download
+                        a (maybe bigger) file once and cache
+                        it for most purposes, than to download
+                        tens of files where its cache might not
+                        be reuseable.<br/>
+                    </p>
+
+                    <a name="JOGLAllInOneJARsAWT">With AWT</a>:
+                    <ul>
+                        <li><code>jogl-all.jar</code><br/>
+                            <ul>
+                                <li><code>jogl-all-natives-<b><i>os.and.arch</i></b>.jar</code></li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <a name="JOGLAllInOneJARsNoAWT">Without AWT</a>:
+                    <ul>
+                        <li><code>jogl-all-noawt.jar</code><br/>
+                            <ul>
+                                <li><code>jogl-all-natives-<b><i>os.and.arch</i></b>.jar</code></li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <a name="JOGLAllInOneJARsMobile">Mobile</a>:
+                    <ul>
+                        <li><code>jogl-all-mobile.jar</code><br/>
+                            <ul>
+                                <li><code>jogl-all-natives-<b><i>os.and.arch</i></b>.jar</code></li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <a name="JOGLAllInOneJARsAndroid">Android</a>:
+                    <ul>
+                        <li><code>jogl-all-android.jar</code><br/>
+                            <ul>
+                                <li><code>jogl-all-natives-<b><i>os.and.arch</i></b>.jar</code></li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <h3>Atomic Deployment </h3>
+
+                    This is a fine tuned solution
+                    where every byte counts.<br/>
+
+                    It is also possible to use this
+                    strategy as a starting point for
+                    efficient manual deployment.<br/>
+
+                    <h4>Cores</h4>
+                    <ul>
+                        <li>Mandatory:<br/>
+                            <ul>
+                                <li>nativewindow.jar</li>
+                                <li>jogl.jar</li>
+                            </ul></li>
+
+                        <li>Newt (optional):<br/>
+                            <ul>
+                                <li>newt.jar</li>
+                                <li>newt-ogl.jar  (to use NEWT with JOGL)</li>
+                            </ul></li>
+                    </ul>
+
+                    <h4>Platform (mandatory)</h4>
+
+                    Chose the same platform for all picks :)
+
+                    <ul>
+                        <li>NativeWindow [pick your platfrom, if available]:<br/>
+                            <ul>
+                                <li>nativewindow-os-x11.jar</li>
+                            </ul></li>
+
+                        <li>JOGL [pick your platform]:<br/>
+                            <ul>
+                                <li>jogl-os-x11.jar</li>
+                                <li>jogl-os-win.jar</li>
+                                <li>jogl-os-osx.jar</li>
+                                <li>none</li>
+                            </ul></li>
+
+                        <li>Newt [pick your platform] (optional):<br/>
+                            <ul>
+                                <li>newt-driver-x11.jar</li>
+                                <li>newt-driver-win.jar</li>
+                                <li>newt-driver-osx.jar</li>
+                                <li>newt-driver-kd.jar</li>
+                                <li>newt-driver-bcm-vc.jar</li>
+                                <li>newt-driver-bcm-old.jar</li>
+                                <li>newt-driver-intelgdl.jar</li>
+                                <li>none</li>
+                            </ul></li>
+                    </ul>
+
+                    <h4>OpenGL Profile (mandatory)</h4>
+
+                    Pick as many as you like, at least 1:
+
+                    <ul>
+                        <li>Embedded Device Profiles<br/>
+                            <ul>
+                                <li>jogl-glmobile.jar<br/>
+                                    <ul>
+                                        <li>jogl-glmobile-dbg.jar</li>
+                                    </ul></li>
+                            </ul></li>
+
+                        <li>Desktop Profiles<br/>
+                            <ul>
+                                <li>jogl-gldesktop.jar<br/>
+                                    <ul>
+                                        <li>jogl-gldesktop-dbg.jar</li>
+                                    </ul></li>
+                            </ul></li>
+                    </ul>
+
+
+                    <h4>JOGL Toolkits/Misc (optional)</h4>
+                    <ul>
+                        <li>jogl-util.jar</li>
+                        <li>jogl-util-gldesktop.jar</li>
+                        <li>jogl-util-fixedfuncemu.jar</li>
+                    </ul>
+
+
+                    <h4>AWT (optional) </h4>
+
+                    <ul>
+                        <li> nativewindow-awt.jar</li>
+                        <li> jogl-awt.jar</li>
+                        <li> jogl-util-awt.jar (if using jogl-util)</li>
+                        <li> newt-awt.jar (if using with NEWT)</li>
+                    </ul>
+
+                    <h4>GLU (optional) </h4>
+                    <ul>
+                        <li>jogl-glu-tess.jar</li>
+                        <li>jogl-glu-mipmap.jar</li>
+                        <li>jogl-glu-gldesktop.jar</li>
+                    </ul>
+
+                    <h2><a name="NativeLibraryFiles">Native Library Files</a></h2>
+
+                    Gluegen native libraries:
+                    <ul>
+                        <li>libgluegen-rt.so</li>
+                    </ul>
+
+                    NativeWindow native libraries
+                    <ul>
+                        <li>libnativewindow_awt.so</li>
+                        <li>libnativewindow_jvm.so</li>
+                        <li>libnativewindow_x11.so</li>
+                    </ul>
+
+                    JOGL native libraries
+                    <ul>
+                        <li>libjogl_desktop.so</li>
+                        <li>libjogl_mobile.so</li>
+                        <li>libjogl_cg.so</li>
+                    </ul>
+
+                    NEWT native libraries
+                    <ul>
+                        <li>libnewt.so</li>
+                    </ul>
+
+                </div>
+            </div>
+            <div id="footer">
+                <div id="footer_left">
+                    <span>JogAmp.org</span>
+                    by <a href="http://jogamp.org">http://jogamp.org</a>
+                    is licensed under a <br/>
+                    <a href="http://creativecommons.org/licenses/by/3.0/us/">Creative Commons Attribution 3.0 License</a>.
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

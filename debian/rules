@@ -1,0 +1,40 @@
+#!/usr/bin/make -f
+
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/class/ant.mk
+
+JAVA_HOME            := /usr/lib/jvm/default-java/
+DEB_JARS             := ant-contrib ant-contrib-cpptasks ant-nodeps antlr ant-antlr swt4
+DEB_ANT_ARGS         := -Dsetup.noCDC=true -verbose -Dcommon.gluegen.build.done=true
+DEB_ANT_CLEAN_TARGET := clean
+DEB_ANT_BUILD_TARGET := all
+DEB_ANT_BUILDFILE    := make/build.xml
+ENABLE_BUILD_HELP_ARCHS := amd64 i386
+DEB_HOST_ARCH ?= $(shell dpkg-architecture -qDEB_HOST_ARCH)
+VERSION = $(shell dpkg-parsechangelog --show-field Version | sed 's/\+dfsg.*//')
+
+ifeq ($(DEB_HOST_ARCH),armhf)
+DEB_ANT_ARGS         += -DisAbiEabiGnuArmhf=true
+endif
+
+# Disable the build of the help on slow archs. It takes forever (a few hours) 
+build-indep:
+ifneq (,$(findstring $(DEB_HOST_ARCH),$(ENABLE_BUILD_HELP_ARCHS)))
+	$(DEB_ANT_INVOKE) javadoc.all
+else
+# Exclude binary doc package from the build. See debhelper manpage.
+export DH_OPTIONS += -Nlibjogl2-java-doc
+endif
+
+install/libjogl2-java::
+	mh_install -plibjogl2-java
+
+clean::
+	$(RM) -r gluegen/build
+	mh_clean
+
+get-orig-pom:
+	wget https://repo1.maven.org/maven2/org/jogamp/jogl/jogl-all/$(VERSION)/jogl-all-$(VERSION).pom -O debian/pom.xml
+
+get-orig-source::
+	-uscan --verbose --upstream-version 0 --no-symlink

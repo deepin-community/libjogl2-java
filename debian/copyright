@@ -1,0 +1,202 @@
+This package was intially debianized by by Sylvestre Ledru <sylvestre@debian.org> on Sat, 04 Dec 2010 16:22:37 +0100
+
+It was downloaded from <http://jogamp.org/>
+
+Copyright:
+
+Copyright (c) 2003-2005 Sun Microsystems, Inc.
+Copyright (c) 2010 JogAmp Community.
+
+Upstream Authors: Kenneth Bradley Russell
+                  Christopher John Kline
+				  and others
+
+License:
+
+This package is licensed under the terms of the Berkeley Software Distribution
+(BSD) License.
+
+/*
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 
+ * - Redistribution of source code must retain the above copyright
+ *   notice, this list of conditions and the following disclaimer.
+ * 
+ * - Redistribution in binary form must reproduce the above copyright
+ *   notice, this list of conditions and the following disclaimer in the
+ *   documentation and/or other materials provided with the distribution.
+ * 
+ * Neither the name of Sun Microsystems, Inc. or the names of
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * This software is provided "AS IS," without a warranty of any kind. ALL
+ * EXPRESS OR IMPLIED CONDITIONS, REPRESENTATIONS AND WARRANTIES,
+ * INCLUDING ANY IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A
+ * PARTICULAR PURPOSE OR NON-INFRINGEMENT, ARE HEREBY EXCLUDED. SUN
+ * MICROSYSTEMS, INC. ("SUN") AND ITS LICENSORS SHALL NOT BE LIABLE FOR
+ * ANY DAMAGES SUFFERED BY LICENSEE AS A RESULT OF USING, MODIFYING OR
+ * DISTRIBUTING THIS SOFTWARE OR ITS DERIVATIVES. IN NO EVENT WILL SUN OR
+ * ITS LICENSORS BE LIABLE FOR ANY LOST REVENUE, PROFIT OR DATA, OR FOR
+ * DIRECT, INDIRECT, SPECIAL, CONSEQUENTIAL, INCIDENTAL OR PUNITIVE
+ * DAMAGES, HOWEVER CAUSED AND REGARDLESS OF THE THEORY OF LIABILITY,
+ * ARISING OUT OF THE USE OF OR INABILITY TO USE THIS SOFTWARE, EVEN IF
+ * SUN HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+ * 
+ * You acknowledge that this software is not designed or intended for use
+ * in the design, construction, operation or maintenance of any nuclear
+ * facility.
+ */
+
+
+Files: ./make/stub_includes/embedded/IntelGDL/gdl_pd.h,
+./make/stub_includes/embedded/IntelGDL/gdl_pd.h,
+./make/stub_includes/embedded/IntelGDL/gdl_version.h
+
+Copyright: 2005-2009 Intel Corporation.
+
+License:
+This file is provided under a dual BSD/GPLv2 license.  When using or 
+redistributing this file, you may do so under either license.
+
+The complete text of the GNU General Public License can be found in
+/usr/share/common-licenses/GPL-2
+
+Redistribution and use in source and binary forms, with or without 
+modification, are permitted provided that the following conditions 
+are met:
+
+  - Redistributions of source code must retain the above copyright 
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright 
+    notice, this list of conditions and the following disclaimer in 
+    the documentation and/or other materials provided with the 
+    distribution.
+  - Neither the name of Intel Corporation nor the names of its 
+    contributors may be used to endorse or promote products derived 
+    from this software without specific prior written permission.
+
+
+Files:
+./make/stub_includes/opengl/GL/glu.h
+./make/stub_includes/opengl/GL/glxext.h
+./make/stub_includes/opengl/GL/wglext.h
+./src/jogl/classes/com/jogamp/opengl/impl/gl2/ProjectDouble.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/error/Error.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/Glue.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/GLUquadricImpl.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/BuildMipmap.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract1010102.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract1555rev.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract2101010rev.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract233rev.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract332.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract4444.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract4444rev.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract5551.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract565.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract565rev.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract8888.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract8888rev.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractFloat.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractPrimitive.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractSByte.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractSInt.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractSShort.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractUByte.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractUInt.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractUShort.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/HalveImage.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Image.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Mipmap.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/PixelStorageModes.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ScaleInternal.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Type_Widget.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/registry/Registry.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/ActiveRegion.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/CachedVertex.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/Dict.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/DictNode.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/Geom.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/GLUface.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/GLUhalfEdge.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/GLUmesh.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/GLUtessellatorImpl.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/GLUvertex.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/Mesh.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/Normal.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/PriorityQHeap.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/PriorityQ.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/PriorityQSort.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/Render.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/Sweep.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/TessMono.java
+./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/TessState.java
+./src/jogl/classes/com/jogamp/opengl/impl/ProjectFloat.java
+./src/jogl/classes/com/jogamp/opengl/util/texture/spi/SGIImage.java
+./src/jogl/classes/javax/media/opengl/glu/GLUtessellatorCallbackAdapter.java
+./src/jogl/classes/javax/media/opengl/glu/GLUtessellatorCallback.java
+./src/jogl/classes/javax/media/opengl/glu/GLUtessellator.java
+
+Copyright: 1991-2000 Silicon Graphics, Inc.
+2003-2006 Sun Microsystems, Inc.
+
+License:
+
+SGI FREE SOFTWARE LICENSE B (Version 2.0, Sept. 18, 2008)
+
+ Copyright (C) [dates of first publication] Silicon Graphics, Inc. All Rights
+ Reserved.
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy of
+ this software and associated documentation files (the "Software"), to deal in
+ the Software without restriction, including without limitation the rights to
+ use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ of the Software, and to permit persons to whom the Software is furnished to do
+ so, subject to the following conditions:
+ The above copyright notice including the dates of first publication and either
+ this permission notice or a reference to http://oss.sgi.com/projects/FreeB/
+ shall be included in all copies or substantial portions of the Software.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ NONINFRINGEMENT. IN NO EVENT SHALL SILICON GRAPHICS, INC. BE
+ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ IN THE SOFTWARE.
+ Except as contained in this notice, the name of Silicon Graphics, Inc. shall
+ not be used in advertising or otherwise to promote the sale, use or other
+ dealings in this Software without prior written authorization from Silicon
+ Graphics, Inc.
+
+Files: ./make/stub_includes/opengl/GL/gl.h
+./make/stub_includes/opengl/GL/glx.h
+./make/stub_includes/openmax/OMX_Audio.h
+./make/stub_includes/openmax/OMX_Component.h
+./make/stub_includes/openmax/OMX_ContentPipe.h
+./make/stub_includes/openmax/OMX_Core.h
+./make/stub_includes/openmax/OMX_Image.h
+./make/stub_includes/openmax/OMX_Index.h
+./make/stub_includes/openmax/OMX_IVCommon.h
+./make/stub_includes/openmax/OMX_Other.h
+./make/stub_includes/openmax/OMX_Types.h
+./make/stub_includes/openmax/OMX_Video.h
+
+Copyright: 1999-2002  Brian Paul  
+2007 The Khronos Group Inc.
+
+License:
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.

@@ -1,0 +1,8 @@
+The homepage of jogl is <http://jogl.dev.java.net>. Please check the
+licence of the package if you are about to upload a new upstream version
+of the package to the Debian archive. If the licence has changed in a
+way that forbids autobuilding the package you have to contact Andreas
+Barth <aba@not.so.argh.org> before uploading it.
+
+ -- Torsten Werner <twerner@debian.org>
+

@@ -1,0 +1,1 @@
+debian/pom.xml --java-lib --usj-name=jogl2 --artifact=build/jar/jogl-all.jar

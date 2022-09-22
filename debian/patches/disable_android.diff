@@ -1,0 +1,25 @@
+Index: jogl-v2.0-rc9/make/build-newt.xml
+===================================================================
+--- jogl-v2.0-rc9.orig/make/build-newt.xml	2012-06-19 05:23:28.000000000 +0200
++++ jogl-v2.0-rc9/make/build-newt.xml	2012-07-02 03:25:32.350528723 +0200
+@@ -139,7 +139,7 @@
+            <isset property="setup.noOpenGL"/>
+         </condition>
+ 
+-        <property name="java.excludes.all" value="${java.excludes.awt}, ${java.excludes.opengl}" />
++        <property name="java.excludes.all" value="${java.excludes.awt}, ${java.excludes.opengl} jogamp/newt/driver/android/**" />
+         <echo message="java.excludes.all: ${java.excludes.all}" />
+ 
+     </target>
+Index: jogl-v2.0-rc9/make/build-test.xml
+===================================================================
+--- jogl-v2.0-rc9.orig/make/build-test.xml	2012-06-19 05:23:28.000000000 +0200
++++ jogl-v2.0-rc9/make/build-test.xml	2012-07-02 03:25:32.350528723 +0200
+@@ -101,6 +101,7 @@
+         <javac destdir="${classes}"
+                fork="yes"
+                includeAntRuntime="false"
++               excludes="${java.excludes.all}"
+                memoryMaximumSize="${javac.memorymax}"
+                encoding="UTF-8"
+                source="${target.sourcelevel}" 

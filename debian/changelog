@@ -1,0 +1,392 @@
+libjogl2-java (2.3.2+dfsg-9) unstable; urgency=medium
+
+  * Team upload.
+  * Build libjogl2-jni only on supported architectures. (Closes: #887140)
+
+ -- Markus Koschany <apo@debian.org>  Sat, 02 Mar 2019 14:56:52 +0100
+
+libjogl2-java (2.3.2+dfsg-8) unstable; urgency=medium
+
+  * Team upload.
+  * java11.patch: Fix FTBFS with Java 11. (Closes: #893287)
+
+ -- Markus Koschany <apo@debian.org>  Sat, 23 Feb 2019 16:38:35 +0100
+
+libjogl2-java (2.3.2+dfsg-7) unstable; urgency=medium
+
+  * Reupload using correct .changes.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Sat, 13 Jan 2018 09:17:50 +0200
+
+libjogl2-java (2.3.2+dfsg-6) unstable; urgency=medium
+
+  * Team upload.
+  * fix-mesa-detection.diff: Fix detecting Mesa 17.2 ->. (Closes:
+    #880924) (LP: #1742894)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 12 Jan 2018 21:29:39 +0200
+
+libjogl2-java (2.3.2+dfsg-5) unstable; urgency=medium
+
+  * Team upload.
+  * Install the Maven artifacts (Closes: #712002)
+  * Transition to libswt-gtk-4-java
+  * Removed the explicit build dependency on quilt
+  * Standards-Version updated to 3.9.8
+  * Use secure Vcs-* URLs
+
+ -- Emmanuel Bourg <ebourg@apache.org>  Thu, 04 Aug 2016 13:01:14 +0200
+
+libjogl2-java (2.3.2+dfsg-4) unstable; urgency=medium
+
+  * Team upload.
+  * Upload to unstable (closes: #801455).
+
+ -- Gilles Filippini <pini@debian.org>  Thu, 29 Oct 2015 19:28:35 +0100
+
+libjogl2-java (2.3.2+dfsg-3) experimental; urgency=medium
+
+  * Team upload.
+  * Fix again patch arm-build.diff because of remaining occurrences
+    of env.TARGET_PLATFORM_ROOT (fix FTBFS on arm64).
+
+ -- Gilles Filippini <pini@debian.org>  Sat, 17 Oct 2015 11:40:52 +0200
+
+libjogl2-java (2.3.2+dfsg-2) experimental; urgency=medium
+
+  * Team upload.
+  * debian/rule: don't try to build the binary doc package on slow
+    arches where we don't run javadoc.
+  * Fix patch arm-build.diff: don't use env.TARGET_PLATFORM_ROOT, like
+    the others arches (fix FTBFS on arm64).
+
+ -- Gilles Filippini <pini@debian.org>  Fri, 16 Oct 2015 11:24:44 +0200
+
+libjogl2-java (2.3.2+dfsg-1) experimental; urgency=medium
+
+  * Team upload.
+  * New upstream release.
+  * Refresh patches.
+  * d/control: bump versioned depends on gluegen2 to 2.3.2.
+  * Fix d/watch and d/orig-tar.sh wrt version mangling.
+
+ -- Gilles Filippini <pini@debian.org>  Mon, 12 Oct 2015 20:56:50 +0200
+
+libjogl2-java (2.2.4+dfsg-1) unstable; urgency=medium
+
+  * Team upload.
+  * Modify orig-tar.sh and repack the upstream tarball to remove source
+    file under a license restriction w.r.t. venue (CC BY-NC 3.0): 
+    src/test/com/jogamp/opengl/test/junit/jogl/demos/es2/shader/landscape.fp
+    - Thanks to Rebecca N. Palmer. (Closes: #767384)
+
+ -- tony mancill <tmancill@debian.org>  Sun, 02 Nov 2014 11:27:35 -0800
+
+libjogl2-java (2.2.4-1) unstable; urgency=medium
+
+  * Team upload.
+  * New upstream release
+    - Depend on gluegen >= 2.2.4
+
+ -- Emmanuel Bourg <ebourg@apache.org>  Mon, 20 Oct 2014 17:07:42 +0200
+
+libjogl2-java (2.2.1-1) unstable; urgency=medium
+
+  * Team upload.
+  * New upstream release
+    - Refreshed the patches
+    - Depend on gluegen >= 2.2.1
+  * Disabled the unit tests (missing dependencies)
+  * Standards-Version updated to 3.9.6 (no changes)
+
+  [ tony mancill ]
+  * Update orig-tar.sh script to find the 7z shipped by upstream.
+
+ -- Emmanuel Bourg <ebourg@apache.org>  Tue, 07 Oct 2014 17:49:44 +0200
+
+libjogl2-java (2.1.5-2) unstable; urgency=medium
+
+  * Team upload.
+  * Apply patch for FTBFS with clang. (Closes: #760294)
+    - Thanks to Nicolas Sévelin-Radiguet.
+  * Migrate package from svn to git.
+  * Bump debhelper compat level from 5 to 9.
+
+ -- tony mancill <tmancill@debian.org>  Tue, 02 Sep 2014 22:21:31 -0700
+
+libjogl2-java (2.1.5-1) unstable; urgency=medium
+
+  * New upstream release
+  * Cherry-pick of the add-port.diff patch
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Mon, 24 Mar 2014 14:33:05 +0100
+
+libjogl2-java (2.1.4-1) unstable; urgency=medium
+
+  * New upstream release
+  * Disable the build of com/jogamp/newt/util/applet/
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Thu, 27 Feb 2014 23:42:51 +0100
+
+libjogl2-java (2.1.3-2) UNRELEASED; urgency=medium
+
+  * Team upload.
+  * Add patch (alpha.diff) to allow compilation on alpha. (Closes: #739397)
+    - Thanks to Michael Cree for the patch.
+
+ -- tony mancill <tmancill@debian.org>  Tue, 18 Feb 2014 21:22:22 -0800
+
+libjogl2-java (2.1.3-1) unstable; urgency=low
+
+  * New upstream release
+  * Repack script updated to remove www/
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Tue, 17 Dec 2013 09:26:26 +0100
+
+libjogl2-java (2.1.2-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Fri, 08 Nov 2013 10:53:16 +0100
+
+libjogl2-java (2.0.2-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Sat, 28 Sep 2013 19:08:07 +0200
+
+libjogl2-java (2.0-rc12-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Mon, 01 Jul 2013 14:26:13 +0200
+
+libjogl2-java (2.0-rc11-1) unstable; urgency=low
+
+  * Upload to unstable
+  * Standards-Version updated to 3.9.4
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Wed, 15 May 2013 10:18:59 +0200
+
+libjogl2-java (2.0-rc11-1~exp5) experimental; urgency=low
+
+  [ Colin Watson ]
+  * Define isAbiEabiGnuArmhf=true when building for armhf.
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Sun, 03 Mar 2013 13:54:53 +0100
+
+libjogl2-java (2.0-rc11-1~exp4.3) experimental; urgency=low
+
+  * Non-maintainer upload.
+  * Search libs in default system paths in make/build-newt.xml
+  * Combine TARGET_PLATFORM_LIBS_2.diff, armhfbuild.diff and armhf-build.diff
+    patches into arm-build.diff patch.
+
+ -- Thomas Preud'homme <robotux@debian.org>  Wed, 26 Dec 2012 15:23:17 +0100
+
+libjogl2-java (2.0-rc11-1~exp4.2) experimental; urgency=low
+
+  * Non-maintainer upload.
+  * Fix wrong copy/paste in changes made in previous upload.
+
+ -- Thomas Preud'homme <robotux@debian.org>  Wed, 26 Dec 2012 10:11:00 +0100
+
+libjogl2-java (2.0-rc11-1~exp4.1) experimental; urgency=low
+
+  * Fix armhf FTBFS by generalizing changes to build-nativewindow.xml to
+    build-jogl.xml and build-newt.xml.
+
+ -- Thomas Preud'homme <robotux@debian.org>  Tue, 25 Dec 2012 20:18:58 +0100
+
+libjogl2-java (2.0-rc11-1~exp4) experimental; urgency=low
+
+  * Try again to fix the armhf FTBFS (thanks again to Thomas Preud'homme)
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Mon, 24 Dec 2012 09:12:34 +0100
+
+libjogl2-java (2.0-rc11-1~exp3) experimental; urgency=low
+
+  * Apply Ubuntu changes introduced in 2.0-rc8-1ubuntu1
+  * Set source and target to 1.5 for OpenJDK 6 compatibility (LP: #1049719).
+  * Try something with Thomas Preud'homme to see if we can fix the armhf
+    build
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Thu, 20 Dec 2012 17:04:08 +0100
+
+libjogl2-java (2.0-rc11-1~exp2) experimental; urgency=low
+
+  * Enable the verbose mode to find out the reason of the FTBFS under armhf
+   (libXrender.so uses VFP register arguments, libnativewindow_x11.so does not)
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Fri, 30 Nov 2012 17:11:16 +0100
+
+libjogl2-java (2.0-rc11-1~exp1) experimental; urgency=low
+
+  * New upstream release
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Thu, 08 Nov 2012 16:51:30 +0100
+
+libjogl2-java (2.0-rc10-1~exp1) experimental; urgency=low
+
+  * New upstream release
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Mon, 03 Sep 2012 09:34:29 +0200
+
+libjogl2-java (2.0-rc9-1~exp1) experimental; urgency=low
+
+  * New upstream release
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Mon, 02 Jul 2012 03:22:25 +0200
+
+libjogl2-java (2.0-rc8-1) unstable; urgency=low
+
+  * Upload to unstable
+  * Support of armhf & s390x added.
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Wed, 13 Jun 2012 18:34:05 +0200
+
+libjogl2-java (2.0-rc8-1~exp2) experimental; urgency=low
+
+  * Force also the version of gluegen2 in the package themself
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Wed, 13 Jun 2012 13:54:44 +0200
+
+libjogl2-java (2.0-rc8-1~exp1) experimental; urgency=low
+  
+  * New upstream release
+  * Set the exact version of the dependency between libjogl2-java
+    and libjogl2-jni
+
+  [ Miguel Landaeta ]
+  * Use public access URL in Vcs-Svn field. (Closes: #670283).
+  * Fix debian-control-has-unusual-field-spacing lintian warning.
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Wed, 23 May 2012 14:23:19 +0200
+
+libjogl2-java (2.0-rc5-2) unstable; urgency=low
+
+  * Really upload to unstable (oups)
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Tue, 13 Mar 2012 09:46:59 +0100
+
+libjogl2-java (2.0-rc5-1) experimental; urgency=low
+
+  * Upload in unstable
+  * Standards-Version updated to version 3.9.3
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Mon, 12 Mar 2012 20:23:07 +0100
+
+libjogl2-java (2.0-rc5-1~exp3) experimental; urgency=low
+
+  * Some sbuild still want to build the doc package. Enable it only for amd64
+    and x86. See build log of ia64 & powerpc of version 2.0-rc5-1~exp2
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Wed, 28 Dec 2011 13:59:28 +0100
+
+libjogl2-java (2.0-rc5-1~exp2) experimental; urgency=low
+
+  * Only build the doc once
+  * Disable some TARGET_PLATFORM_LIBS variables
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Tue, 27 Dec 2011 23:22:05 +0100
+
+libjogl2-java (2.0-rc5-1~exp1) experimental; urgency=low
+
+  * New upstream release
+  * watch + repack script added
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Mon, 26 Dec 2011 02:06:41 +0100
+
+libjogl2-java (2.0-rc3-7) unstable; urgency=low
+
+  * Drop patch sparc.diff since it is now managed into gluegen2
+  * Disable the build of the documentation for arch indep build
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Tue, 22 Nov 2011 00:42:13 +0100
+
+libjogl2-java (2.0-rc3-6) unstable; urgency=low
+
+  * Fix a problem under arm
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Sun, 20 Nov 2011 21:43:36 +0100
+
+libjogl2-java (2.0-rc3-5) unstable; urgency=low
+
+  * Example is now working (Closes: #634996)
+  * Fix the various FTBFS (Closes: #638431) (LP: #809743)
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Sun, 20 Nov 2011 21:43:29 +0100
+
+libjogl2-java (2.0-rc3-4) unstable; urgency=low
+
+  * Ant to build C code = a lot of uploads ... pfff
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Mon, 10 Oct 2011 12:13:14 +0200
+
+libjogl2-java (2.0-rc3-3) unstable; urgency=low
+
+  * Fix more FTBFS
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Sun, 09 Oct 2011 19:26:30 +0200
+
+libjogl2-java (2.0-rc3-2) unstable; urgency=low
+
+  * Fix various FTBFS:
+    - disable the android include
+    - build the documentation as indep package (to avoid the timeout)
+    - disable the git call
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Sat, 08 Oct 2011 11:39:42 +0200
+
+libjogl2-java (2.0-rc3-1) unstable; urgency=low
+
+  * New upstream release
+  * libjogl2-java, libjogl2-jni and libjogl2-java-doc added
+    (better match of the version 1)
+  * Massive cleanup of the package list. Upstream decided to simplify all the
+    jar packages. 
+    See: http://bit.ly/qBNO7V
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Thu, 06 Oct 2011 15:53:38 +0200
+
+libjogl2-java (2.0-rc2-4) unstable; urgency=low
+
+  * Team upload.
+  * Update dependency libswt-gtk-3.6-java to libswt-gtk-3-java
+    (Closes: #635656)
+
+ -- tony mancill <tmancill@debian.org>  Fri, 29 Jul 2011 22:15:33 -0700
+
+libjogl2-java (2.0-rc2-3) unstable; urgency=low
+
+  * Support of the other debian arch. Should fix the various FTBFS
+    (otherArchsoswin.diff)
+  * Update dependency libswt-gtk-3.5-java to libswt-gtk-3.6-java
+    (Closes: #629777)
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Tue, 21 Jun 2011 21:54:41 +0200
+
+libjogl2-java (2.0-rc2-2) unstable; urgency=low
+
+  * cg-common.cfg.diff, build-java.diff, build.diff & defaultDebianPath.diff
+    removed (deprecated patches)
+  * libjogl2-core-java depended on libjogl2-core-jni which does not exist
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Sun, 08 May 2011 23:30:49 +0200
+
+libjogl2-java (2.0-rc2-1) unstable; urgency=low
+
+  * New upstream release
+  * Standards-Version updated to version 3.9.2
+  * needless-dependency-on-jre removed
+  * swt-debug.jar removed from the archive. Update the dep list.
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Sun, 17 Apr 2011 14:41:20 +0200
+
+libjogl2-java (2.0-rc1-1) unstable; urgency=low
+
+  * New upstream release (Closes: #614819)
+
+ -- Sylvestre Ledru <sylvestre@debian.org>  Tue, 01 Mar 2011 14:12:56 +0100
+
+

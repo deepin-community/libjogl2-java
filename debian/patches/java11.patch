@@ -1,0 +1,159 @@
+From: Markus Koschany <apo@debian.org>
+Date: Sat, 23 Feb 2019 16:32:26 +0100
+Subject: java11
+
+Fix FTBFS with Java 9+. The javah tool is gone, nativeHeaderDir in Ant must be
+used instead. The method getPeer() does not exist anymore.
+
+Bug-Debian: https://bugs.debian.org/893287
+Forwarded: no
+---
+ make/build-jogl.xml                                  |  9 ++++++---
+ make/build-nativewindow.xml                          |  5 ++++-
+ make/build-newt.xml                                  | 11 +----------
+ src/jogl/classes/com/jogamp/opengl/awt/GLCanvas.java |  4 ++--
+ 4 files changed, 13 insertions(+), 16 deletions(-)
+
+diff --git a/make/build-jogl.xml b/make/build-jogl.xml
+index f0ba86a..1bfae60 100644
+--- a/make/build-jogl.xml
++++ b/make/build-jogl.xml
+@@ -814,6 +814,7 @@
+                source="${target.sourcelevel}" 
+                target="${target.targetlevel}" 
+                bootclasspath="${target.rt.jar}"
++               nativeHeaderDir="${build.jogl}/gensrc/native/jogl"
+                debug="${javacdebug}" debuglevel="${javacdebuglevel}">
+             <classpath refid="gluegen-gl.classpath"/>
+             <src path="${src.java}" />
+@@ -828,6 +829,7 @@
+                source="${target.sourcelevel}" 
+                target="${target.targetlevel}" 
+                bootclasspath="${target.rt.jar}"
++               nativeHeaderDir="${build.jogl}/gensrc/native/jogl"
+                debug="${javacdebug}" debuglevel="${javacdebuglevel}">
+             <classpath refid="gluegen-gl.classpath"/>
+             <src path="${src.java}" />
+@@ -1094,6 +1096,7 @@
+                source="${target.sourcelevel}" 
+                target="${target.targetlevel}" 
+                bootclasspath="${target.rt.jar}"
++               nativeHeaderDir="${build.jogl}/gensrc/native/jogl"
+                debug="${javacdebug}" debuglevel="${javacdebuglevel}">
+             <classpath refid="nativewindow_gluegen.classpath"/>
+             <src path="${src.java}" />
+@@ -1130,6 +1133,7 @@
+                source="${target.sourcelevel}" 
+                target="${target.targetlevel}" 
+                bootclasspath="${target.rt.jar}"
++               nativeHeaderDir="${src.generated.c.libav}"
+                debug="${javacdebug}" debuglevel="${javacdebuglevel}">
+             <classpath refid="nativewindow_gluegen.classpath"/>
+             <src path="${src.java}" />
+@@ -1148,6 +1152,7 @@
+                source="${target.sourcelevel}" 
+                target="${target.targetlevel}" 
+                bootclasspath="${target.rt.jar}"
++               nativeHeaderDir="${build.jogl}/gensrc/native/jogl"
+                debug="${javacdebug}" debuglevel="${javacdebuglevel}">
+             <classpath refid="nativewindow_gluegen_android.classpath"/>
+             <src path="${src.java}" />
+@@ -1169,6 +1174,7 @@
+                source="${target.sourcelevel}" 
+                target="${target.targetlevel}" 
+                bootclasspath="${target.rt.jar}"
++               nativeHeaderDir="${build.jogl}/gensrc/native/jogl"
+                debug="${javacdebug}" debuglevel="${javacdebuglevel}">
+             <classpath refid="nativewindow_gluegen.classpath"/>
+             <src path="${src.java}" />
+@@ -1706,9 +1712,6 @@
+     </macrodef>  
+ 
+     <target name="c.build.jogl.prepare">
+-      <javah destdir="${build.jogl}/gensrc/native/jogl" classpath="${javah.classpath}" class="jogamp.opengl.GLDebugMessageHandler, jogamp.opengl.GLContextImpl" />
+-      <javah destdir="${src.generated.c.libav}" classpath="${javah.classpath}" class="jogamp.opengl.util.av.impl.FFMPEGStaticNatives,jogamp.opengl.util.av.impl.FFMPEGv08Natives,jogamp.opengl.util.av.impl.FFMPEGv09Natives,jogamp.opengl.util.av.impl.FFMPEGv10Natives,jogamp.opengl.util.av.impl.FFMPEGv11Natives" />
+-      <javah destdir="${src.generated.c.openmax}" classpath="${javah.classpath}" class="jogamp.opengl.util.av.impl.OMXGLMediaPlayer" />
+       <!-- Generate the waveout Mixer header -->
+       <!-- FIXME: this is temporary until we move this to another workspace -->
+       <!--javah destdir="${build.jogl}/gensrc/native/jogl" classpath="${javah.classpath}" class="com.jogamp.audio.windows.waveout.Mixer" /-->
+diff --git a/make/build-nativewindow.xml b/make/build-nativewindow.xml
+index c930cb3..abd3f05 100644
+--- a/make/build-nativewindow.xml
++++ b/make/build-nativewindow.xml
+@@ -81,6 +81,9 @@
+         <property name="java.part.macosx"
+                   value="com/jogamp/nativewindow/macosx/* jogamp/nativewindow/macosx/*" />
+ 
++        <property name="java.lib.dir.platform"
++                  value="/usr/lib/jvm/default-java/lib" />
++
+         <!-- condition excludes -->
+ 
+         <condition property="java.excludes.awt"
+@@ -334,6 +337,7 @@
+                source="${target.sourcelevel}" 
+                target="${target.targetlevel}" 
+                bootclasspath="${target.rt.jar}"
++               nativeHeaderDir="${src.generated.c}/X11"
+                debug="${javacdebug}" debuglevel="${javacdebuglevel}">
+             <classpath refid="swt_gluegen.classpath"/>
+             <src path="${src.java}" />
+@@ -799,7 +803,6 @@
+     </target>
+ 
+     <target name="c.build.nativewindow.windowlib.x11" if="isX11">
+-      <javah destdir="${src.generated.c}/X11" classpath="${javah.classpath}" class="jogamp.nativewindow.x11.X11Lib, jogamp.nativewindow.x11.X11Util" />
+ 
+       <c.build c.compiler.src.files="c.src.files.x11"
+                output.lib.name="nativewindow_x11"
+diff --git a/make/build-newt.xml b/make/build-newt.xml
+index 9c473b1..4e7bf76 100644
+--- a/make/build-newt.xml
++++ b/make/build-newt.xml
+@@ -254,6 +254,7 @@
+                source="${target.sourcelevel}" 
+                target="${target.targetlevel}" 
+                bootclasspath="${target.rt.jar}"
++               nativeHeaderDir="${src.generated.c}"
+                debug="${javacdebug}" debuglevel="${javacdebuglevel}">
+             <src path="${src.java}" />
+             <classpath refid="jogl_nativewindow_gluegen.classpath"/>
+@@ -777,16 +778,6 @@
+     </macrodef>
+ 
+     <target name="c.build.newt.prepare">
+-      <javah destdir="${src.generated.c}/KD"          classpath="${javah.classpath}" class="jogamp.newt.driver.kd.WindowDriver" />
+-
+-      <javah destdir="${src.generated.c}/IntelGDL"    classpath="${javah.classpath}" class="jogamp.newt.driver.intel.gdl.DisplayDriver, jogamp.newt.driver.intel.gdl.ScreenDriver, jogamp.newt.driver.intel.gdl.WindowDriver" />
+-
+-      <javah destdir="${src.generated.c}/bcm/egl"     classpath="${javah.classpath}" class="jogamp.newt.driver.bcm.egl.WindowDriver" />
+-      <javah destdir="${src.generated.c}/bcm/vc/iv"   classpath="${javah.classpath}" class="jogamp.newt.driver.bcm.vc.iv.DisplayDriver, jogamp.newt.driver.bcm.vc.iv.ScreenDriver, jogamp.newt.driver.bcm.vc.iv.WindowDriver" />
+-
+-      <javah destdir="${src.generated.c}/Windows"     classpath="${javah.classpath}" class="jogamp.newt.driver.windows.WindowDriver, jogamp.newt.driver.windows.ScreenDriver, jogamp.newt.driver.windows.DisplayDriver" />
+-      <javah destdir="${src.generated.c}/MacOSX"      classpath="${javah.classpath}" class="jogamp.newt.driver.macosx.WindowDriver, jogamp.newt.driver.macosx.ScreenDriver, jogamp.newt.driver.macosx.DisplayDriver" />
+-      <javah destdir="${src.generated.c}/X11"         classpath="${javah.classpath}" class="jogamp.newt.driver.x11.WindowDriver, jogamp.newt.driver.x11.ScreenDriver, jogamp.newt.driver.x11.RandR11, jogamp.newt.driver.x11.RandR13, jogamp.newt.driver.x11.DisplayDriver" />
+     </target>
+ 
+     <target name="c.build.newt.prepare.android" if="isAndroid">
+diff --git a/src/jogl/classes/com/jogamp/opengl/awt/GLCanvas.java b/src/jogl/classes/com/jogamp/opengl/awt/GLCanvas.java
+index 5f59f7e..b3064c7 100644
+--- a/src/jogl/classes/com/jogamp/opengl/awt/GLCanvas.java
++++ b/src/jogl/classes/com/jogamp/opengl/awt/GLCanvas.java
+@@ -629,7 +629,7 @@ public class GLCanvas extends Canvas implements AWTGLAutoDrawable, WindowClosing
+         awtWindowClosingProtocol.addClosingListener();
+ 
+         if(DEBUG) {
+-            System.err.println(getThreadName()+": Info: addNotify - end: peer: "+getPeer());
++            System.err.println(getThreadName()+": Info: addNotify - end: peer: ");
+         }
+     } finally {
+         _lock.unlock();
+@@ -806,7 +806,7 @@ public class GLCanvas extends Canvas implements AWTGLAutoDrawable, WindowClosing
+       }
+     }
+     if(DEBUG) {
+-        System.err.println(getThreadName()+": Info: removeNotify - end, peer: "+getPeer());
++        System.err.println(getThreadName()+": Info: removeNotify - end, peer: ");
+     }
+   }
+ 
