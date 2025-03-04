@@ -48,7 +48,7 @@ public class WindowDriver extends jogamp.newt.WindowImpl {
     static long nextWindowHandle = 1;
 
     @Override
-    protected void createNativeImpl() {
+    protected void createNativeImpl(boolean[] positionModified) {
         if(0!=getParentWindowHandle()) {
             throw new NativeWindowException("GDL Window does not support window parenting");
         }
@@ -86,7 +86,7 @@ public class WindowDriver extends jogamp.newt.WindowImpl {
 
     @Override
     protected final int getSupportedReconfigMaskImpl() {
-        return minimumReconfigStateMask;
+        return mutableSizePosReconfigStateMask;
     }
 
     @Override
@@ -115,7 +115,7 @@ public class WindowDriver extends jogamp.newt.WindowImpl {
             if(0 != ( STATE_MASK_VISIBLE & flags)) {
                 ((DisplayDriver)getScreen().getDisplay()).setFocus(this);
             }
-            visibleChanged(false, 0 != ( STATE_MASK_VISIBLE & flags));
+            visibleChanged(0 != ( STATE_MASK_VISIBLE & flags));
         }
 
         return true;
@@ -146,8 +146,8 @@ public class WindowDriver extends jogamp.newt.WindowImpl {
     private        native void SetBounds0(long surfaceHandle, int scrn_width, int scrn_height, int x, int y, int width, int height);
 
     private void updateBounds(final int x, final int y, final int width, final int height) {
-        definePosition(x, y);
-        defineSize(width, height);
+        defineWindowPosition(x, y);
+        defineWindowSize(width, height);
     }
 
     private long   surfaceHandle;

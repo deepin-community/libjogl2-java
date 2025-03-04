@@ -28,6 +28,7 @@
 
 package com.jogamp.newt.swt;
 
+import com.jogamp.common.util.locks.RecursiveLock;
 import com.jogamp.nativewindow.AbstractGraphicsConfiguration;
 import com.jogamp.nativewindow.AbstractGraphicsDevice;
 import com.jogamp.nativewindow.AbstractGraphicsScreen;
@@ -38,6 +39,7 @@ import com.jogamp.nativewindow.NativeSurface;
 import com.jogamp.nativewindow.NativeWindow;
 import com.jogamp.nativewindow.NativeWindowException;
 import com.jogamp.nativewindow.NativeWindowFactory;
+import com.jogamp.nativewindow.NativeWindowHolder;
 import com.jogamp.nativewindow.SurfaceUpdatedListener;
 import com.jogamp.nativewindow.WindowClosingProtocol;
 import com.jogamp.nativewindow.util.Insets;
@@ -46,13 +48,12 @@ import com.jogamp.nativewindow.util.Point;
 import com.jogamp.opengl.GLCapabilities;
 
 import jogamp.nativewindow.macosx.OSXUtil;
-import jogamp.nativewindow.windows.GDIUtil;
-import jogamp.nativewindow.x11.X11Lib;
 import jogamp.newt.Debug;
 import jogamp.newt.swt.SWTEDTUtil;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.SWTException;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
@@ -70,13 +71,17 @@ import com.jogamp.newt.util.EDTUtil;
  * Implementation allows use of custom {@link GLCapabilities}.
  * </p>
  */
-public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
+public class NewtCanvasSWT extends Canvas implements NativeWindowHolder, WindowClosingProtocol {
     private static final boolean DEBUG = Debug.debug("Window");
 
+    private final int iHashCode;
     private final AbstractGraphicsScreen screen;
 
-    private WindowClosingMode newtChildCloseOp = WindowClosingMode.DISPOSE_ON_CLOSE;
-    private volatile Rectangle clientArea;
+    private WindowClosingMode newtChildClosingMode = WindowClosingMode.DISPOSE_ON_CLOSE;
+    private final WindowClosingMode closingMode = WindowClosingMode.DISPOSE_ON_CLOSE;
+    private volatile org.eclipse.swt.graphics.Rectangle clientAreaPixels, clientAreaWindow;
+    /** pixelScale = pixelUnit / windowUnix */
+    private volatile float[] pixelScale = new float[] { 1f, 1f };
 
     private volatile SWTNativeWindow nativeWindow;
     private volatile Window newtChild = null;
@@ -109,6 +114,8 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
         return res[0];
     }
 
+    private final String shortName() { return "NewtCanvasSWT("+toHexString(iHashCode)+")"; }
+
     /**
      * Instantiates a NewtCanvas with a NEWT child.
      *
@@ -123,89 +130,221 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
      */
     public NewtCanvasSWT(final Composite parent, final int style, final Window child) {
         super(parent, style | SWT.NO_BACKGROUND);
+        iHashCode = this.hashCode();
 
         SWTAccessor.setRealized(this, true);
 
-        clientArea = getClientArea();
+        clientAreaPixels = SWTAccessor.getClientAreaInPixels(this);
+        clientAreaWindow = getClientArea();
+        if( 0 < clientAreaWindow.width && 0 < clientAreaWindow.height ) {
+            pixelScale[0] = clientAreaPixels.width / clientAreaWindow.width;
+            pixelScale[1] = clientAreaPixels.height / clientAreaWindow.height;
+        } else {
+            pixelScale[0] = 1f;
+            pixelScale[1] = 1f;
+        }
 
         final AbstractGraphicsDevice device = SWTAccessor.getDevice(this);
         screen = SWTAccessor.getScreen(device, -1 /* default */);
         nativeWindow = null;
 
+        // Bug 1362 fix or workaround: Seems SWT/GTK3 at least performs lazy initialization
+        // Minimal action required: setBackground of the parent canvas before reparenting!
+        setBackground(new Color(parent.getDisplay(), 255, 255, 255));
+
         if(null != child) {
             setNEWTChild(child);
         }
+        if(DEBUG) {
+            final long nsh = newtChildReady ? newtChild.getSurfaceHandle() : 0;
+            System.err.println("NewtCanvasSWT: "+
+                    ", ("+Thread.currentThread().getName()+"): newtChildReady "+newtChildReady+
+                    ", pixel "+clientAreaPixels.x+"/"+clientAreaPixels.y+" "+clientAreaPixels.width+"x"+clientAreaPixels.height+
+                    ", window "+clientAreaWindow.x+"/"+clientAreaWindow.y+" "+clientAreaWindow.width+"x"+clientAreaWindow.height+
+                    ", scale "+pixelScale[0]+"/"+pixelScale[1]+
+                    " - surfaceHandle 0x"+Long.toHexString(nsh));
+        }
 
-        final Listener listener = new Listener () {
-            @Override
-            public void handleEvent (final Event event) {
-                switch (event.type) {
-                case SWT.Paint:
-                    if( DEBUG ) {
-                        System.err.println("NewtCanvasSWT.Event.PAINT, "+event);
+        addListener (SWT.Paint, swtListener);
+        addListener (SWT.Move, swtListener);
+        addListener (SWT.Show, swtListener);
+        addListener (SWT.Hide, swtListener);
+        addListener (SWT.Resize, swtListener);
+        addListener (SWT.Dispose, swtListener);
+        addListener (SWT.Activate, swtListener);
+        addListener (SWT.Deactivate, swtListener);
+        addListener (SWT.FocusIn, swtListener);
+        addListener (SWT.FocusOut, swtListener);
+    }
+
+    /**
+     * Set's the NEWT {@link Window}'s size using {@link Window#setSize(int, int)}.
+     * <p>
+     * For all non-native DPI autoscale platforms method uses {@link SWTAccessor#deviceZoomScaleUp(Point)},
+     * which multiplies the given {@link Rectangle} size with {@link SWTAccessor#getDeviceZoomScalingFactor()}
+     * to emulate DPI scaling, see Bug 1422.
+     * </p>
+     * <p>
+     * Otherwise this method uses the given {@link Rectangle} as-is.
+     * </p>
+     * <p>
+     * Currently native DPI autoscale platforms are
+     * <ul>
+     *  <li>{@link SWTAccessor#isOSX}</li>
+     * </ul>
+     * hence the emulated DPI scaling is enabled for all other platforms.
+     * </p>
+     * @param r containing desired size
+     */
+    private final void setNewtChildSize(final org.eclipse.swt.graphics.Rectangle r) {
+        if( !SWTAccessor.isOSX ) {
+            final Point p = SWTAccessor.deviceZoomScaleUp(new Point(r.width, r.height));
+            newtChild.setSize(p.getX(), p.getY());
+        } else {
+            newtChild.setSize(r.width, r.height);
+        }
+    }
+    /**
+     * Return scaled-up value {@code scaleUp} using {@link SWTAccessor#deviceZoomScaleUp(int)}
+     * for all non-native DPI autoscale platforms, currently !{@link SWTAccessor#isOSX}.
+     * <p>
+     * Return passthrough value {@code passthrough} unchanged
+     * for all native DPI autoscale platforms, currently {@link SWTAccessor#isOSX}.
+     * </p>
+     * <p>
+     * See {@link #setNewtChildSize(Rectangle)}
+     * </p>
+     * @param scaleUp value to be used for non-native DPI autoscale platforms for upscale
+     * @param passthrough value to be used for native DPI autoscale platforms for passthrough
+     */
+    private final int newtScaleUp(final int scaleUp, final int passthrough) {
+        if( !SWTAccessor.isOSX ) {
+            return SWTAccessor.deviceZoomScaleUp(scaleUp);
+        } else {
+            return passthrough;
+        }
+    }
+    private final Listener swtListener = new Listener () {
+        @Override
+        public void handleEvent (final Event event) {
+            switch (event.type) {
+            case SWT.Paint:
+                if( DEBUG ) {
+                    System.err.println(shortName()+".Event.PAINT, "+event);
+                    // Cannot invoke "com.jogamp.newt.Window.getDelegatedWindow()" because the return value of "com.jogamp.newt.swt.NewtCanvasSWT.access$200(com.jogamp.newt.swt.NewtCanvasSWT)" is null
+                    // System.err.println(shortName()+".Event.PAINT, "+newtChild.getDelegatedWindow().toSimpleString());
+                }
+                if( validateNative() && newtChildReady ) {
+                    if( postSetSize ) {
+                        setNewtChildSize(clientAreaWindow);
+                        postSetSize = false;
                     }
-                    if( null != nativeWindow || validateNative() ) {
-                        if( newtChildReady ) {
-                            if( postSetSize ) {
-                                newtChild.setSize(clientArea.width, clientArea.height);
-                                postSetSize = false;
-                            }
-                            if( postSetPos ) {
-                                newtChild.setPosition(clientArea.x, clientArea.y);
-                                postSetPos = false;
-                            }
-                            newtChild.windowRepaint(0, 0, clientArea.width, clientArea.height);
-                        }
+                    if( postSetPos ) {
+                        newtChild.setPosition(clientAreaWindow.x, clientAreaWindow.y);
+                        postSetPos = false;
                     }
-                    break;
-                case SWT.Move:
-                    if( DEBUG ) {
-                        System.err.println("NewtCanvasSWT.Event.MOVE, "+event);
-                    }
-                    // updatePosSizeCheck();
-                    break;
-                case SWT.Resize:
-                    if( DEBUG ) {
-                        System.err.println("NewtCanvasSWT.Event.RESIZE, "+event);
-                    }
-                    updateSizeCheck();
-                    break;
-                case SWT.Dispose:
-                    if( DEBUG ) {
-                        System.err.println("NewtCanvasSWT.Event.DISPOSE, "+event);
-                    }
-                    NewtCanvasSWT.this.dispose();
-                    break;
-                default:
-                    if( DEBUG ) {
-                        System.err.println("NewtCanvasSWT.Event.misc: "+event.type+", "+event);
-                    }
+                    newtChild.windowRepaint(0, 0, clientAreaPixels.width, clientAreaPixels.height);
+                }
+                break;
+            case SWT.Move:
+                if( DEBUG ) {
+                    System.err.println(shortName()+".Event.MOVE, "+event);
+                    // System.err.println(shortName()+".Event.MOVE, "+newtChild.getDelegatedWindow().toSimpleString());
+                }
+                break;
+            case SWT.Show:
+                if( DEBUG ) {
+                    System.err.println(shortName()+".Event.SHOW, "+event);
+                    // System.err.println(shortName()+".Event.SHOW, "+newtChild.getDelegatedWindow().toSimpleString());
+                }
+                if( newtChildReady ) {
+                    newtChild.setVisible(true /* wait */, true /* visible */);
+                }
+                break;
+            case SWT.Hide:
+                if( DEBUG ) {
+                    System.err.println(shortName()+".Event.HIDE, "+event);
+                    // System.err.println(shortName()+".Event.HIDE, "+newtChild.getDelegatedWindow().toSimpleString());
+                }
+                if( newtChildReady ) {
+                    newtChild.setVisible(true /* wait */, false /* visible */);
+                }
+                break;
+            case SWT.Resize:
+                if( DEBUG ) {
+                    System.err.println(shortName()+".Event.RESIZE, "+event);
+                    // System.err.println(shortName()+".Event.RESIZE, "+newtChild.getDelegatedWindow().toSimpleString());
+                }
+                if( isNativeValid() ) {
+                    // ensure this is being called if already valid
+                    updatePosSizeCheck();
+                } else {
+                    validateNative();
+                }
+                break;
+            case SWT.Dispose:
+                if( DEBUG ) {
+                    System.err.println(shortName()+".Event.DISPOSE, "+event);
+                    // Cannot invoke "com.jogamp.newt.Window.getDelegatedWindow()" because the return value of "com.jogamp.newt.swt.NewtCanvasSWT.access$200(com.jogamp.newt.swt.NewtCanvasSWT)" is null
+                    // System.err.println(shortName()+".Event.DISPOSE, "+newtChild.getDelegatedWindow().toSimpleString());
+                }
+                NewtCanvasSWT.this.dispose();
+                break;
+            case SWT.Activate: // receives focus ??
+                if( DEBUG ) {
+                    System.err.println(shortName()+".Event.ACTIVATE, "+event);
+                    // System.err.println(shortName()+".Event.ACTIVATE, "+newtChild.getDelegatedWindow().toSimpleString());
+                }
+                break;
+            case SWT.Deactivate: // lost focus ??
+                if( DEBUG ) {
+                    System.err.println(shortName()+".Event.DEACTIVATE, "+event);
+                    // System.err.println(shortName()+".Event.DEACTIVATE, "+newtChild.getDelegatedWindow().toSimpleString());
+                }
+                break;
+            case SWT.FocusIn: // receives focus
+                if( DEBUG ) {
+                    System.err.println(shortName()+".Event.FOCUS_IN, "+event);
+                    // System.err.println(shortName()+".Event.FOCUS_IN, "+newtChild.getDelegatedWindow().toSimpleString());
+                }
+                if( newtChildReady ) {
+                    newtChild.requestFocus(false /* wait */);
+                }
+                break;
+            case SWT.FocusOut: // lost focus
+                if( DEBUG ) {
+                    System.err.println(shortName()+".Event.FOCUS_OUT, "+event);
+                    // System.err.println(shortName()+".Event.FOCUS_OUT, "+newtChild.getDelegatedWindow().toSimpleString());
+                }
+                // we lack newtChild.releaseFocus(..) as this should be handled by the WM
+                break;
+            default:
+                if( DEBUG ) {
+                    System.err.println(shortName()+".Event.misc: "+event.type+", "+event);
+                    // System.err.println(shortName()+".Event.misc: "+newtChild.getDelegatedWindow().toSimpleString());
                 }
             }
-        };
-        // addListener (SWT.Move, listener);
-        addListener (SWT.Resize, listener);
-        addListener (SWT.Paint, listener);
-        addListener (SWT.Dispose, listener);
-    }
+        }
+    };
 
     @Override
     public void setBounds(final int x, final int y, final int width, final int height) {
     	super.setBounds(x, y, width, height);
     	if( DEBUG ) {
-    	    System.err.println("NewtCanvasSWT.setBounds: "+x+"/"+y+" "+width+"x"+height);
+    	    System.err.println(shortName()+".setBounds: "+x+"/"+y+" "+width+"x"+height);
     	}
-    	if( SWTAccessor.isOSX ) {
-            // Force newtChild to update its size and position (OSX only)
-    	    updatePosSizeCheck(x, y, width, height, true /* updatePos */);
-    	}
+    	updatePosSizeCheck();
     }
 
-    /** assumes nativeWindow == null ! */
+    protected final boolean isNativeValid() { return null != nativeWindow; }
+
     protected final boolean validateNative() {
-        updateSizeCheck();
-        final Rectangle nClientArea = clientArea;
-        if(0 >= nClientArea.width || 0 >= nClientArea.height) {
+        if( null != nativeWindow ) {
+            return true; // already valid
+        }
+        updatePosSizeCheck();
+        final org.eclipse.swt.graphics.Rectangle nClientAreaWindow = clientAreaWindow;
+        if(0 >= nClientAreaWindow.width || 0 >= nClientAreaWindow.height) {
             return false;
         }
         screen.getDevice().open();
@@ -215,7 +354,7 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
         final int visualID = SWTAccessor.getNativeVisualID(screen.getDevice(), nativeWindowHandle);
         final boolean visualIDValid = NativeWindowFactory.isNativeVisualIDValidForProcessing(visualID);
         if(DEBUG) {
-            System.err.println("NewtCanvasSWT.validateNative() windowHandle 0x"+Long.toHexString(nativeWindowHandle)+", visualID 0x"+Integer.toHexString(visualID)+", valid "+visualIDValid);
+            System.err.println(shortName()+".validateNative() windowHandle 0x"+Long.toHexString(nativeWindowHandle)+", visualID 0x"+Integer.toHexString(visualID)+", valid "+visualIDValid);
         }
         if( visualIDValid ) {
             /* Get the nativewindow-Graphics Device associated with this control (which is determined by the parent Composite).
@@ -224,7 +363,7 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
             final GraphicsConfigurationFactory factory = GraphicsConfigurationFactory.getFactory(screen.getDevice(), caps);
             final AbstractGraphicsConfiguration config = factory.chooseGraphicsConfiguration( caps, caps, null, screen, visualID );
             if(DEBUG) {
-                System.err.println("NewtCanvasSWT.validateNative() factory: "+factory+", windowHandle 0x"+Long.toHexString(nativeWindowHandle)+", visualID 0x"+Integer.toHexString(visualID)+", chosen config: "+config);
+                System.err.println(shortName()+".validateNative() factory: "+factory+", windowHandle 0x"+Long.toHexString(nativeWindowHandle)+", visualID 0x"+Integer.toHexString(visualID)+", chosen config: "+config);
                 // Thread.dumpStack();
             }
             if (null == config) {
@@ -233,58 +372,56 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
 
             nativeWindow = new SWTNativeWindow(config, nativeWindowHandle);
             reparentWindow( true );
-        	if( SWTAccessor.isOSX && newtChildReady ) {
-        	    // initial positioning for OSX, called when the window is created
-        	    newtChild.setPosition(getLocation().x, getLocation().y);
-        	}
         }
-
         return null != nativeWindow;
     }
 
-    protected final void updateSizeCheck() {
-        final Rectangle nClientArea = getClientArea();
-        if( null != nClientArea ) {
-            updatePosSizeCheck(nClientArea.x, nClientArea.y, nClientArea.width, nClientArea.height, false /* updatePos */);
-        }
-    }
     protected final void updatePosSizeCheck() {
-        final Rectangle nClientArea = getClientArea();
-        if( null != nClientArea ) {
-            updatePosSizeCheck(nClientArea.x, nClientArea.y, nClientArea.width, nClientArea.height, true /* updatePos */);
-        }
-    }
-    protected final void updatePosSizeCheck(final int newX, final int newY, final int newWidth, final int newHeight, final boolean updatePos) {
+        final org.eclipse.swt.graphics.Rectangle oClientAreaWindow = clientAreaWindow;
+        final org.eclipse.swt.graphics.Rectangle nClientAreaPixels = SWTAccessor.getClientAreaInPixels(this);
+        final org.eclipse.swt.graphics.Rectangle nClientAreaWindow = getClientArea();
         final boolean sizeChanged, posChanged;
-        final Rectangle nClientArea;
         {
-            final Rectangle oClientArea = clientArea;
-            sizeChanged = newWidth != oClientArea.width || newHeight != oClientArea.height;
-            posChanged = newX != oClientArea.x || newY != oClientArea.y;
+            sizeChanged = nClientAreaWindow.width != oClientAreaWindow.width || nClientAreaWindow.height != oClientAreaWindow.height;
+            posChanged = nClientAreaWindow.x != oClientAreaWindow.x || nClientAreaWindow.y != oClientAreaWindow.y;
             if( sizeChanged || posChanged ) {
-                nClientArea = new Rectangle(updatePos ? newX : oClientArea.x, updatePos ? newY : oClientArea.y, newWidth, newHeight);
-                clientArea = nClientArea;
-            } else {
-                nClientArea = clientArea;
+                clientAreaPixels = nClientAreaPixels;
+                clientAreaWindow = nClientAreaWindow;
+                if( 0 < nClientAreaWindow.width && 0 < nClientAreaWindow.height ) {
+                    pixelScale[0] = nClientAreaPixels.width / nClientAreaWindow.width;
+                    pixelScale[1] = nClientAreaPixels.height / nClientAreaWindow.height;
+                } else {
+                    pixelScale[0] = 1f;
+                    pixelScale[1] = 1f;
+                }
             }
         }
         if(DEBUG) {
             final long nsh = newtChildReady ? newtChild.getSurfaceHandle() : 0;
-            System.err.println("NewtCanvasSWT.updatePosSizeCheck: sizeChanged "+sizeChanged+", posChanged "+posChanged+", updatePos "+updatePos+", ("+Thread.currentThread().getName()+"): newtChildReady "+newtChildReady+", "+nClientArea.x+"/"+nClientArea.y+" "+nClientArea.width+"x"+nClientArea.height+" - surfaceHandle 0x"+Long.toHexString(nsh));
+            System.err.println(shortName()+".updatePosSizeCheck: sizeChanged "+sizeChanged+", posChanged "+posChanged+
+                    ", ("+Thread.currentThread().getName()+"): newtChildReady "+newtChildReady+
+                    ", pixel "+nClientAreaPixels.x+"/"+nClientAreaPixels.y+" "+nClientAreaPixels.width+"x"+nClientAreaPixels.height+
+                    ", window "+nClientAreaWindow.x+"/"+nClientAreaWindow.y+" "+nClientAreaWindow.width+"x"+nClientAreaWindow.height+
+                    ", scale "+pixelScale[0]+"/"+pixelScale[1]+
+                    " - surfaceHandle 0x"+Long.toHexString(nsh));
         }
         if( sizeChanged ) {
             if( newtChildReady ) {
-                newtChild.setSize(nClientArea.width, nClientArea.height);
+                setNewtChildSize(nClientAreaWindow);
+                newtChild.setSurfaceScale(pixelScale);
             } else {
                 postSetSize = true;
             }
         }
-        if( updatePos && posChanged ) {
+        if( posChanged ) {
             if( newtChildReady ) {
-                newtChild.setPosition(nClientArea.x, nClientArea.y);
+                newtChild.setPosition(nClientAreaWindow.x, nClientAreaWindow.y);
             } else {
                 postSetPos = true;
             }
+        }
+        if( DEBUG ) {
+            System.err.println(shortName()+".updatePosSizeCheck.X END");
         }
     }
 
@@ -302,12 +439,30 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
      *   <li> Remove reference to the NEWT Child</li>
      * </ul>
      * @see Window#destroy()
+     * @throws SWTException If this method is not called
+     * {@link SWTAccessor#isOnSWTThread(org.eclipse.swt.widgets.Display) from the SWT thread},
+     * an {@link SWTException} is thrown for compliance across platforms.
+     * User may utilize {@link SWTAccessor#invokeOnSWTThread(org.eclipse.swt.widgets.Display, boolean, Runnable)}.
      */
     @Override
-    public void dispose() {
+    public void dispose() throws SWTException {
+        if( !SWTAccessor.isOnSWTThread( getDisplay() ) ) {
+            throw new SWTException("Invalid thread access");
+        }
+        removeListener (SWT.Paint, swtListener);
+        removeListener (SWT.Move, swtListener);
+        removeListener (SWT.Show, swtListener);
+        removeListener (SWT.Hide, swtListener);
+        removeListener (SWT.Resize, swtListener);
+        removeListener (SWT.Dispose, swtListener);
+        removeListener (SWT.Activate, swtListener);
+        removeListener (SWT.Deactivate, swtListener);
+        removeListener (SWT.FocusIn, swtListener);
+        removeListener (SWT.FocusOut, swtListener);
+
         if( null != newtChild ) {
             if(DEBUG) {
-                System.err.println("NewtCanvasSWT.dispose.0: EDTUtil cur "+newtChild.getScreen().getDisplay().getEDTUtil()+
+                System.err.println(shortName()+".dispose.0: EDTUtil cur "+newtChild.getScreen().getDisplay().getEDTUtil()+
                                    ",\n\t"+newtChild);
             }
             configureNewtChild(false);
@@ -321,26 +476,28 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
         super.dispose();
     }
 
-    private Point getParentLocationOnScreen() {
-        final org.eclipse.swt.graphics.Point[] parentLoc = new org.eclipse.swt.graphics.Point[] { null };
-        SWTAccessor.invoke(true, new Runnable() {
-            public void run() {
-                parentLoc[0] = getParent().toDisplay(0,0);
-            } } );
-        return new Point(parentLoc[0].x, parentLoc[0].y);
-    }
-
-    /** @return this SWT Canvas NativeWindow representation, may be null in case it has not been realized. */
+    /**
+     * {@inheritDoc}
+     * @return this SWT Canvas {@link NativeWindow} representation, may be null in case it has not been realized
+     */
+    @Override
     public NativeWindow getNativeWindow() { return nativeWindow; }
+
+    /**
+     * {@inheritDoc}
+     * @return this SWT Canvas {@link NativeSurface} representation, may be null in case it has not been realized
+     */
+    @Override
+    public NativeSurface getNativeSurface() { return nativeWindow; }
 
     @Override
     public WindowClosingMode getDefaultCloseOperation() {
-        return newtChildCloseOp; // TODO: implement ?!
+        return closingMode;
     }
 
     @Override
     public WindowClosingMode setDefaultCloseOperation(final WindowClosingMode op) {
-        return newtChildCloseOp = op; // TODO: implement ?!
+        return closingMode; // TODO: implement!
     }
 
 
@@ -367,11 +524,21 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
      *       via {@link Display#setEDTUtil(EDTUtil)}.
      * </p>
      * @return the previous attached newt child.
+     *
+     * @throws SWTException If this method is not called
+     * {@link SWTAccessor#isOnSWTThread(org.eclipse.swt.widgets.Display) from the SWT thread},
+     * an {@link SWTException} is thrown for compliance across platforms.
+     * User may utilize {@link SWTAccessor#invokeOnSWTThread(org.eclipse.swt.widgets.Display, boolean, Runnable)}.
      */
-    public Window setNEWTChild(final Window newChild) {
+    public Window setNEWTChild(final Window newChild) throws SWTException {
+        if( !SWTAccessor.isOnSWTThread( getDisplay() ) ) {
+            throw new SWTException("Invalid thread access");
+        }
+
+        // if( org.eclipse.swt.widgets.Display.s)
         final Window prevChild = newtChild;
         if(DEBUG) {
-            System.err.println("NewtCanvasSWT.setNEWTChild.0: win "+newtWinHandleToHexString(prevChild)+" -> "+newtWinHandleToHexString(newChild));
+            System.err.println(shortName()+".setNEWTChild.0: win "+newtWinHandleToHexString(prevChild)+" -> "+newtWinHandleToHexString(newChild));
         }
         // remove old one
         if(null != newtChild) {
@@ -401,10 +568,10 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
         if( null != newtChild ) {
             newtChild.setKeyboardFocusHandler(null);
             if(attach) {
-                newtChildCloseOp = newtChild.setDefaultCloseOperation(WindowClosingMode.DO_NOTHING_ON_CLOSE);
+                newtChildClosingMode = newtChild.setDefaultCloseOperation(WindowClosingMode.DO_NOTHING_ON_CLOSE);
             } else {
                 newtChild.setFocusAction(null);
-                newtChild.setDefaultCloseOperation(newtChildCloseOp);
+                newtChild.setDefaultCloseOperation(newtChildClosingMode);
             }
         }
     }
@@ -414,14 +581,12 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
             return; // nop
         }
         if(DEBUG) {
-            System.err.println("NewtCanvasSWT.reparentWindow.0: add="+add+", win "+newtWinHandleToHexString(newtChild)+", EDTUtil: cur "+newtChild.getScreen().getDisplay().getEDTUtil());
+            System.err.println(shortName()+".reparentWindow.0: add="+add+", win "+newtWinHandleToHexString(newtChild)+", EDTUtil: cur "+newtChild.getScreen().getDisplay().getEDTUtil());
         }
 
         newtChild.setFocusAction(null); // no AWT focus traversal ..
         if(add) {
-            updateSizeCheck();
-            final int w = clientArea.width;
-            final int h = clientArea.height;
+            updatePosSizeCheck();
 
             // set SWT EDT and start it
             {
@@ -431,10 +596,12 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
                 newtDisplay.setEDTUtil( edtUtil );
             }
 
-            newtChild.setSize(w, h);
+            setNewtChildSize(clientAreaWindow);
             newtChild.reparentWindow(nativeWindow, -1, -1, Window.REPARENT_HINT_BECOMES_VISIBLE);
+            newtChild.setPosition(clientAreaWindow.x, clientAreaWindow.y);
             newtChild.setVisible(true);
             configureNewtChild(true);
+            newtChild.setSurfaceScale(pixelScale); // ensure this to be set after creation, otherwise updatePosSizeCheck is being used
             newtChild.sendWindowEvent(WindowEvent.EVENT_WINDOW_RESIZED); // trigger a resize/relayout to listener
 
             // force this SWT Canvas to be focus-able,
@@ -446,7 +613,7 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
             newtChild.reparentWindow(null, -1, -1, 0 /* hints */);
         }
         if(DEBUG) {
-            System.err.println("NewtCanvasSWT.reparentWindow.X: add="+add+", win "+newtWinHandleToHexString(newtChild)+", EDTUtil: cur "+newtChild.getScreen().getDisplay().getEDTUtil());
+            System.err.println(shortName()+".reparentWindow.X: add="+add+", win "+newtWinHandleToHexString(newtChild)+", EDTUtil: cur "+newtChild.getScreen().getDisplay().getEDTUtil());
         }
     }
 
@@ -478,6 +645,9 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
                 this.insets = new Insets(0, 0, 0, 0);
             }
         }
+
+        @Override
+        public RecursiveLock getLock() { return null; }
 
         @Override
         public int lockSurface() throws NativeWindowException, RuntimeException {
@@ -518,33 +688,58 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
         }
 
         @Override
+        public int getX() {
+            return 0;
+        }
+
+        @Override
+        public int getY() {
+            return 0;
+        }
+
+        @Override
         public int getWidth() {
-            return getSurfaceWidth(); // FIXME: Use 'scale' or an actual window-width
+            return newtScaleUp(clientAreaWindow.width, clientAreaWindow.width);
         }
 
         @Override
         public int getHeight() {
-            return getSurfaceHeight(); // FIXME: Use 'scale' or an actual window-width
+            return newtScaleUp(clientAreaWindow.height, clientAreaWindow.height);
+        }
+
+        @Override
+        public final com.jogamp.nativewindow.util.Rectangle getBounds() {
+            return new com.jogamp.nativewindow.util.Rectangle(getX(), getY(), getWidth(), getHeight());
+        }
+
+        @Override
+        public final com.jogamp.nativewindow.util.Rectangle getSurfaceBounds() {
+            return new com.jogamp.nativewindow.util.Rectangle(getX(), getY(),
+                                                              getSurfaceWidth(), getSurfaceHeight());
         }
 
         @Override
         public final int[] convertToWindowUnits(final int[] pixelUnitsAndResult) {
-            return pixelUnitsAndResult; // FIXME HiDPI: use 'pixelScale'
+            pixelUnitsAndResult[0] /= pixelScale[0];
+            pixelUnitsAndResult[1] /= pixelScale[1];
+            return pixelUnitsAndResult;
         }
 
         @Override
         public final int[] convertToPixelUnits(final int[] windowUnitsAndResult) {
-            return windowUnitsAndResult; // FIXME HiDPI: use 'pixelScale'
+            windowUnitsAndResult[0] *= pixelScale[0];
+            windowUnitsAndResult[1] *= pixelScale[1];
+            return windowUnitsAndResult;
         }
 
         @Override
         public int getSurfaceWidth() {
-            return clientArea.width;
+            return newtScaleUp(clientAreaWindow.width, clientAreaPixels.width);
         }
 
         @Override
         public int getSurfaceHeight() {
-            return clientArea.height;
+            return newtScaleUp(clientAreaWindow.height, clientAreaPixels.height);
         }
 
         @Override
@@ -587,31 +782,8 @@ public class NewtCanvasSWT extends Canvas implements WindowClosingProtocol {
         }
 
         @Override
-        public int getX() {
-            return 0;
-        }
-
-        @Override
-        public int getY() {
-            return 0;
-        }
-
-        @Override
         public Point getLocationOnScreen(final Point point) {
-            final Point los; // client window location on screen
-            if( SWTAccessor.isOSX ) {
-            	// let getLOS provide the point where the child window may be placed
-            	// from, as taken from SWT Control.toDisplay();
-            	los = getParentLocationOnScreen();
-            } else if (SWTAccessor.isX11) {
-                final AbstractGraphicsScreen s = config.getScreen();
-                los = X11Lib.GetRelativeLocation(s.getDevice().getHandle(), s.getIndex(), nativeWindowHandle, 0 /*root win*/, 0, 0);
-            } else if (SWTAccessor.isWindows) {
-                los = GDIUtil.GetRelativeLocation( nativeWindowHandle, 0 /*root win*/, 0, 0);
-            } else {
-                // fall-back to 0/0
-                los = new Point(0, 0);
-            }
+            final Point los = NativeWindowFactory.getLocationOnScreen(this); // client window location on screen
             if(null!=point) {
               return point.translate(los);
             } else {

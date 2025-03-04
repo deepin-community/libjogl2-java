@@ -31,8 +31,11 @@ import java.util.ArrayList;
 
 
 import com.jogamp.graph.geom.Vertex;
+import com.jogamp.graph.geom.plane.Winding;
 import com.jogamp.graph.geom.Triangle;
+import com.jogamp.opengl.math.Vec3f;
 import com.jogamp.opengl.math.VectorUtil;
+import com.jogamp.opengl.math.Vert2fImmutable;
 import com.jogamp.opengl.math.geom.AABBox;
 
 public class Loop {
@@ -40,7 +43,7 @@ public class Loop {
     private final AABBox box = new AABBox();
     private GraphOutline initialOutline = null;
 
-    public Loop(final GraphOutline polyline, final VectorUtil.Winding winding){
+    public Loop(final GraphOutline polyline, final Winding winding){
         initialOutline = polyline;
         this.root = initFromPolyline(initialOutline, winding);
     }
@@ -90,67 +93,89 @@ public class Loop {
         return (root.getNext().getNext().getNext() == root);
     }
 
-    /**Create a connected list of half edges (loop)
+    private static float area(final ArrayList<GraphVertex> vertices) {
+        final int n = vertices.size();
+        float area = 0.0f;
+        for (int p = n - 1, q = 0; q < n; p = q++) {
+            final Vec3f pCoord = vertices.get(p).getCoord();
+            final Vec3f qCoord = vertices.get(q).getCoord();
+            area += pCoord.x() * qCoord.y() - qCoord.x() * pCoord.y();
+        }
+        return area;
+    }
+    private static Winding getWinding(final ArrayList<GraphVertex> vertices) {
+        return area(vertices) >= 0 ? Winding.CCW : Winding.CW ;
+    }
+
+    /**
+     * Create a connected list of half edges (loop)
      * from the boundary profile
-     * @param reqWinding requested winding of edges (CCW or CW)
+     * @param reqWinding requested winding of edges, either {@link Winding#CCW} for {@link HEdge#BOUNDARY} or {@link Winding#CW} for {@link HEdge#HOLE}
      */
-    private HEdge initFromPolyline(final GraphOutline outline, final VectorUtil.Winding reqWinding){
+    private HEdge initFromPolyline(final GraphOutline outline, final Winding reqWinding){
         final ArrayList<GraphVertex> vertices = outline.getGraphPoint();
 
         if(vertices.size()<3) {
             throw new IllegalArgumentException("outline's vertices < 3: " + vertices.size());
         }
-        final VectorUtil.Winding hasWinding = VectorUtil.getWinding(
-                                 vertices.get(0).getPoint(),
-                                 vertices.get(1).getPoint(),
-                                 vertices.get(2).getPoint());
-        //FIXME: handle case when vertices come inverted - Rami
-        // skips inversion CW -> CCW
-        final boolean invert =  hasWinding != reqWinding &&
-                                reqWinding == VectorUtil.Winding.CW;
+        final Winding hasWinding = getWinding( vertices ); // requires area-winding detection
 
-        final int max;
-        final int edgeType = reqWinding == VectorUtil.Winding.CCW ? HEdge.BOUNDARY : HEdge.HOLE ;
-        int index;
+        final int edgeType = reqWinding == Winding.CCW ? HEdge.BOUNDARY : HEdge.HOLE ;
         HEdge firstEdge = null;
         HEdge lastEdge = null;
 
-        if(!invert) {
-            max = vertices.size();
-            index = 0;
-        } else {
-            max = -1;
-            index = vertices.size() -1;
-        }
+        /**
+         * The winding conversion CW -> CCW can't be resolved here (-> Rami?)
+         * Therefore we require outline boundaries to be in CCW, see API-doc comment in OutlineShape.
+         *
+         * Original comment:
+         * FIXME: handle case when vertices come inverted - Rami
+         * Skips inversion CW -> CCW
+         */
+        if( hasWinding == reqWinding || reqWinding == Winding.CCW ) {
+            // Correct Winding or skipped CW -> CCW (no inversion possible here, too late ??)
+            final int max = vertices.size() - 1;
+            for(int index = 0; index <= max; ++index) {
+                final GraphVertex v1 = vertices.get(index);
+                box.resize(v1.x(), v1.y(), v1.z());
 
-        while(index != max){
-            final GraphVertex v1 = vertices.get(index);
-            box.resize(v1.getX(), v1.getY(), v1.getZ());
+                final HEdge edge = new HEdge(v1, edgeType);
 
-            final HEdge edge = new HEdge(v1, edgeType);
-
-            v1.addEdge(edge);
-            if(lastEdge != null) {
-                lastEdge.setNext(edge);
-                edge.setPrev(lastEdge);
-            } else {
-                firstEdge = edge;
-            }
-
-            if(!invert) {
-                if(index == vertices.size()-1) {
+                v1.addEdge(edge);
+                if(lastEdge != null) {
+                    lastEdge.setNext(edge);
+                    edge.setPrev(lastEdge);
+                } else {
+                    firstEdge = edge;
+                }
+                if(index == max ) {
                     edge.setNext(firstEdge);
                     firstEdge.setPrev(edge);
                 }
-                index++;
-            } else {
+                lastEdge = edge;
+            }
+        } else { // if( reqWinding == Winding.CW ) {
+            // CCW -> CW
+            for(int index = vertices.size() - 1; index >= 0; --index) {
+                final GraphVertex v1 = vertices.get(index);
+                box.resize(v1.x(), v1.y(), v1.z());
+
+                final HEdge edge = new HEdge(v1, edgeType);
+
+                v1.addEdge(edge);
+                if(lastEdge != null) {
+                    lastEdge.setNext(edge);
+                    edge.setPrev(lastEdge);
+                } else {
+                    firstEdge = edge;
+                }
+
                 if (index == 0) {
                     edge.setNext(firstEdge);
                     firstEdge.setPrev(edge);
                 }
-                index--;
+                lastEdge = edge;
             }
-            lastEdge = edge;
         }
         return firstEdge;
     }
@@ -158,7 +183,7 @@ public class Loop {
     public void addConstraintCurve(final GraphOutline polyline) {
         //        GraphOutline outline = new GraphOutline(polyline);
         /**needed to generate vertex references.*/
-        initFromPolyline(polyline, VectorUtil.Winding.CW);
+        initFromPolyline(polyline, Winding.CW); // -> HEdge.HOLE
 
         final GraphVertex v3 = locateClosestVertex(polyline);
         final HEdge v3Edge = v3.findBoundEdge();
@@ -198,7 +223,7 @@ public class Loop {
             final GraphVertex nextV = initVertices.get(i+1);
             for(int pos=0; pos<vertices.size(); pos++) {
                 final GraphVertex cand = vertices.get(pos);
-                final float distance = VectorUtil.distVec3(v.getCoord(), cand.getCoord());
+                final float distance = v.getCoord().dist( cand.getCoord() );
                 if(distance < minDistance){
                     for (final GraphVertex vert:vertices){
                         if(vert == v || vert == nextV || vert == cand)
@@ -229,7 +254,7 @@ public class Loop {
     private HEdge findClosestValidNeighbor(final HEdge edge, final boolean delaunay) {
         final HEdge next = root.getNext();
 
-        if(!VectorUtil.ccw(root.getGraphPoint().getPoint(), next.getGraphPoint().getPoint(),
+        if(!VectorUtil.isCCW(root.getGraphPoint().getPoint(), next.getGraphPoint().getPoint(),
                 edge.getGraphPoint().getPoint())){
             return null;
         }
@@ -288,7 +313,7 @@ public class Loop {
     }
 
     public boolean checkInside(final Vertex v) {
-        if(!box.contains(v.getX(), v.getY(), v.getZ())){
+        if(!box.contains(v.x(), v.y(), v.z())){
             return false;
         }
 
@@ -299,8 +324,8 @@ public class Loop {
             final Vertex v2 = current.getGraphPoint().getPoint();
             final Vertex v1 = next.getGraphPoint().getPoint();
 
-            if ( ((v1.getY() > v.getY()) != (v2.getY() > v.getY())) &&
-                  (v.getX() < (v2.getX() - v1.getX()) * (v.getY() - v1.getY()) / (v2.getY() - v1.getY()) + v1.getX()) ){
+            if ( ((v1.y() > v.y()) != (v2.y() > v.y())) &&
+                  (v.x() < (v2.x() - v1.x()) * (v.y() - v1.y()) / (v2.y() - v1.y()) + v1.x()) ){
                 inside = !inside;
             }
 

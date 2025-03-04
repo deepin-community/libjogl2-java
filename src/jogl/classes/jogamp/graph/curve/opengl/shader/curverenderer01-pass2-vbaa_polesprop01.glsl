@@ -56,10 +56,13 @@
             }
         }
 
-        #if 0
-        if(t.w == 0.0){
-            discard; // discard freezes NV tegra2 compiler
-        }
+        #if USE_DISCARD
+            if( 0.0 == t.w ) {
+                discard; // discard freezes NV tegra2 compiler
+            } else {
+                mgl_FragColor = t;
+            }
+        #else
+            mgl_FragColor = t;
         #endif
-        
-        mgl_FragColor = t;
+

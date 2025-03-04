@@ -38,6 +38,7 @@ import jogamp.newt.WindowImpl;
 import jogamp.newt.driver.MouseTracker;
 
 import com.jogamp.common.util.InterruptSource;
+import com.jogamp.common.util.PropertyAccess;
 import com.jogamp.newt.Screen;
 import com.jogamp.newt.Window;
 import com.jogamp.newt.event.MouseEvent;
@@ -46,22 +47,28 @@ import com.jogamp.newt.event.WindowListener;
 import com.jogamp.newt.event.WindowUpdateEvent;
 
 /**
- * Experimental native mouse tracker thread for GNU/Linux
- * just reading <code>/dev/input/mice</code>
+ * Native mouse tracker thread for GNU/Linux.
+ * <p>
+ * Implementation is reading <code>/dev/input/mice</code>
  * within it's own polling thread.
+ * <p>
+ * This tracker can be completely disabled by setting property <code>newt.disable.LinuxMouseTracker</code>.
+ * </p>
  */
 public class LinuxMouseTracker implements WindowListener, MouseTracker {
 
-    private static final LinuxMouseTracker lmt;
+    private static final boolean DISABLE = PropertyAccess.isPropertyDefined("newt.disable.LinuxMouseTracker", true);
+    private static LinuxMouseTracker lmt = null;
 
-    static {
-        lmt = new LinuxMouseTracker();
-        final Thread t = new InterruptSource.Thread(null, lmt.mouseDevicePoller, "NEWT-LinuxMouseTracker");
-        t.setDaemon(true);
-        t.start();
-    }
-
-    public static LinuxMouseTracker getSingleton() {
+    public static synchronized LinuxMouseTracker getSingleton() {
+        if(!DISABLE) {
+            if( null == lmt ) {
+                lmt = new LinuxMouseTracker();
+                final Thread t = new InterruptSource.Thread(null, lmt.mouseDevicePoller, "NEWT-MouseTracker");
+                t.setDaemon(true);
+                t.start();
+            }
+        }
         return lmt;
     }
 
@@ -76,6 +83,8 @@ public class LinuxMouseTracker implements WindowListener, MouseTracker {
     private short old_buttonDown = 0;
     private WindowImpl focusedWindow = null;
     private final MouseDevicePoller mouseDevicePoller = new MouseDevicePoller();
+
+    private LinuxMouseTracker() {}
 
     public final int getLastX() { return lastFocusedX; }
     public final int getLastY() { return lastFocusedY; }
@@ -122,6 +131,9 @@ public class LinuxMouseTracker implements WindowListener, MouseTracker {
             final byte[] b = new byte[3];
             final File f = new File("/dev/input/mice");
             f.setReadOnly();
+            if(Window.DEBUG_MOUSE_EVENT) {
+                System.out.println("LinuxMouseTracker: Started "+f);
+            }
             InputStream fis;
             try {
                 fis = new FileInputStream(f);
@@ -228,6 +240,9 @@ public class LinuxMouseTracker implements WindowListener, MouseTracker {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
+            }
+            if(Window.DEBUG_MOUSE_EVENT) {
+                System.out.println("LinuxMouseTracker: Stopped "+f);
             }
         }
     }

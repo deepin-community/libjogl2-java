@@ -1,8 +1,11 @@
-Index: libjogl2-java/make/build-common.xml
-===================================================================
---- libjogl2-java.orig/make/build-common.xml
-+++ libjogl2-java/make/build-common.xml
-@@ -73,19 +73,7 @@
+Description: not calling git as part of the build process
+Author: Sylvestre Ledru <sylvestre@debian.org>
+Forwarded: not-needed
+Last-Update: 2023-04-17
+
+--- a/make/build-common.xml
++++ b/make/build-common.xml
+@@ -81,19 +81,7 @@
          <property name="jogl.build.number" value="manual"/>
          <property name="jogl.build.id"     value="${version.timestamp}"/>
          <mkdir dir="${tempdir}" />

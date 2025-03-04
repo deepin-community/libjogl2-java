@@ -53,13 +53,23 @@ import com.jogamp.junit.util.JunitTracer;
 import com.jogamp.newt.Window;
 import com.jogamp.newt.awt.NewtCanvasAWT;
 import com.jogamp.newt.opengl.GLWindow;
+import com.jogamp.newt.opengl.util.NEWTDemoListener;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
 import com.jogamp.opengl.test.junit.newt.parenting.NewtAWTReparentingKeyAdapter;
-import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
+import com.jogamp.opengl.test.junit.newt.parenting.NewtReparentingKeyAdapter;
+import com.jogamp.opengl.test.junit.util.NewtTestUtil;
 import com.jogamp.opengl.test.junit.util.MiscUtils;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 import com.jogamp.opengl.util.Animator;
 
+/**
+ * <p>
+ * The demo code uses {@link NewtReparentingKeyAdapter} including {@link NEWTDemoListener} functionality.
+ * </p>
+ * <p>
+ * Manual invocation via main allows setting each tests's duration in milliseconds, e.g.{@code -duration 10000}, and many more, see {@link #main(String[])}
+ * </p>
+ */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestOffscreenLayer02NewtCanvasAWT extends UITestCase {
     static boolean singleBuffer = false;
@@ -167,8 +177,8 @@ public class TestOffscreenLayer02NewtCanvasAWT extends UITestCase {
 
         frame1.setSize(frameSize0);
         setupFrameAndShow(frame1, newtCanvasAWT1);
-        Assert.assertEquals(true, AWTRobotUtil.waitForRealized(glWindow1, true));
-        Assert.assertEquals(true, AWTRobotUtil.waitForVisible(glWindow1, true));
+        Assert.assertEquals(true, NewtTestUtil.waitForRealized(glWindow1, true, null));
+        Assert.assertEquals(true, NewtTestUtil.waitForVisible(glWindow1, true, null));
         Assert.assertEquals(newtCanvasAWT1.getNativeWindow(),glWindow1.getParent());
         Assert.assertEquals(true, newtCanvasAWT1.isOffscreenLayerSurfaceEnabled());
 

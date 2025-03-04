@@ -33,21 +33,21 @@ import com.jogamp.common.os.DynamicLibraryBundle;
 import com.jogamp.common.os.DynamicLibraryBundleInfo;
 import com.jogamp.common.os.Platform;
 import com.jogamp.common.util.RunnableExecutor;
+import com.jogamp.common.util.SecurityUtil;
 import com.jogamp.common.util.cache.TempJarCache;
 
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.*;
 
 public final class CgDynamicLibraryBundleInfo implements DynamicLibraryBundleInfo {
     private static final List<String> glueLibNames;
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+        SecurityUtil.doPrivileged(new PrivilegedAction<Object>() {
             @Override
             public Object run() {
                 Platform.initSingleton();
 
-                if(TempJarCache.isInitialized()) {
+                if( TempJarCache.isInitialized(true) ) {
                    // only: jogl-cg.jar -> jogl-cg-natives-<os.and.arch>.jar [atomic JAR files only]
                    JNILibLoaderBase.addNativeJarLibs(new Class<?>[] { jogamp.opengl.cg.CgPackagePlaceholder.class }, null);
                 }
@@ -96,6 +96,16 @@ public final class CgDynamicLibraryBundleInfo implements DynamicLibraryBundleInf
     @Override
     public final boolean useToolGetProcAdressFirst(final String funcName) {
         return false;
+    }
+
+    @Override
+    public final boolean searchToolLibInSystemPath() {
+        return true;
+    }
+
+    @Override
+    public final boolean searchToolLibSystemPathFirst() {
+        return true;
     }
 
     @Override

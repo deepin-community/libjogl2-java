@@ -1,6 +1,33 @@
-
+/**
+ * Copyright 2011 JogAmp Community. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ * 
+ *    1. Redistributions of source code must retain the above copyright notice, this list of
+ *       conditions and the following disclaimer.
+ * 
+ *    2. Redistributions in binary form must reproduce the above copyright notice, this list
+ *       of conditions and the following disclaimer in the documentation and/or other materials
+ *       provided with the distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY JogAmp Community ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL JogAmp Community OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * The views and conclusions contained in the software and documentation are those of the
+ * authors and should not be interpreted as representing official policies, either expressed
+ * or implied, of JogAmp Community.
+ */
 #include "NewtCommon.h"
 #include <string.h>
+#include <math.h>
 
 static const char * const ClazzNameRuntimeException = "java/lang/RuntimeException";
 static jclass    runtimeExceptionClz=NULL;
@@ -44,31 +71,64 @@ void NewtCommon_FatalError(JNIEnv *env, const char* msg, ...)
     }
 }
 
-void NewtCommon_throwNewRuntimeException(JNIEnv *env, const char* msg, ...)
+static void NewtCommon_throwNewRuntimeExceptionVA(JNIEnv *env, const char* msg, va_list ap)
 {
     char buffer[512];
-    va_list ap;
 
     if(NULL==_jvmHandle) {
         NewtCommon_FatalError(env, "NEWT: NULL JVM handle, call NewtCommon_init 1st\n");
         return;
     }
 
+    vsnprintf(buffer, sizeof(buffer), msg, ap);
+
+    if(NULL != env) {
+        (*env)->ThrowNew(env, runtimeExceptionClz, buffer);
+    }
+}
+
+void NewtCommon_throwNewRuntimeException(JNIEnv *env, const char* msg, ...)
+{
+    va_list ap;
+
     if( NULL != msg ) {
         va_start(ap, msg);
-        vsnprintf(buffer, sizeof(buffer), msg, ap);
+        NewtCommon_throwNewRuntimeExceptionVA(env, msg, ap);
         va_end(ap);
+    }
+}
 
-        if(NULL != env) {
-            (*env)->ThrowNew(env, runtimeExceptionClz, buffer);
-        }
+jboolean NewtCommon_ExceptionCheck0(JNIEnv *env)
+{
+    if( (*env)->ExceptionCheck(env) ) {
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        return JNI_TRUE;
+    } else {
+        return JNI_FALSE;
+    }
+}
+
+jboolean NewtCommon_ExceptionCheck1_throwNewRuntimeException(JNIEnv *env, const char* msg, ...)
+{
+    va_list ap;
+
+    if( (*env)->ExceptionCheck(env) ) {
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        va_start(ap, msg);
+        NewtCommon_throwNewRuntimeExceptionVA(env, msg, ap);
+        va_end(ap);
+        return JNI_TRUE;
+    } else {
+        return JNI_FALSE;
     }
 }
 
 const char * NewtCommon_GetStaticStringMethod(JNIEnv *jniEnv, jclass clazz, jmethodID jGetStrID, char *dest, int destSize, const char *altText) {
     if(NULL != jniEnv && NULL != clazz && NULL != jGetStrID) {
         jstring jstr = (jstring) (*jniEnv)->CallStaticObjectMethod(jniEnv, clazz, jGetStrID);
-        if(NULL != jstr) {
+        if( !NewtCommon_ExceptionCheck0(jniEnv) && NULL != jstr) {
             const char * str = (*jniEnv)->GetStringUTFChars(jniEnv, jstr, NULL);
             if( NULL != str) {
                 strncpy(dest, str, destSize-1);
@@ -140,3 +200,7 @@ void NewtCommon_ReleaseJNIEnv (int shallBeDetached) {
     }
 }
 
+int NewtCommon_isFloatZero(float f) {
+    // EPSILON = 1.1920929E-7f; // Float.MIN_VALUE == 1.4e-45f ; double EPSILON 2.220446049250313E-16d
+    return fabsf(f) < 1.1920929E-7f;
+}

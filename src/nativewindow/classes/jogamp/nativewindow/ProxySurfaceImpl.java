@@ -163,6 +163,10 @@ public abstract class ProxySurfaceImpl implements ProxySurface {
 
     @Override
     public boolean surfaceSwap() {
+        final NativeSurface upstreamSurface = upstream.getUpstreamSurface();
+        if( null != upstreamSurface ) {
+            return upstreamSurface.surfaceSwap();
+        }
         return false;
     }
 
@@ -184,6 +188,11 @@ public abstract class ProxySurfaceImpl implements ProxySurface {
     @Override
     public void surfaceUpdated(final Object updater, final NativeSurface ns, final long when) {
         surfaceUpdatedHelper.surfaceUpdated(updater, ns, when);
+    }
+
+    @Override
+    public RecursiveLock getLock() {
+        return surfaceLock;
     }
 
     @Override

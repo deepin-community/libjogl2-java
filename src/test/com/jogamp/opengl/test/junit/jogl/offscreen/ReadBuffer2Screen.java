@@ -108,7 +108,7 @@ public class ReadBuffer2Screen extends ReadBufferBase {
         pmvMatrix.glTranslatef(0, 0, -2.5f);
         if(null!=glM) {
             glM.glMatrixMode(GLMatrixFunc.GL_MODELVIEW);
-            glM.glLoadMatrixf(pmvMatrix.glGetMvMatrixf());
+            glM.glLoadMatrixf(pmvMatrix.getSyncMvMat().getSyncFloats());
         }
 
         // Set location in front of camera
@@ -117,7 +117,7 @@ public class ReadBuffer2Screen extends ReadBufferBase {
         pmvMatrix.gluPerspective(45.0f, (float)width / (float)height, 1.0f, 100.0f);
         if(null!=glM) {
             glM.glMatrixMode(GLMatrixFunc.GL_PROJECTION);
-            glM.glLoadMatrixf(pmvMatrix.glGetPMatrixf());
+            glM.glLoadMatrixf(pmvMatrix.getSyncPMat().getSyncFloats());
         }
     }
 
@@ -144,7 +144,7 @@ public class ReadBuffer2Screen extends ReadBufferBase {
       if(null!=readTextureCoords) {
           readTextureCoords.enableBuffer(gl, true);
       }
-      gl.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, readTextureVertices.getElementCount());
+      gl.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, readTextureVertices.getElemCount());
       /**
       if(null!=readTextureCoords) {
           readTextureCoords.enableBuffer(gl, false);

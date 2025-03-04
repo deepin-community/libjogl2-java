@@ -48,7 +48,7 @@ import org.junit.runners.MethodSorters;
 
 import com.jogamp.opengl.JoglVersion;
 import com.jogamp.opengl.test.junit.jogl.demos.gl2.Gears;
-import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
+import com.jogamp.opengl.test.junit.util.GLTestUtil;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 
 /**
@@ -128,7 +128,7 @@ public class TestGLAutoDrawableFactoryGL2OffscrnCapsNEWT extends UITestCase {
 
         // 1 - szStep = 2
         Assert.assertTrue("Size not reached: Expected "+(widthStep*szStep)+"x"+(heightStep*szStep)+", Is "+glad.getSurfaceWidth()+"x"+glad.getSurfaceHeight(),
-                          AWTRobotUtil.waitForSize(glad, widthStep*szStep, heightStep*szStep));
+                          GLTestUtil.waitForSize(glad, widthStep*szStep, heightStep*szStep, null));
         snapshotGLEventListener.setMakeSnapshot();
         glad.display();
 
@@ -136,7 +136,7 @@ public class TestGLAutoDrawableFactoryGL2OffscrnCapsNEWT extends UITestCase {
         szStep = 1;
         glad.setSurfaceSize(widthStep*szStep, heightStep*szStep);
         Assert.assertTrue("Size not reached: Expected "+(widthStep*szStep)+"x"+(heightStep*szStep)+", Is "+glad.getSurfaceWidth()+"x"+glad.getSurfaceHeight(),
-                          AWTRobotUtil.waitForSize(glad, widthStep*szStep, heightStep*szStep));
+                          GLTestUtil.waitForSize(glad, widthStep*szStep, heightStep*szStep, null));
         snapshotGLEventListener.setMakeSnapshot();
         glad.display();
 
@@ -144,7 +144,7 @@ public class TestGLAutoDrawableFactoryGL2OffscrnCapsNEWT extends UITestCase {
         szStep = 4;
         glad.setSurfaceSize(widthStep*szStep, heightStep*szStep);
         Assert.assertTrue("Size not reached: Expected "+(widthStep*szStep)+"x"+(heightStep*szStep)+", Is "+glad.getSurfaceWidth()+"x"+glad.getSurfaceHeight(),
-                          AWTRobotUtil.waitForSize(glad, widthStep*szStep, heightStep*szStep));
+                          GLTestUtil.waitForSize(glad, widthStep*szStep, heightStep*szStep, null));
         snapshotGLEventListener.setMakeSnapshot();
         glad.display();
 
@@ -152,18 +152,6 @@ public class TestGLAutoDrawableFactoryGL2OffscrnCapsNEWT extends UITestCase {
 
         glad.destroy();
         System.out.println("Fin Drawable: "+glad);
-    }
-
-    @Test
-    public void testAvailableInfo() {
-        GLDrawableFactory f = GLDrawableFactory.getDesktopFactory();
-        if(null != f) {
-            System.err.println(JoglVersion.getDefaultOpenGLInfo(f.getDefaultDevice(), null, true).toString());
-        }
-        f = GLDrawableFactory.getEGLFactory();
-        if(null != f) {
-            System.err.println(JoglVersion.getDefaultOpenGLInfo(f.getDefaultDevice(), null, true).toString());
-        }
     }
 
     @Test

@@ -56,7 +56,7 @@ public class WindowDriver extends WindowImpl {
     }
 
     @Override
-    protected void createNativeImpl() {
+    protected void createNativeImpl(boolean[] positionModified) {
         if(0!=getParentWindowHandle()) {
             throw new RuntimeException("Window parenting not supported (yet)");
         }
@@ -96,14 +96,14 @@ public class WindowDriver extends WindowImpl {
 
     @Override
     protected final int getSupportedReconfigMaskImpl() {
-        return minimumReconfigStateMask;
+        return mutableSizePosReconfigStateMask;
     }
 
     @Override
     protected boolean reconfigureWindowImpl(final int x, final int y, int width, int height, final int flags) {
         if( 0 != ( CHANGE_MASK_VISIBILITY & flags) ) {
             setVisible0(eglWindowHandle, 0 != ( STATE_MASK_VISIBLE & flags));
-            visibleChanged(false, 0 != ( STATE_MASK_VISIBLE & flags));
+            visibleChanged(0 != ( STATE_MASK_VISIBLE & flags));
         }
 
         if(0!=eglWindowHandle) {
@@ -127,7 +127,7 @@ public class WindowDriver extends WindowImpl {
         }
 
         if( 0 != ( CHANGE_MASK_VISIBILITY & flags) ) {
-            visibleChanged(false, 0 != ( STATE_MASK_VISIBLE & flags));
+            visibleChanged(0 != ( STATE_MASK_VISIBLE & flags));
         }
 
         return true;
@@ -155,11 +155,11 @@ public class WindowDriver extends WindowImpl {
     }
 
     @Override
-    protected void sizeChanged(final boolean defer, final int newWidth, final int newHeight, final boolean force) {
+    protected boolean sizeChanged(final boolean defer, final boolean windowUnits, final int newWidth, final int newHeight, final boolean force) {
         if(isFullscreen()) {
             ((ScreenDriver)getScreen()).sizeChanged(getWidth(), getHeight());
         }
-        super.sizeChanged(defer, newWidth, newHeight, force);
+        return super.sizeChanged(defer, windowUnits, newWidth, newHeight, force);
     }
 
     private long   eglWindowHandle;

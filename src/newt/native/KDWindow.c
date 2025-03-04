@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2008 Sun Microsystems, Inc. All Rights Reserved.
+ * Copyright (c) 2010 JogAmp Community. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -130,7 +131,7 @@ JNIEXPORT void JNICALL Java_jogamp_newt_driver_kd_DisplayDriver_DispatchMessages
                                 KDint32 v[2];
                                 if(!kdGetWindowPropertyiv(kdWindow, KD_WINDOWPROPERTY_SIZE, v)) {
                                     DBG_PRINT( "event window size change : src: %p %dx%d\n", userData, v[0], v[1]);
-                                    (*env)->CallVoidMethod(env, javaWindow, sizeChangedID, JNI_FALSE, (jint) v[0], (jint) v[1], JNI_FALSE);
+                                    (*env)->CallBooleanMethod(env, javaWindow, sizeChangedID, JNI_FALSE, JNI_FALSE, (jint) v[0], (jint) v[1], JNI_FALSE);
                                 } else {
                                     DBG_PRINT( "event window size change error: src: %p %dx%d\n", userData, v[0], v[1]);
                                 }
@@ -144,7 +145,7 @@ JNIEXPORT void JNICALL Java_jogamp_newt_driver_kd_DisplayDriver_DispatchMessages
                                 KDboolean visible;
                                 kdGetWindowPropertybv(kdWindow, KD_WINDOWPROPERTY_VISIBILITY, &visible);
                                 DBG_PRINT( "event window visibility: src: %p, v:%d\n", userData, visible);
-                                (*env)->CallVoidMethod(env, javaWindow, visibleChangedID, JNI_FALSE, visible?JNI_TRUE:JNI_FALSE);
+                                (*env)->CallVoidMethod(env, javaWindow, visibleChangedID, visible?JNI_TRUE:JNI_FALSE);
                             }
                             break;
                         default:
@@ -190,8 +191,8 @@ JNIEXPORT jboolean JNICALL Java_jogamp_newt_driver_kd_WindowDriver_initIDs
     #endif
 #endif
     windowCreatedID = (*env)->GetMethodID(env, clazz, "windowCreated", "(J)V");
-    sizeChangedID = (*env)->GetMethodID(env, clazz, "sizeChanged", "(ZIIZ)V");
-    visibleChangedID = (*env)->GetMethodID(env, clazz, "visibleChanged", "(ZZ)V");
+    sizeChangedID = (*env)->GetMethodID(env, clazz, "sizeChanged", "(ZZIIZ)Z");
+    visibleChangedID = (*env)->GetMethodID(env, clazz, "visibleChanged", "(Z)V");
     windowDestroyNotifyID = (*env)->GetMethodID(env, clazz, "windowDestroyNotify", "(Z)Z");
     sendMouseEventID = (*env)->GetMethodID(env, clazz, "sendMouseEvent", "(SIIISF)V");
     sendKeyEventID = (*env)->GetMethodID(env, clazz, "sendKeyEvent", "(SISSC)V");
@@ -276,7 +277,7 @@ JNIEXPORT void JNICALL Java_jogamp_newt_driver_kd_WindowDriver_setVisible0
     KDboolean v = (visible==JNI_TRUE)?KD_TRUE:KD_FALSE;
     kdSetWindowPropertybv(w, KD_WINDOWPROPERTY_VISIBILITY, &v);
     DBG_PRINT( "[setVisible] v=%d\n", visible);
-    (*env)->CallVoidMethod(env, obj, visibleChangedID, JNI_FALSE, visible); // FIXME: or defer=true ?
+    (*env)->CallVoidMethod(env, obj, visibleChangedID, visible);
 }
 
 JNIEXPORT void JNICALL Java_jogamp_newt_driver_kd_WindowDriver_setFullScreen0
@@ -306,6 +307,6 @@ JNIEXPORT void JNICALL Java_jogamp_newt_driver_kd_WindowDriver_setSize0
     DBG_PRINT( "[setSize] v=%dx%d, res=%d\n", width, height, res);
     (void)res;
 
-    (*env)->CallVoidMethod(env, obj, sizeChangedID, JNI_FALSE, (jint) width, (jint) height, JNI_FALSE);
+    (*env)->CallBooleanMethod(env, obj, sizeChangedID, JNI_FALSE, JNI_FALSE, (jint) width, (jint) height, JNI_FALSE);
 }
 

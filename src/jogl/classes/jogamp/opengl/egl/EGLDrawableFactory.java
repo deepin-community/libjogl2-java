@@ -1,6 +1,6 @@
 /*
+ * Copyright (c) 2010-2023 JogAmp Community. All rights reserved.
  * Copyright (c) 2008 Sun Microsystems, Inc. All Rights Reserved.
- * Copyright (c) 2010 JogAmp Community. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -99,6 +99,7 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
     private static GLDynamicLookupHelper eglGLnDynamicLookupHelper = null;
     private static boolean isANGLE = false;
     private static boolean hasX11 = false;
+    private static boolean isDRM_GBM = false;
     private static String defaultConnection = null;
     private static EGLGraphicsDevice defaultDevice = null;
     private static EGLFeatures defaultDeviceEGLFeatures = null;
@@ -172,6 +173,7 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
                 }
             }
         }
+        @Override
         public final String toString() {
             return "EGLFeatures[vendor "+vendor+", version "+version+
                    ", has[GL-API "+hasGLAPI+", KHR[CreateContext "+hasKHRCreateContext+", Surfaceless "+hasKHRSurfaceless+"]]]";
@@ -204,6 +206,12 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
             } else {
                 hasX11 = false;
             }
+            if(NativeWindowFactory.TYPE_DRM_GBM == nwt) {
+                isDRM_GBM = true;
+            } else {
+                isDRM_GBM = false;
+            }
+
             defaultConnection = NativeWindowFactory.getDefaultDisplayConnection(nwt);
 
             /**
@@ -288,9 +296,28 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
                     System.err.println("Info: EGLDrawableFactory: EGL ES1 - NOPE (ES1 lib)");
                 }
             }
-            // Setup: eglGLnDynamicLookupHelper
+            /**
+             * Setup: eglGLnDynamicLookupHelper
+             *
+             * TODO Bug 1401: Mesa 18.3.6 issues using EGL_PLATFORM_GBM_KHR and OpenGL Desktop Profile
+             * Using EGL_GBM with OpenGL results in an unsatisfied linkage error using desktop GL, see:
+             *
+             * java.lang.UnsatisfiedLinkError: 'int jogamp.opengl.gl4.GL4bcImpl.dispatch_glGetError1(long)'
+             * at jogamp.opengl.gl4.GL4bcImpl.dispatch_glGetError1(Native Method)
+             * at jogamp.opengl.gl4.GL4bcImpl.glGetError(GL4bcImpl.java:648)
+             * at jogamp.opengl.GLContextImpl.setGLFunctionAvailability(GLContextImpl.java:2186)
+             * at jogamp.opengl.GLContextImpl.createContextARBVersions(GLContextImpl.java:1427)
+             * at jogamp.opengl.GLContextImpl.createContextARBMapVersionsAvailable(GLContextImpl.java:1366)
+             * at jogamp.opengl.GLContextImpl.mapGLVersions(GLContextImpl.java:1223)
+             * at jogamp.opengl.GLContextImpl.createContextARB(GLContextImpl.java:968)
+             * at jogamp.opengl.egl.EGLContext.createImpl(EGLContext.java:318)
+             * at jogamp.opengl.GLContextImpl.makeCurrentWithinLock(GLContextImpl.java:769)
+             * at jogamp.opengl.GLContextImpl.makeCurrent(GLContextImpl.java:652)
+             * at jogamp.opengl.GLContextImpl.makeCurrent(GLContextImpl.java:590)
+             * at jogamp.opengl.egl.EGLDrawableFactory$SharedResourceImplementation.mapAvailableEGLESConfig(EGLDrawableFactory.java:858)
+             */
             if( null == eglGLnDynamicLookupHelper ) {
-                if( !GLProfile.disableOpenGLDesktop ) {
+                if( !GLProfile.disableOpenGLDesktop && !isDRM_GBM ) {
                     GLDynamicLookupHelper tmp=null;
                     try {
                         tmp = new GLDynamicLookupHelper(new EGLGLnDynamicLibraryBundleInfo());
@@ -345,7 +372,13 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
 
                     // Note: defaultDevice.open() triggers eglInitialize(..) which crashed on Windows w/ Chrome/ANGLE, FF/ANGLE!
                     // Hence opening will happen later, eventually
-                    defaultDevice = EGLDisplayUtil.eglCreateEGLGraphicsDevice(EGL.EGL_DEFAULT_DISPLAY, defaultConnection, AbstractGraphicsDevice.DEFAULT_UNIT);
+                    final long nativeDisplayID;
+                    if( isDRM_GBM ) { // Bug 1402 related and in case surfaceless is n/a
+                        nativeDisplayID = jogamp.nativewindow.drm.DRMLib.gbm_create_device(jogamp.nativewindow.drm.DRMUtil.getDrmFd());
+                    } else {
+                        nativeDisplayID = EGL.EGL_DEFAULT_DISPLAY;
+                    }
+                    defaultDevice = EGLDisplayUtil.eglCreateEGLGraphicsDevice(nativeDisplayID, defaultConnection, AbstractGraphicsDevice.DEFAULT_UNIT);
 
                     // Init shared resources off thread
                     // Will be released via ShutdownHook
@@ -378,6 +411,9 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
         }
 
         if(null != defaultDevice) {
+            if( isDRM_GBM ) { // Bug 1402 related and in case surfaceless is n/a
+                jogamp.nativewindow.drm.DRMLib.gbm_device_destroy(defaultDevice.getNativeDisplayID());
+            }
             defaultDevice.close();
             defaultDevice = null;
         }
@@ -396,6 +432,7 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
             // eglGLDynamicLookupHelper.destroy();
             eglGLnDynamicLookupHelper = null;
         }
+        eglDynamicLookupHelperInit = false;
         EGLGraphicsConfigurationFactory.unregisterFactory();
         EGLDisplayUtil.shutdown(DEBUG);
     }
@@ -616,7 +653,9 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
             }
 
             if( mappedToDefaultDevice[0] ) {
-                EGLContext.remapAvailableGLVersions(defaultDevice, adevice);
+                // map all GL versions (ES, CORE or COMPAT) to 'adevice' if not existing (no overwrite)
+                EGLContext.remapAvailableGLVersions(defaultDevice, adevice, false /* overwrite */,
+                        EGLContext.CTX_PROFILE_ES | EGLContext.CTX_PROFILE_CORE | EGLContext.CTX_PROFILE_COMPAT );
                 sr = defaultSharedResource;
             } else {
                 if( hasX11 ) {
@@ -689,7 +728,7 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
                 System.err.println("EGLDrawableFactory.MapGLVersions: "+profileString+" ( "+majorVersion+" ), "+
                         "mapsADeviceToDefaultDevice "+mapsADeviceToDefaultDevice[0]+
                         " (useDefaultDevice "+useDefaultDevice+", defaultDeviceHasPBuffer "+defaultDeviceHasPBuffer+", hasDesktopFactory "+(null != desktopFactory)+
-                        ", isEGLGraphicsDevice "+(adevice instanceof EGLGraphicsDevice)+")");
+                        ", isEGLGraphicsDevice "+(adevice instanceof EGLGraphicsDevice)+"), isDRM_GBM "+isDRM_GBM);
             }
 
             if( mapsADeviceToDefaultDevice[0] ) {
@@ -699,13 +738,16 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
             final boolean defaultNoSurfacelessCtx = GLRendererQuirks.existStickyDeviceQuirk(defaultDevice, GLRendererQuirks.NoSurfacelessCtx);
             boolean success = false;
             final boolean hasKHRSurfacelessTried;
-            if( defaultDeviceEGLFeatures.hasKHRSurfaceless && !defaultNoSurfacelessCtx ) {
+            if( defaultDeviceEGLFeatures.hasKHRSurfaceless && !defaultNoSurfacelessCtx
+                && ( !isDRM_GBM || isDRM_GBM && useDefaultDevice ) )
+            {
+                // Includes mapping DRM_GBM EGL device to EGL default shared resources (default behavior), surfaceless.
                 hasKHRSurfacelessTried = true;
                 final AbstractGraphicsDevice zdevice = useDefaultDevice ? defaultDevice : adevice; // reuse
-                final EGLSurface zeroSurface = createSurfacelessImpl(zdevice, false, reqCapsAny, reqCapsAny, null, 64, 64);
+                final EGLSurface zeroSurface = createSurfacelessImpl(adevice, zdevice, false, reqCapsAny, reqCapsAny, null, 64, 64);
                 resEGLDevice[0] = (EGLGraphicsDevice) zeroSurface.getGraphicsConfiguration().getScreen().getDevice();
                 if ( DEBUG_SHAREDCTX ) {
-                    System.err.println("EGLDrawableFactory-MapGLVersions.0: "+resEGLDevice[0]);
+                    System.err.println("EGLDrawableFactory.MapGLVersions.0: "+resEGLDevice[0]);
                 }
                 EGLDrawable zeroDrawable = null;
                 EGLContext context = null;
@@ -729,12 +771,12 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
                             setNoSurfacelessCtxQuirk(context);
                         }
                     } else if ( DEBUG_SHAREDCTX ) {
-                        System.err.println("EGLDrawableFactory-MapGLVersions.0: NOT_CURRENT: "+resEGLDevice[0]+", "+context);
+                        System.err.println("EGLDrawableFactory.MapGLVersions.0: NOT_CURRENT: "+resEGLDevice[0]+", "+context);
                     }
                 } catch (final Throwable t) {
                     hasException = true;
                     if ( DEBUG_SHAREDCTX ) {
-                        System.err.println("EGLDrawableFactory-MapGLVersions.0: INFO: context create/makeCurrent failed");
+                        System.err.println("EGLDrawableFactory.MapGLVersions.0: INFO: context create/makeCurrent failed");
                         t.printStackTrace();
                     }
                 } finally {
@@ -743,7 +785,7 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
                             context.destroy();
                         } catch (final GLException gle) {
                             if ( DEBUG_SHAREDCTX ) {
-                                System.err.println("EGLDrawableFactory-MapGLVersions.0: INFO: destroy caught exception:");
+                                System.err.println("EGLDrawableFactory.MapGLVersions.0: INFO: destroy caught exception:");
                                 gle.printStackTrace();
                             }
                         }
@@ -776,21 +818,34 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
             ProxySurface upstreamSurface = null; // X11, GLX, ..
             ProxySurface downstreamSurface = null; // EGL
             try {
-                if( useDefaultDevice && defaultDeviceHasPBuffer ) {
-                    // Map any non EGL device to EGL default shared resources (default behavior), using a pbuffer surface
+                if( useDefaultDevice && isDRM_GBM ) {
+                    // Map DRM_GBM EGL device to EGL default shared resources (default behavior), using a GBM dummy surface
                     resEGLDevice[0] = defaultDevice; // reuse
                     eglFeatures = defaultDeviceEGLFeatures;
                     if ( DEBUG_SHAREDCTX ) {
-                        System.err.println("EGLDrawableFactory-MapGLVersions.1: "+resEGLDevice[0]);
-                        System.err.println("EGLDrawableFactory-MapGLVersions.1: "+eglFeatures);
+                        System.err.println("EGLDrawableFactory.MapGLVersions.1: "+resEGLDevice[0]);
+                        System.err.println("EGLDrawableFactory.MapGLVersions.1: "+eglFeatures);
                     }
-
-                    downstreamSurface = createDummySurfaceImpl(resEGLDevice[0], false, reqCapsPBuffer, reqCapsPBuffer, null, 64, 64);
+                    downstreamSurface = createDummySurfaceImpl(resEGLDevice[0], resEGLDevice[0], false, reqCapsAny, reqCapsAny, null, 64, 64);
                     if( null != downstreamSurface ) {
                         downstreamSurface.createNotify();
                         surface = downstreamSurface;
                     }
-                } else if( adevice != defaultDevice ) {
+                } else if( useDefaultDevice && defaultDeviceHasPBuffer ) {
+                    // Map any non EGL device to EGL default shared resources (default behavior), using a pbuffer surface
+                    resEGLDevice[0] = defaultDevice; // reuse
+                    eglFeatures = defaultDeviceEGLFeatures;
+                    if ( DEBUG_SHAREDCTX ) {
+                        System.err.println("EGLDrawableFactory.MapGLVersions.2: "+resEGLDevice[0]);
+                        System.err.println("EGLDrawableFactory.MapGLVersions.2: "+eglFeatures);
+                    }
+
+                    downstreamSurface = createDummySurfaceImpl(resEGLDevice[0], resEGLDevice[0], false, reqCapsPBuffer, reqCapsPBuffer, null, 64, 64);
+                    if( null != downstreamSurface ) {
+                        downstreamSurface.createNotify();
+                        surface = downstreamSurface;
+                    }
+                } else if( !useDefaultDevice && !isDRM_GBM ) {
                     // Create a true mapping of given device to EGL
                     upstreamSurface = desktopFactory.createDummySurface(adevice, reqCapsAny, null, 64, 64); // X11, WGL, .. dummy window
                     if(null != upstreamSurface) {
@@ -799,8 +854,8 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
                         resEGLDevice[0].open();
                         eglFeatures = new EGLFeatures(resEGLDevice[0]);
                         if ( DEBUG_SHAREDCTX ) {
-                            System.err.println("EGLDrawableFactory-MapGLVersions.2: "+resEGLDevice[0]);
-                            System.err.println("EGLDrawableFactory-MapGLVersions.2: "+eglFeatures);
+                            System.err.println("EGLDrawableFactory.MapGLVersions.3: "+resEGLDevice[0]);
+                            System.err.println("EGLDrawableFactory.MapGLVersions.3: "+eglFeatures);
                         }
                         surface = upstreamSurface;
                     }
@@ -833,15 +888,15 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
                                 setNoSurfacelessCtxQuirk(context);
                             }
                         } else if ( DEBUG_SHAREDCTX ) {
-                            System.err.println("EGLDrawableFactory-MapGLVersions.12: NULL VERSION: "+resEGLDevice[0]+", "+context.getGLVersion());
+                            System.err.println("EGLDrawableFactory.MapGLVersions.123: NULL VERSION: "+resEGLDevice[0]+", "+context.getGLVersion());
                         }
                     } else if ( DEBUG_SHAREDCTX ) {
-                        System.err.println("EGLDrawableFactory-MapGLVersions.12: NOT_CURRENT: "+resEGLDevice[0]+", "+context);
+                        System.err.println("EGLDrawableFactory.MapGLVersions.123: NOT_CURRENT: "+resEGLDevice[0]+", "+context);
                     }
                 }
             } catch (final Throwable t) {
                 if ( DEBUG_SHAREDCTX ) {
-                    System.err.println("EGLDrawableFactory-MapGLVersions.12: INFO: context create/makeCurrent failed");
+                    System.err.println("EGLDrawableFactory.MapGLVersions.123: INFO: context create/makeCurrent failed");
                     t.printStackTrace();
                 }
                 success = false;
@@ -851,7 +906,7 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
                         context.destroy();
                     } catch (final GLException gle) {
                         if ( DEBUG_SHAREDCTX ) {
-                            System.err.println("EGLDrawableFactory-MapGLVersions.12: INFO: destroy caught exception:");
+                            System.err.println("EGLDrawableFactory.MapGLVersions.123: INFO: destroy caught exception:");
                             gle.printStackTrace();
                         }
                     }
@@ -1046,7 +1101,7 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
 
     private final EGLGraphicsConfiguration evalConfig(final boolean[] ownDevice, final AbstractGraphicsDevice deviceReq, final boolean createNewDevice,
                                                       final GLCapabilitiesImmutable capsChosen, final GLCapabilitiesImmutable capsRequested,
-                                                      final GLCapabilitiesChooser chooser) {
+                                                      final GLCapabilitiesChooser chooser, final int nativeVisualID) {
         final EGLGraphicsDevice device;
         if( createNewDevice || ! (deviceReq instanceof EGLGraphicsDevice) ) {
             device = EGLDisplayUtil.eglCreateEGLGraphicsDevice(deviceReq);
@@ -1057,7 +1112,8 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
             ownDevice[0] = false;
         }
         final DefaultGraphicsScreen screen = new DefaultGraphicsScreen(device, 0);
-        final EGLGraphicsConfiguration config = EGLGraphicsConfigurationFactory.chooseGraphicsConfigurationStatic(capsChosen, capsRequested, chooser, screen, VisualIDHolder.VID_UNDEFINED, false);
+        final EGLGraphicsConfiguration config = EGLGraphicsConfigurationFactory.chooseGraphicsConfigurationStatic(
+                capsChosen, capsRequested, chooser, screen, nativeVisualID, false);
         if(null == config) {
             throw new GLException("Choosing GraphicsConfiguration failed w/ "+capsChosen+" on "+screen);
         }
@@ -1065,27 +1121,46 @@ public class EGLDrawableFactory extends GLDrawableFactoryImpl {
     }
 
     @Override
-    protected final EGLSurface createMutableSurfaceImpl(final AbstractGraphicsDevice deviceReq, final boolean createNewDevice,
-                                                          final GLCapabilitiesImmutable capsChosen, final GLCapabilitiesImmutable capsRequested,
-                                                          final GLCapabilitiesChooser chooser, final UpstreamSurfaceHook upstreamHook) {
+    protected final EGLSurface createMutableSurfaceImpl(final AbstractGraphicsDevice deviceOrig, final AbstractGraphicsDevice deviceReq,
+                                                        final boolean createNewDevice, final GLCapabilitiesImmutable capsChosen,
+                                                        final GLCapabilitiesImmutable capsRequested,
+                                                        final GLCapabilitiesChooser chooser, final UpstreamSurfaceHook upstreamHook) {
+        final AbstractGraphicsDevice device0 = null != deviceOrig ? deviceOrig : deviceReq; // prefer orig for native display ID
+        return createMutableSurfaceImpl2(device0, createNewDevice, capsChosen, capsRequested, chooser, VisualIDHolder.VID_UNDEFINED, upstreamHook);
+    }
+    private final EGLSurface createMutableSurfaceImpl2(final AbstractGraphicsDevice deviceReq, final boolean createNewDevice,
+                                                       final GLCapabilitiesImmutable capsChosen, final GLCapabilitiesImmutable capsRequested,
+                                                       final GLCapabilitiesChooser chooser, final int nativeVisualID,
+                                                       final UpstreamSurfaceHook upstreamHook) {
         final boolean[] ownDevice = { false };
-        final EGLGraphicsConfiguration config = evalConfig(ownDevice, deviceReq, createNewDevice, capsChosen, capsRequested, chooser);
+        final EGLGraphicsConfiguration config = evalConfig(ownDevice, deviceReq, createNewDevice, capsChosen, capsRequested, chooser, nativeVisualID);
         return EGLSurface.createWrapped(config, 0, upstreamHook, ownDevice[0]);
     }
 
     @Override
-    public final EGLSurface createDummySurfaceImpl(final AbstractGraphicsDevice deviceReq, final boolean createNewDevice,
-                                                     GLCapabilitiesImmutable chosenCaps, final GLCapabilitiesImmutable requestedCaps, final GLCapabilitiesChooser chooser, final int width, final int height) {
-        chosenCaps = GLGraphicsConfigurationUtil.fixGLPBufferGLCapabilities(chosenCaps); // complete validation in EGLGraphicsConfigurationFactory.chooseGraphicsConfigurationStatic(..) above
-        return createMutableSurfaceImpl(deviceReq, createNewDevice, chosenCaps, requestedCaps, chooser, new EGLDummyUpstreamSurfaceHook(width, height));
+    public final EGLSurface createDummySurfaceImpl(final AbstractGraphicsDevice deviceOrig, final AbstractGraphicsDevice device,
+                                                   final boolean createNewDevice, GLCapabilitiesImmutable chosenCaps, final GLCapabilitiesImmutable requestedCaps, final GLCapabilitiesChooser chooser, final int width, final int height) {
+        final AbstractGraphicsDevice device0 = null != deviceOrig ? deviceOrig : device; // prefer orig for native display ID
+        final UpstreamSurfaceHook ush;
+        final int nativeVisualID;
+        if( isDRM_GBM ) {
+            ush = new jogamp.nativewindow.drm.GBMDummyUpstreamSurfaceHook(width, height);
+            nativeVisualID = jogamp.nativewindow.drm.DRMUtil.GBM_FORMAT_XRGB8888;
+        } else {
+            ush = new EGLDummyUpstreamSurfaceHook(width, height);
+            chosenCaps = GLGraphicsConfigurationUtil.fixGLPBufferGLCapabilities(chosenCaps); // complete validation in EGLGraphicsConfigurationFactory.chooseGraphicsConfigurationStatic(..) above
+            nativeVisualID = VisualIDHolder.VID_UNDEFINED;
+        }
+        return createMutableSurfaceImpl2(device0, createNewDevice, chosenCaps, requestedCaps, chooser, nativeVisualID, ush);
     }
 
     @Override
-    public final EGLSurface createSurfacelessImpl(final AbstractGraphicsDevice deviceReq, final boolean createNewDevice,
-                                                    GLCapabilitiesImmutable chosenCaps, final GLCapabilitiesImmutable requestedCaps, final GLCapabilitiesChooser chooser, final int width, final int height) {
+    public final EGLSurface createSurfacelessImpl(final AbstractGraphicsDevice deviceOrig, final AbstractGraphicsDevice device,
+                                                  final boolean createNewDevice, GLCapabilitiesImmutable chosenCaps, final GLCapabilitiesImmutable requestedCaps, final GLCapabilitiesChooser chooser, final int width, final int height) {
+        final AbstractGraphicsDevice device0 = null != deviceOrig ? deviceOrig : device; // prefer orig for native display ID
         chosenCaps = GLGraphicsConfigurationUtil.fixOnscreenGLCapabilities(chosenCaps);
         final boolean[] ownDevice = { false };
-        final EGLGraphicsConfiguration config = evalConfig(ownDevice, deviceReq, createNewDevice, chosenCaps, requestedCaps, chooser);
+        final EGLGraphicsConfiguration config = evalConfig(ownDevice, device0, createNewDevice, chosenCaps, requestedCaps, chooser, VisualIDHolder.VID_UNDEFINED);
         return EGLSurface.createSurfaceless(config, new GenericUpstreamSurfacelessHook(width, height), ownDevice[0]);
     }
 

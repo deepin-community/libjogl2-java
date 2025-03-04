@@ -47,8 +47,9 @@ import com.jogamp.opengl.GLProfile;
 
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
 import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
+import com.jogamp.opengl.test.junit.util.NewtTestUtil;
+import com.jogamp.opengl.test.junit.util.TestUtil;
 import com.jogamp.opengl.test.junit.util.UITestCase;
-import com.jogamp.opengl.test.junit.util.AWTRobotUtil.WindowClosingListener;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestWindowClosingProtocol03NewtAWT extends UITestCase {
@@ -56,12 +57,12 @@ public class TestWindowClosingProtocol03NewtAWT extends UITestCase {
     @Test
     public void testCloseJFrameNewtCanvasAWT() throws InterruptedException, InvocationTargetException {
         final JFrame frame = new JFrame("testCloseJFrameNewtCanvasAWT");
-        final WindowClosingListener awtClosingListener = AWTRobotUtil.addClosingListener(frame);
+        final TestUtil.WindowClosingListener awtClosingListener = AWTRobotUtil.addClosingListener(frame);
 
         final GLProfile glp = GLProfile.getGL2ES2();
         final GLCapabilities caps = new GLCapabilities(glp);
         final GLWindow glWindow = GLWindow.create(caps);
-        final AWTRobotUtil.WindowClosingListener newtClosingListener = AWTRobotUtil.addClosingListener(glWindow);
+        final TestUtil.WindowClosingListener newtClosingListener = NewtTestUtil.addClosingListener(glWindow);
 
         glWindow.addGLEventListener(new GearsES2());
 
@@ -75,8 +76,8 @@ public class TestWindowClosingProtocol03NewtAWT extends UITestCase {
                 frame.validate();
                 frame.setVisible(true);
             } });
-        Assert.assertEquals(true,  AWTRobotUtil.waitForVisible(frame, true));
-        Assert.assertEquals(true,  AWTRobotUtil.waitForRealized(glWindow, true));
+        Assert.assertEquals(true,  AWTRobotUtil.waitForVisible(frame, true, null));
+        Assert.assertEquals(true,  NewtTestUtil.waitForRealized(glWindow, true, null));
         Assert.assertEquals(true,  frame.isDisplayable());
         Assert.assertEquals(true,  frame.isVisible());
         Assert.assertEquals(true,  newtCanvas.isValid());
@@ -94,8 +95,8 @@ public class TestWindowClosingProtocol03NewtAWT extends UITestCase {
 
         Thread.sleep(300);
 
-        Assert.assertEquals(true,  AWTRobotUtil.closeWindow(frame, false, awtClosingListener)); // hide
-        Assert.assertEquals(true,  AWTRobotUtil.waitForVisible(frame, false)); // hide -> invisible
+        Assert.assertEquals(true,  AWTRobotUtil.closeWindow(frame, false, awtClosingListener, null)); // hide
+        Assert.assertEquals(true,  AWTRobotUtil.waitForVisible(frame, false, null)); // hide -> invisible
         Assert.assertEquals(true,  frame.isDisplayable());
         Assert.assertEquals(false, frame.isVisible());
         Assert.assertEquals(true,  newtCanvas.isValid());
@@ -112,8 +113,8 @@ public class TestWindowClosingProtocol03NewtAWT extends UITestCase {
             public void run() {
                 frame.setVisible(true);
             } });
-        Assert.assertEquals(true,  AWTRobotUtil.waitForVisible(frame, true));
-        Assert.assertEquals(true,  AWTRobotUtil.waitForRealized(glWindow, true));
+        Assert.assertEquals(true,  AWTRobotUtil.waitForVisible(frame, true, null));
+        Assert.assertEquals(true,  NewtTestUtil.waitForRealized(glWindow, true, null));
         Assert.assertEquals(true,  frame.isDisplayable());
         Assert.assertEquals(true,  frame.isVisible());
 
@@ -129,8 +130,8 @@ public class TestWindowClosingProtocol03NewtAWT extends UITestCase {
 
         Thread.sleep(300);
 
-        Assert.assertEquals(true,  AWTRobotUtil.closeWindow(frame, true, awtClosingListener));
-        Assert.assertEquals(true,  AWTRobotUtil.waitForRealized(glWindow, false));
+        Assert.assertEquals(true,  AWTRobotUtil.closeWindow(frame, true, awtClosingListener, null));
+        Assert.assertEquals(true,  NewtTestUtil.waitForRealized(glWindow, false, null));
         Assert.assertEquals(false, frame.isDisplayable());
         Assert.assertEquals(false, frame.isVisible());
         Assert.assertEquals(false, newtCanvas.isValid());

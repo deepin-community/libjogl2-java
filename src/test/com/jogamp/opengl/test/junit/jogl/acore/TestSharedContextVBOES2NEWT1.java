@@ -38,7 +38,8 @@ import com.jogamp.opengl.GLDrawableFactory;
 import com.jogamp.opengl.GLProfile;
 
 import com.jogamp.opengl.util.Animator;
-import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
+import com.jogamp.opengl.test.junit.util.NewtTestUtil;
+import com.jogamp.opengl.test.junit.util.GLTestUtil;
 import com.jogamp.opengl.test.junit.util.MiscUtils;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
@@ -108,7 +109,8 @@ public class TestSharedContextVBOES2NEWT1 extends UITestCase {
             sharedDrawable = GLDrawableFactory.getFactory(glp).createDummyAutoDrawable(null, true /* createNewDevice */, caps, null);
         }
         Assert.assertNotNull(sharedDrawable);
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(sharedDrawable, true));
+        final GLAutoDrawable obj = sharedDrawable;
+        Assert.assertTrue(GLTestUtil.waitForRealized(obj, true, null));
 
         sharedGears = new GearsES2();
         Assert.assertNotNull(sharedGears);
@@ -116,7 +118,7 @@ public class TestSharedContextVBOES2NEWT1 extends UITestCase {
         // init and render one frame, which will setup the Gears display lists
         sharedDrawable.display();
         final GLContext ctxM = sharedDrawable.getContext();
-        Assert.assertTrue("Master ctx not created", AWTRobotUtil.waitForContextCreated(sharedDrawable, true));
+        Assert.assertTrue("Master ctx not created", GLTestUtil.waitForContextCreated(sharedDrawable, true, null));
         Assert.assertTrue("Master Ctx is shared before shared creation", !ctxM.isShared());
         Assert.assertTrue("Master Gears not initialized", sharedGears.waitForInit(true));
         System.err.println("Master Gears Init done: "+sharedGears);
@@ -149,9 +151,9 @@ public class TestSharedContextVBOES2NEWT1 extends UITestCase {
         animator.add(glWindow);
         animator.start();
         glWindow.setVisible(true);
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(glWindow, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(glWindow, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(glWindow, true));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(glWindow, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(glWindow, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(glWindow, true, null));
 
         final GLContext sharedMasterContext = sharedDrawable.getContext();
         MiscUtils.dumpSharedGLContext("Master Context", sharedMasterContext);
@@ -174,7 +176,7 @@ public class TestSharedContextVBOES2NEWT1 extends UITestCase {
     @Test
     public void test01CommonAnimatorSharedOnscreen() throws InterruptedException {
         initShared(true);
-        final Animator animator = new Animator();
+        final Animator animator = new Animator(0 /* w/o AWT */);
         final GLWindow f1 = runTestGL(animator, 0, 0, true, false);
         final InsetsImmutable insets = f1.getInsets();
         final GLWindow f2 = runTestGL(animator, f1.getX()+width+insets.getTotalWidth(),
@@ -191,15 +193,15 @@ public class TestSharedContextVBOES2NEWT1 extends UITestCase {
         f1.destroy();
         f2.destroy();
         f3.destroy();
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f3, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f3, false));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f3, false));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f1, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f1, false, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f1, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f2, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f2, false, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f2, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f3, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f3, false, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f3, false, null));
 
         releaseShared();
     }
@@ -207,9 +209,9 @@ public class TestSharedContextVBOES2NEWT1 extends UITestCase {
     @Test
     public void test02EachWithAnimatorSharedOnscreen() throws InterruptedException {
         initShared(true);
-        final Animator animator1 = new Animator();
-        final Animator animator2 = new Animator();
-        final Animator animator3 = new Animator();
+        final Animator animator1 = new Animator(0 /* w/o AWT */);
+        final Animator animator2 = new Animator(0 /* w/o AWT */);
+        final Animator animator3 = new Animator(0 /* w/o AWT */);
         final GLWindow f1 = runTestGL(animator1, 0, 0, true, false);
         final InsetsImmutable insets = f1.getInsets();
         final GLWindow f2 = runTestGL(animator2, f1.getX()+width+insets.getTotalWidth(),
@@ -229,15 +231,15 @@ public class TestSharedContextVBOES2NEWT1 extends UITestCase {
         f1.destroy();
         f2.destroy();
         f3.destroy();
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f3, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f3, false));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f3, false));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f1, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f1, false, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f1, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f2, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f2, false, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f2, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f3, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f3, false, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f3, false, null));
 
         releaseShared();
     }
@@ -245,7 +247,7 @@ public class TestSharedContextVBOES2NEWT1 extends UITestCase {
     @Test
     public void test11CommonAnimatorSharedOffscreen() throws InterruptedException {
         initShared(false);
-        final Animator animator = new Animator();
+        final Animator animator = new Animator(0 /* w/o AWT */);
         final GLWindow f1 = runTestGL(animator, 0, 0, true, false);
         final InsetsImmutable insets = f1.getInsets();
         final GLWindow f2 = runTestGL(animator, f1.getX()+width+insets.getTotalWidth(),
@@ -262,15 +264,15 @@ public class TestSharedContextVBOES2NEWT1 extends UITestCase {
         f1.destroy();
         f2.destroy();
         f3.destroy();
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f3, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f3, false));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f3, false));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f1, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f1, false, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f1, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f2, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f2, false, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f2, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f3, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f3, false, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f3, false, null));
 
         releaseShared();
     }
@@ -278,9 +280,9 @@ public class TestSharedContextVBOES2NEWT1 extends UITestCase {
     @Test
     public void test12EachWithAnimatorSharedOffscreen() throws InterruptedException {
         initShared(false);
-        final Animator animator1 = new Animator();
-        final Animator animator2 = new Animator();
-        final Animator animator3 = new Animator();
+        final Animator animator1 = new Animator(0 /* w/o AWT */);
+        final Animator animator2 = new Animator(0 /* w/o AWT */);
+        final Animator animator3 = new Animator(0 /* w/o AWT */);
         final GLWindow f1 = runTestGL(animator1, 0, 0, true, false);
         final InsetsImmutable insets = f1.getInsets();
         final GLWindow f2 = runTestGL(animator2, f1.getX()+width+insets.getTotalWidth(),
@@ -300,15 +302,15 @@ public class TestSharedContextVBOES2NEWT1 extends UITestCase {
         f1.destroy();
         f2.destroy();
         f3.destroy();
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f3, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f3, false));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f3, false));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f1, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f1, false, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f1, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f2, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f2, false, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f2, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f3, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f3, false, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f3, false, null));
 
         releaseShared();
     }

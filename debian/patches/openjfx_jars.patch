@@ -1,0 +1,144 @@
+Description: Remove the paths to the jars of openjfx
+Author: Pierre Gruet <pgt@debian.org>
+Forwarded: not-needed
+Last-Update: 2023-04-15
+
+--- a/make/build-common.xml
++++ b/make/build-common.xml
+@@ -439,7 +439,6 @@
+         <property name="newt-ogl.jar"             value="${build.newt}/newt-ogl.jar" />
+         <property name="newt-awt.jar"             value="${build.newt}/newt-awt.jar" />
+         <property name="newt-swt.jar"             value="${build.newt}/newt-swt.jar" />
+-        <property name="newt-javafx.jar"          value="${build.newt}/newt-javafx.jar" />
+         <property name="newt-event.jar"           value="${build.newt}/newt-event.jar" />              <!-- using NEWT events w/o NEWT -->
+         <property name="newt-driver-linux.jar"    value="${build.newt}/newt-driver-linux.jar" />
+         <property name="newt-driver-x11.jar"      value="${build.newt}/newt-driver-x11.jar" />
+@@ -458,7 +457,6 @@
+             <pathelement location="${newt-ogl.jar}" />
+             <pathelement location="${newt-awt.jar}" />
+             <pathelement location="${newt-swt.jar}" />
+-            <pathelement location="${newt-javafx.jar}" />
+             <pathelement location="${newt-driver-linux.jar}" />
+             <pathelement location="${newt-driver-x11.jar}" />
+             <pathelement location="${newt-driver-win.jar}" />
+@@ -528,24 +528,18 @@
+         <path id="swt_gluegen.classpath">
+             <pathelement location="${gluegen-rt.jar}" />
+             <pathelement location="${swt.jar}" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-base-11.jar" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-graphics-11.jar" />
+         </path>
+ 
+         <!-- JOGL Compilation .. -->
+         <path id="nativewindow_gluegen.classpath">
+             <pathelement location="${gluegen-rt.jar}" />
+             <pathelement location="${swt.jar}" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-base-11.jar" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-graphics-11.jar" />
+             <path refid="nativewindow_all_atoms.classpath" />
+         </path>
+ 
+         <path id="nativewindow_gluegen_joal.classpath">
+             <pathelement location="${gluegen-rt.jar}" />
+             <pathelement location="${swt.jar}" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-base-11.jar" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-graphics-11.jar" />
+             <pathelement location="${joal.jar}" />
+             <path refid="nativewindow_all_atoms.classpath" />
+         </path>
+@@ -554,8 +554,6 @@
+             <pathelement location="${android.jar}" />
+             <pathelement location="${gluegen-rt-android.jar}" />
+             <pathelement location="${swt.jar}" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-base-11.jar" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-graphics-11.jar" />
+             <path refid="nativewindow_all_atoms.classpath" />
+         </path>
+ 
+@@ -564,8 +564,6 @@
+             <pathelement location="${gluegen-rt.jar}" />
+             <pathelement location="${plugin3.jar}" />
+             <pathelement location="${swt.jar}" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-base-11.jar" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-graphics-11.jar" />
+             <path refid="nativewindow_all_atoms.classpath" />
+             <path refid="jogl_all_atoms.classpath" />
+         </path>
+@@ -575,8 +575,6 @@
+             <pathelement location="${gluegen-rt-android.jar}" />
+             <pathelement location="${plugin3.jar}" />
+             <pathelement location="${swt.jar}" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-base-11.jar" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-graphics-11.jar" />
+             <path refid="nativewindow_all_atoms.classpath" />
+             <path refid="jogl_all_atoms.classpath" />
+         </path>
+@@ -614,8 +614,6 @@
+             <pathelement location="${gluegen-rt.jar}" />
+             <pathelement location="${gluegen-test-util.jar}" />
+             <pathelement location="${swt.jar}" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-base-11.jar" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-graphics-11.jar" />
+             <path refid="nativewindow_all_atoms.classpath" />
+             <path refid="jogl_all_atoms.classpath" />
+             <path refid="newt_all_atoms.classpath" />
+@@ -660,8 +660,6 @@
+             <pathelement location="${gluegen-rt.jar}" />
+             <pathelement location="${gluegen-test-util.jar}" />
+             <pathelement location="${swt.jar}" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-base-11.jar" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-graphics-11.jar" />
+             <path refid="nativewindow_all_atoms.classpath" />
+             <path refid="jogl_all_atoms.classpath" />
+             <path refid="newt_all_atoms.classpath" />
+@@ -696,8 +696,6 @@
+             <pathelement location="${gluegen-rt-android.jar}" />
+             <pathelement location="${gluegen-test-util.jar}" />
+             <pathelement location="${swt.jar}" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-base-11.jar" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-graphics-11.jar" />
+             <path refid="nativewindow_all_atoms.classpath" />
+             <path refid="jogl_all_atoms.classpath" />
+             <path refid="newt_all_atoms.classpath" />
+@@ -710,8 +710,6 @@
+             <pathelement location="${android.jar}" />
+             <pathelement location="${gluegen-rt.jar}" />
+             <pathelement location="${swt.jar}" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-base-11.jar" />
+-            <pathelement location="${project.root}/make/lib/openjfx/11/javafx-graphics-11.jar" />
+             <pathelement location="${jogl-all.jar}" />
+             <pathelement location="${oculusvr.jar}" />
+             <pathelement location="${graphui.jar}" />
+--- a/make/build-test.xml
++++ b/make/build-test.xml
+@@ -227,8 +227,6 @@
+               <arg line="--classpath ${ant-junit.jar}"/> 
+               <arg line="--classpath ${ant-junit4.jar}"/> 
+               <arg line="--classpath ${semver.jar}"/> 
+-              <arg line="--classpath ${project.root}/make/lib/openjfx/11/javafx-base-11.jar"/>
+-              <arg line="--classpath ${project.root}/make/lib/openjfx/11/javafx-graphics-11.jar"/>
+           </d8-classpaths>
+         </aapt.signed>
+     </target>
+--- a/make/build.xml
++++ b/make/build.xml
+@@ -228,8 +228,6 @@
+               <arg line="--classpath ${gluegen-rt-android.jar}"/> 
+               <arg line="--classpath ${joal.jar}"/> 
+               <arg line="--classpath ${jogl-all-android.jar}"/> 
+-              <arg line="--classpath ${project.root}/make/lib/openjfx/11/javafx-base-11.jar"/>
+-              <arg line="--classpath ${project.root}/make/lib/openjfx/11/javafx-graphics-11.jar"/>
+           </d8-classpaths>
+         </aapt.signed>
+     </target>
+--- a/make/build-nativewindow.xml
++++ b/make/build-nativewindow.xml
+@@ -67,7 +67,7 @@
+         <!-- partitioning -->
+ 
+         <property name="java.part.core"
+-                  value="com/jogamp/nativewindow/* com/jogamp/nativewindow/util/* com/jogamp/nativewindow/egl/* com/jogamp/nativewindow/swt/** com/jogamp/nativewindow/javafx/** jogamp/nativewindow/*"/>
++                  value="com/jogamp/nativewindow/* com/jogamp/nativewindow/util/* com/jogamp/nativewindow/egl/* com/jogamp/nativewindow/swt/** jogamp/nativewindow/*"/>
+ 
+         <property name="java.part.swt"
+                   value="com/jogamp/nativewindow/swt/*"/>

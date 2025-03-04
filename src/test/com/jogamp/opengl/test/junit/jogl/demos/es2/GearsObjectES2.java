@@ -100,7 +100,7 @@ public class GearsObjectES2 extends GearsObject {
                 array.bindBuffer(gl, true);
                 final int bufferTarget = array.getVBOTarget();
                 final int bufferName = array.getVBOName();
-                final long bufferSize = array.getSizeInBytes();
+                final long bufferSize = array.getByteCount();
                 final int hasBufferName = gl.getBoundBuffer(bufferTarget);
                 final GLBufferStorage hasStorage = gl.getBufferStorage(hasBufferName);
                 final boolean ok = bufferName == hasBufferName &&
@@ -113,7 +113,7 @@ public class GearsObjectES2 extends GearsObject {
             }
             array.enableBuffer(gl, true);
             // System.err.println("XXX Draw face "+face+" of "+this);
-            gl.glDrawArrays(mode, 0, array.getElementCount());
+            gl.glDrawArrays(mode, 0, array.getElemCount());
             array.enableBuffer(gl, false);
         }
     }
@@ -124,11 +124,7 @@ public class GearsObjectES2 extends GearsObject {
         pmvMatrix.glPushMatrix();
         pmvMatrix.glTranslatef(x, y, 0f);
         pmvMatrix.glRotatef(angle, 0f, 0f, 1f);
-        if( pmvMatrix.update() ) {
-            st.uniform(gl, pmvMatrixUniform);
-        } else {
-            throw new InternalError("PMVMatrix.update() returns false after mutable operations");
-        }
+        st.uniform(gl, pmvMatrixUniform); // automatic sync + update of Mvi + Mvit
 
         colorUniform.setData(gearColor);
         st.uniform(gl, colorUniform);

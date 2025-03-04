@@ -32,10 +32,15 @@ import com.jogamp.nativewindow.NativeWindowFactory;
 import com.jogamp.nativewindow.util.Insets;
 import com.jogamp.nativewindow.util.Point;
 
+import java.security.PrivilegedAction;
+
+import com.jogamp.common.ExceptionUtils;
+import com.jogamp.common.os.NativeLibrary;
 import com.jogamp.common.util.Function;
 import com.jogamp.common.util.FunctionTask;
 import com.jogamp.common.util.InterruptedRuntimeException;
 import com.jogamp.common.util.RunnableTask;
+import com.jogamp.common.util.SecurityUtil;
 
 import jogamp.nativewindow.Debug;
 import jogamp.nativewindow.NWJNILibLoader;
@@ -44,6 +49,8 @@ import jogamp.nativewindow.ToolkitProperties;
 public class OSXUtil implements ToolkitProperties {
     private static boolean isInit = false;
     private static final boolean DEBUG = Debug.debug("OSXUtil");
+
+    private static final ThreadLocal<Boolean> tlsIsMainThread = new ThreadLocal<Boolean>();
 
     /** FIXME HiDPI: OSX unique and maximum value {@value} */
     public static final int MAX_PIXELSCALE = 2;
@@ -54,11 +61,25 @@ public class OSXUtil implements ToolkitProperties {
      */
     public static synchronized void initSingleton() {
       if(!isInit) {
-          if(DEBUG) {
-              System.out.println("OSXUtil.initSingleton()");
+          final boolean useMainThreadChecker = Debug.debug("OSXUtil.MainThreadChecker");
+          if(DEBUG || useMainThreadChecker) {
+              System.out.println("OSXUtil.initSingleton() - useMainThreadChecker "+useMainThreadChecker);
           }
           if(!NWJNILibLoader.loadNativeWindow("macosx")) {
               throw new NativeWindowException("NativeWindow MacOSX native library load error.");
+          }
+          if( useMainThreadChecker ) {
+              final String libMainThreadChecker = "/Applications/Xcode.app/Contents/Developer/usr/lib/libMainThreadChecker.dylib";
+              final NativeLibrary lib = SecurityUtil.doPrivileged(new PrivilegedAction<NativeLibrary>() {
+                  @Override
+                  public NativeLibrary run() {
+                      return NativeLibrary.open(libMainThreadChecker, false, false, OSXUtil.class.getClassLoader(), true);
+                  } } );
+              if( null == lib ) {
+                  System.err.println("Could not load "+libMainThreadChecker);
+              } else {
+                  System.err.println("Loaded "+lib);
+              }
           }
 
           if( !initIDs0() ) {
@@ -108,26 +129,44 @@ public class OSXUtil implements ToolkitProperties {
       return (Insets) GetInsets0(windowOrView);
     }
 
-    public static double GetPixelScaleByDisplayID(final int displayID) {
+    public static float GetScreenPixelScaleByDisplayID(final int displayID) {
       if( 0 != displayID ) {
-          return GetPixelScale1(displayID);
+          return GetScreenPixelScale1(displayID);
       } else {
-          return 1.0; // default
+          return 1.0f; // default
       }
     }
-    public static double GetPixelScale(final long windowOrView) {
+    public static float GetScreenPixelScale(final long windowOrView) {
       if( 0 != windowOrView ) {
-          return GetPixelScale2(windowOrView);
+          return GetScreenPixelScale2(windowOrView);
       } else {
-          return 1.0; // default
+          return 1.0f; // default
+      }
+    }
+    public static float GetWindowPixelScale(final long windowOrView) {
+      if( 0 != windowOrView ) {
+          return GetWindowPixelScale1(windowOrView);
+      } else {
+          return 1.0f; // default
+      }
+    }
+    public static void SetWindowPixelScale(final long windowOrView, final float reqPixelScale) {
+      if( 0 != windowOrView ) {
+          SetWindowPixelScale1(windowOrView, reqPixelScale);
       }
     }
 
     public static long CreateNSWindow(final int x, final int y, final int width, final int height) {
-      return CreateNSWindow0(x, y, width, height);
+      final long res[] = { 0 };
+      RunOnMainThread(true, false /* kickNSApp */, new Runnable() {
+          @Override
+          public void run() {
+              res[0] = CreateNSWindow0(x, y, width, height);
+          } } );
+      return res[0];
     }
     public static void DestroyNSWindow(final long nsWindow) {
-        DestroyNSWindow0(nsWindow);
+      DestroyNSWindow0(nsWindow);
     }
     public static long GetNSView(final long nsWindow) {
       return GetNSView0(nsWindow);
@@ -227,15 +266,16 @@ public class OSXUtil implements ToolkitProperties {
 
     /**
      * Detach a sub CALayer from the root CALayer.
+     * @param subCALayerRelease if true, native call will issue a final {@code [subCALayerRelease release]}.
      */
-    public static void RemoveCASublayer(final long rootCALayer, final long subCALayer) {
+    public static void RemoveCASublayer(final long rootCALayer, final long subCALayer, final boolean subCALayerRelease) {
         if(0==rootCALayer || 0==subCALayer) {
             throw new IllegalArgumentException("rootCALayer 0x"+Long.toHexString(rootCALayer)+", subCALayer 0x"+Long.toHexString(subCALayer));
         }
         if(DEBUG) {
             System.err.println("OSXUtil.DetachCALayer: 0x"+Long.toHexString(subCALayer)+" - "+Thread.currentThread().getName());
         }
-        RemoveCASublayer0(rootCALayer, subCALayer);
+        RemoveCASublayer0(rootCALayer, subCALayer, subCALayerRelease);
     }
 
     /**
@@ -263,7 +303,7 @@ public class OSXUtil implements ToolkitProperties {
      * @param runnable
      */
     public static void RunOnMainThread(final boolean waitUntilDone, final boolean kickNSApp, final Runnable runnable) {
-        if( IsMainThread0() ) {
+        if( IsMainThread() ) {
             runnable.run(); // don't leave the JVM
         } else {
             // Utilize Java side lock/wait and simply pass the Runnable async to OSX main thread,
@@ -336,7 +376,7 @@ public class OSXUtil implements ToolkitProperties {
      * @param func
      */
     public static <R,A> R RunOnMainThread(final boolean waitUntilDone, final boolean kickNSApp, final Function<R,A> func, final A... args) {
-        if( IsMainThread0() ) {
+        if( IsMainThread() ) {
             return func.eval(args); // don't leave the JVM
         } else {
             // Utilize Java side lock/wait and simply pass the Runnable async to OSX main thread,
@@ -364,8 +404,22 @@ public class OSXUtil implements ToolkitProperties {
         }
     }
 
+    /**
+     * Returns true if the current is the NSApplication main-thread.
+     * <p>
+     * Implementation utilizes a {@link ThreadLocal} storage boolean holding the answer,
+     * which only gets set at the first call from each individual thread.
+     * This minimizes unnecessary native callbacks.
+     * </p>
+     * @return {@code true} if current thread is the NSApplication main-thread, otherwise false.
+     */
     public static boolean IsMainThread() {
-        return IsMainThread0();
+        Boolean isMainThread = tlsIsMainThread.get();
+        if( null == isMainThread ) {
+            isMainThread = new Boolean(IsMainThread0());
+            tlsIsMainThread.set(isMainThread);
+        }
+        return isMainThread.booleanValue();
     }
 
     /** Returns the screen refresh rate in Hz. If unavailable, returns 60Hz. */
@@ -373,34 +427,21 @@ public class OSXUtil implements ToolkitProperties {
         return GetScreenRefreshRate0(scrn_idx);
     }
 
-    /***
-    private static boolean  isAWTEDTMainThreadInit = false;
-    private static boolean  isAWTEDTMainThread;
-
-    public synchronized static boolean isAWTEDTMainThread() {
-        if(!isAWTEDTMainThreadInit) {
-            isAWTEDTMainThreadInit = true;
-            if(Platform.AWT_AVAILABLE) {
-                AWTEDTExecutor.singleton.invoke(true, new Runnable() {
-                   public void run() {
-                       isAWTEDTMainThread = IsMainThread();
-                       System.err.println("XXX: "+Thread.currentThread().getName()+" - isAWTEDTMainThread "+isAWTEDTMainThread);
-                   }
-                });
-            } else {
-                isAWTEDTMainThread = false;
-            }
-        }
-        return isAWTEDTMainThread;
-    } */
+    private static final String getCurrentThreadName() { return Thread.currentThread().getName(); } // Callback for JNI
+    private static final void dumpStack() { // Callback for JNI
+        System.err.println("Stacktrace on thread "+Thread.currentThread().getName());
+        ExceptionUtils.dumpStack(System.err);
+    }
 
     private static native boolean initIDs0();
     private static native boolean isNSView0(long object);
     private static native boolean isNSWindow0(long object);
     private static native Object GetLocationOnScreen0(long windowOrView, int src_x, int src_y);
     private static native Object GetInsets0(long windowOrView);
-    private static native double GetPixelScale1(int displayID);
-    private static native double GetPixelScale2(long windowOrView);
+    private static native float GetScreenPixelScale1(int displayID);
+    private static native float GetScreenPixelScale2(long windowOrView);
+    private static native float GetWindowPixelScale1(long windowOrView);
+    private static native void SetWindowPixelScale1(final long windowOrView, final float reqPixelScale);
     private static native long CreateNSWindow0(int x, int y, int width, int height);
     private static native void DestroyNSWindow0(long nsWindow);
     private static native long GetNSView0(long nsWindow);
@@ -409,7 +450,7 @@ public class OSXUtil implements ToolkitProperties {
     private static native void AddCASublayer0(long rootCALayer, long subCALayer, int x, int y, int width, int height, float contentsScale, int caLayerQuirks);
     private static native void FixCALayerLayout0(long rootCALayer, long subCALayer, boolean visible, int x, int y, int width, int height, int caLayerQuirks);
     private static native void SetCALayerPixelScale0(long rootCALayer, long subCALayer, float contentsScale);
-    private static native void RemoveCASublayer0(long rootCALayer, long subCALayer);
+    private static native void RemoveCASublayer0(long rootCALayer, long subCALayer, boolean subCALayerRelease);
     private static native void DestroyCALayer0(long caLayer);
     private static native void RunOnMainThread0(boolean kickNSApp, Runnable runnable);
     private static native void RunLater0(boolean onMain, boolean kickNSApp, Runnable runnable, int delay);

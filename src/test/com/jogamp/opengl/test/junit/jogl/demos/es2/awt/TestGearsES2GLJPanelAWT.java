@@ -35,6 +35,7 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.lang.reflect.InvocationTargetException;
 
+import com.jogamp.common.util.awt.AWTEDTExecutor;
 import com.jogamp.nativewindow.ScalableSurface;
 import com.jogamp.nativewindow.util.Rectangle;
 import com.jogamp.nativewindow.util.RectangleImmutable;
@@ -107,6 +108,7 @@ public class TestGearsES2GLJPanelAWT extends UITestCase {
     static void setFrameSize(final JFrame frame, final boolean frameLayout, final java.awt.Dimension new_sz) {
         try {
             javax.swing.SwingUtilities.invokeAndWait(new Runnable() {
+                @Override
                 public void run() {
                     frame.setSize(new_sz);
                     if( frameLayout ) {
@@ -127,11 +129,15 @@ public class TestGearsES2GLJPanelAWT extends UITestCase {
         final float[] maxSurfacePixelScale = glc.getMaximumSurfaceScale(new float[2]);
         final float[] reqSurfacePixelScale = glc.getRequestedSurfaceScale(new float[2]);
         final float[] hasSurfacePixelScale = glc.getCurrentSurfaceScale(new float[2]);
-        frame.setTitle("GLJPanel["+capsA+"], swapI "+swapInterval+", win: ["+b.x+"/"+b.y+" "+b.width+"x"+b.height+"], pix: "+glc.getSurfaceWidth()+"x"+glc.getSurfaceHeight()+
-                ", scale[min "+minSurfacePixelScale[0]+"x"+minSurfacePixelScale[1]+", max "+
-                maxSurfacePixelScale[0]+"x"+maxSurfacePixelScale[1]+", req "+
-                reqSurfacePixelScale[0]+"x"+reqSurfacePixelScale[1]+" -> has "+
-                hasSurfacePixelScale[0]+"x"+hasSurfacePixelScale[1]+"]");
+        AWTEDTExecutor.singleton.invoke(false, new Runnable() {
+            @Override
+            public void run() {
+                frame.setTitle("GLJPanel["+capsA+"], swapI "+swapInterval+", win: ["+b.x+"/"+b.y+" "+b.width+"x"+b.height+"], pix: "+glc.getSurfaceWidth()+"x"+glc.getSurfaceHeight()+
+                        ", scale[min "+minSurfacePixelScale[0]+"x"+minSurfacePixelScale[1]+", max "+
+                        maxSurfacePixelScale[0]+"x"+maxSurfacePixelScale[1]+", req "+
+                        reqSurfacePixelScale[0]+"x"+reqSurfacePixelScale[1]+" -> has "+
+                        hasSurfacePixelScale[0]+"x"+hasSurfacePixelScale[1]+"]");
+            } } );
     }
 
     protected GLEventListener createDemo(final GLCapabilities caps) {
@@ -213,14 +219,15 @@ public class TestGearsES2GLJPanelAWT extends UITestCase {
             frame.setVisible(true);
         } else {
             SwingUtilities.invokeAndWait(new Runnable() {
+                    @Override
                     public void run() {
                         frame.getContentPane().add(glJPanel, BorderLayout.CENTER);
                         frame.getContentPane().validate();
                         frame.pack();
                         frame.setVisible(true);
                     } } ) ;
-            Assert.assertEquals(true,  AWTRobotUtil.waitForVisible(frame, true));
-            Assert.assertEquals(true,  AWTRobotUtil.waitForRealized(glJPanel, true));
+            Assert.assertEquals(true,  AWTRobotUtil.waitForVisible(frame, true, null));
+            Assert.assertEquals(true,  AWTRobotUtil.waitForRealized(glJPanel, true, null));
 
             final float[] minSurfacePixelScale = glJPanel.getMinimumSurfaceScale(new float[2]);
             final float[] maxSurfacePixelScale = glJPanel.getMaximumSurfaceScale(new float[2]);
@@ -260,6 +267,7 @@ public class TestGearsES2GLJPanelAWT extends UITestCase {
                 }
             } else {
                 SwingUtilities.invokeAndWait(new Runnable() {
+                        @Override
                         public void run() {
                             if( null != frame ) {
                                 frame.setVisible(false);

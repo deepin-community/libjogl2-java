@@ -40,6 +40,8 @@ import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
 
 import com.jogamp.common.os.Platform;
+import com.jogamp.junit.util.JunitTracer;
+import com.jogamp.nativewindow.AbstractGraphicsDevice;
 import com.jogamp.newt.opengl.GLWindow;
 import com.jogamp.opengl.JoglVersion;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
@@ -84,32 +86,45 @@ public class TestShutdownCompleteNEWT extends UITestCase {
     @AfterClass
     public static void afterAll() {
         if(waitForKey) {
-            UITestCase.waitForKey("Exit");
+            JunitTracer.waitForKey("Exit");
         }
     }
 
     protected void oneLife(final boolean glInfo) throws InterruptedException {
         if(waitForEach) {
-            UITestCase.waitForKey("Start One Life");
+            JunitTracer.waitForKey("Start One Life");
         }
-        final long t0 = Platform.currentTimeMicros();
+        final long t0 = Platform.currentTimeMillis();
         GLProfile.initSingleton();
-        final long t1 = Platform.currentTimeMicros();
+        final long t1 = Platform.currentTimeMillis();
+
+        // Test minimum requirement, having a default device with profile
+        {
+            final GLProfile glp = GLProfile.getDefault();
+            System.out.println("GLProfile.getDefault(): "+glp);
+
+            final AbstractGraphicsDevice gd = GLProfile.getDefaultDevice();
+            final GLProfile glp2 = GLProfile.getDefault(gd);
+            System.out.println("GLProfile.getDefaultDevice(): "+gd);
+            System.out.println("GLProfile.getDefault(gd): "+glp2);
+            Assert.assertEquals(glp, glp2);
+        }
+
         if(!initOnly) {
             runTestGL(true);
         }
-        final long t2 = Platform.currentTimeMicros();
+        final long t2 = Platform.currentTimeMillis();
         if(glInfo) {
             System.err.println(JoglVersion.getDefaultOpenGLInfo(null, null, false).toString());
         }
-        final long t3 = Platform.currentTimeMicros();
+        final long t3 = Platform.currentTimeMillis();
         GLProfile.shutdown();
-        final long t4 = Platform.currentTimeMicros();
-        System.err.println("Total:                          "+ (t4-t0)/1e3 +"ms");
-        System.err.println("  GLProfile.initSingleton():    "+ (t1-t0)/1e3 +"ms");
-        System.err.println("  Demo Code:                    "+ (t2-t1)/1e3 +"ms");
-        System.err.println("  GLInfo:                       "+ (t3-t2)/1e3 +"ms");
-        System.err.println("  GLProfile.shutdown():         "+ (t4-t3)/1e3 +"ms");
+        final long t4 = Platform.currentTimeMillis();
+        System.err.println("Total:                          "+ (t4-t0) +"ms");
+        System.err.println("  GLProfile.initSingleton():    "+ (t1-t0) +"ms");
+        System.err.println("  Demo Code:                    "+ (t2-t1) +"ms");
+        System.err.println("  GLInfo:                       "+ (t3-t2) +"ms");
+        System.err.println("  GLProfile.shutdown():         "+ (t4-t3) +"ms");
     }
 
     @Test
@@ -150,7 +165,7 @@ public class TestShutdownCompleteNEWT extends UITestCase {
         }
 
         if(waitForKey) {
-            UITestCase.waitForKey("Start");
+            JunitTracer.waitForKey("Start");
         }
 
         final String tstname = TestShutdownCompleteNEWT.class.getName();

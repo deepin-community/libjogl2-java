@@ -1,5 +1,5 @@
 /**
- * Copyright 2010 JogAmp Community. All rights reserved.
+ * Copyright 2010-2023 JogAmp Community. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
  * permitted provided that the following conditions are met:
@@ -47,7 +47,6 @@ import com.jogamp.nativewindow.CapabilitiesImmutable;
 import com.jogamp.nativewindow.NativeWindow;
 import com.jogamp.nativewindow.ScalableSurface;
 import com.jogamp.nativewindow.WindowClosingProtocol;
-import com.jogamp.nativewindow.util.Rectangle;
 import com.jogamp.nativewindow.util.RectangleImmutable;
 import com.jogamp.nativewindow.util.SurfaceSize;
 
@@ -88,12 +87,12 @@ import com.jogamp.nativewindow.util.SurfaceSize;
  * The location must be resolvable via classpath, i.e. shall reference a location within the jar file.
  * Example (our default):
  * <pre>
- *   -Dnewt.window.icons="newt/data/jogamp-16x16.png,newt/data/jogamp-32x32.png"
- *   -Djnlp.newt.window.icons="newt/data/jogamp-16x16.png,newt/data/jogamp-32x32.png"
+ *   -Dnewt.window.icons="jogamp/newt/assets/jogamp-16x16.png,jogamp/newt/assets/jogamp-32x32.png"
+ *   -Djnlp.newt.window.icons="jogamp/newt/assets/jogamp-16x16.png,jogamp/newt/assets/jogamp-32x32.png"
  * </pre>
  * The property can also be set programmatically, which must happen before any NEWT classes are <i>touched</i>:
  * <pre>
- *   System.setProperty("newt.window.icons", "newt/data/jogamp-16x16.png, newt/data/jogamp-32x32.png");
+ *   System.setProperty("newt.window.icons", "jogamp/newt/assets/jogamp-16x16.png,jogamp/newt/assets/jogamp-32x32.png");
  * </pre>
  * To disable even Jogamp's own window icons in favor of system icons,
  * simply set a non-existing location, e.g.:
@@ -130,6 +129,7 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * <p>Changing this state is <a href="#lifecycleHeavy">lifecycle heavy</a>.</p>
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code false}.</p>
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
@@ -140,6 +140,7 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * otherwise the custom position is being enforced.</p>
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code true}.</p>
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
@@ -152,6 +153,7 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * <p>Changing this state is <a href="#lifecycleHeavy">lifecycle heavy</a>.</p>
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code false}.</p>
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
@@ -160,6 +162,7 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * Set if window has <i>the input focus</i>, otherwise cleared.
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code false}.</p>
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
@@ -168,6 +171,7 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * Set if window has <i>window decorations</i>, otherwise cleared.
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code false}.</p>
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
@@ -176,6 +180,7 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * Set if window is <i>always on top</i>, otherwise cleared.
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code false}.</p>
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
@@ -184,6 +189,7 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * Set if window is <i>always on bottom</i>, otherwise cleared.
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code false}.</p>
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
@@ -192,12 +198,13 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * Set if window is <i>sticky</i>, i.e. visible <i>on all virtual desktop</i>, otherwise cleared.
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code false}.</p>
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_BIT_STICKY = 7;    // reconfig-flag
     /**
-     * Set if window is <i>resizable</i>, otherwise cleared.
+     * Set if window is <i>resizable</i> after creation, otherwise cleared.
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code true}.</p>
      * @see #getStateMask()
@@ -208,6 +215,7 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * Set if window is <i>maximized vertically</i>, otherwise cleared.
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code false}.</p>
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
@@ -216,6 +224,7 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * Set if window is <i>maximized horizontally</i>, otherwise cleared.
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code false}.</p>
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
@@ -228,6 +237,7 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * </p>
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code false}.</p>
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
@@ -237,6 +247,7 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * Set if the <i>pointer is visible</i> when inside the window, otherwise cleared.
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code true}.</p>
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
@@ -245,84 +256,131 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * Set if the <i>pointer is confined</i> to the window, otherwise cleared.
      * <p>Bit number {@value}.</p>
      * <p>Defaults to {@code false}.</p>
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_BIT_POINTERCONFINED = 13;
 
     /**
+     * Set if window is <i>repositionable</i> after creation, otherwise cleared.
+     * <p>Bit number {@value}.</p>
+     * <p>Defaults to {@code true}.</p>
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
+     * @since 2.4.0
+     */
+    public static final int STATE_BIT_REPOSITIONABLE = 14; // reconfig-flag
+
+    /**
      * Bitmask for {@link #STATE_BIT_VISIBLE}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_VISIBLE = 1 << STATE_BIT_VISIBLE;
     /**
      * Bitmask for {@link #STATE_BIT_AUTOPOSITION}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_AUTOPOSITION = 1 << STATE_BIT_AUTOPOSITION;
     /**
      * Bitmask for {@link #STATE_BIT_CHILDWIN}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_CHILDWIN = 1 << STATE_BIT_CHILDWIN;
     /**
      * Bitmask for {@link #STATE_BIT_FOCUSED}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_FOCUSED = 1 << STATE_BIT_FOCUSED;
     /**
      * Bitmask for {@link #STATE_BIT_UNDECORATED}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_UNDECORATED = 1 << STATE_BIT_UNDECORATED;
     /**
      * Bitmask for {@link #STATE_BIT_ALWAYSONTOP}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_ALWAYSONTOP = 1 << STATE_BIT_ALWAYSONTOP;
     /**
      * Bitmask for {@link #STATE_BIT_ALWAYSONBOTTOM}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_ALWAYSONBOTTOM = 1 << STATE_BIT_ALWAYSONBOTTOM;
     /**
      * Bitmask for {@link #STATE_BIT_STICKY}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_STICKY = 1 << STATE_BIT_STICKY;
     /**
      * Bitmask for {@link #STATE_BIT_RESIZABLE}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_RESIZABLE = 1 << STATE_BIT_RESIZABLE;
     /**
      * Bitmask for {@link #STATE_BIT_MAXIMIZED_VERT}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_MAXIMIZED_VERT = 1 << STATE_BIT_MAXIMIZED_VERT;
     /**
      * Bitmask for {@link #STATE_BIT_MAXIMIZED_HORZ}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_MAXIMIZED_HORZ = 1 << STATE_BIT_MAXIMIZED_HORZ;
     /**
      * Bitmask for {@link #STATE_BIT_FULLSCREEN}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_FULLSCREEN = 1 << STATE_BIT_FULLSCREEN;
     /**
      * Bitmask for {@link #STATE_BIT_POINTERVISIBLE}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_POINTERVISIBLE = 1 << STATE_BIT_POINTERVISIBLE;
     /**
      * Bitmask for {@link #STATE_BIT_POINTERCONFINED}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
      * @since 2.3.2
      */
     public static final int STATE_MASK_POINTERCONFINED = 1 << STATE_BIT_POINTERCONFINED;
+    /**
+     * Bitmask for {@link #STATE_BIT_REPOSITIONABLE}, {@value}.
+     * @see #getSupportedStateMask()
+     * @see #getStateMask()
+     * @since 2.4.0
+     */
+    public static final int STATE_MASK_REPOSITIONABLE = 1 << STATE_BIT_REPOSITIONABLE;
 
     /**
      * Number of all public state bits.
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
@@ -330,6 +388,7 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
 
     /**
      * Bitmask covering all public state bits.
+     * @see #getSupportedStateMask()
      * @see #getStateMask()
      * @since 2.3.2
      */
@@ -352,6 +411,7 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * @see #STATE_MASK_FULLSCREEN
      * @see #STATE_MASK_POINTERVISIBLE
      * @see #STATE_MASK_POINTERCONFINED
+     * @see #STATE_MASK_REPOSITIONABLE
      * @since 2.3.2
      */
     int getStateMask();
@@ -372,8 +432,11 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * Please note that a window's size shall also be allowed to change, i.e. {@link #setSize(int, int)}.
      * </p>
      * <p>
-     * Default value is {@link #STATE_MASK_VISIBLE} | {@link #STATE_MASK_FOCUSED} | {@link #STATE_MASK_FULLSCREEN},
+     * Default minimum value is {@link #STATE_MASK_VISIBLE} | {@link #STATE_MASK_FOCUSED},
      * i.e. the <b>minimum requirement</b> for all implementations.
+     * </p>
+     * <p>
+     * Usual desktop minimum value is {@link #STATE_MASK_VISIBLE} | {@link #STATE_MASK_FOCUSED} | {@link STATE_MASK_FULLSCREEN} | {@link STATE_MASK_RESIZABLE} | {@link STATE_MASK_REPOSITIONABLE}.
      * </p>
      * <p>
      * Before native window creation {@link #getStatePublicBitmask()} is returned,
@@ -389,12 +452,13 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * <li>{@link #STATE_MASK_ALWAYSONTOP}: Window can be set {@link #setAlwaysOnTop(boolean) always-on-top}. </li>
      * <li>{@link #STATE_MASK_ALWAYSONBOTTOM}: Window can be set {@link #setAlwaysOnBottom(boolean) always-on-bottom}. </li>
      * <li>{@link #STATE_MASK_STICKY}: Window can be set {@link #setSticky(boolean) sticky}.</li>
-     * <li>{@link #STATE_MASK_RESIZABLE}: Window {@link #setResizable(boolean) resizability} can be toggled.</li>
+     * <li>{@link #STATE_MASK_RESIZABLE}: Window {@link #setResizable(boolean) resizability} can be toggled and it's {@link #setSize(int, int) size} can be changed.</li>
      * <li>{@link #STATE_MASK_MAXIMIZED_VERT}: Window can be {@link #setMaximized(boolean, boolean) maximized-vertically}. </li>
      * <li>{@link #STATE_MASK_MAXIMIZED_HORZ}: Window can be {@link #setMaximized(boolean, boolean) maximized-horizontally}. </li>
      * <li>{@link #STATE_MASK_FULLSCREEN}: Window {@link #setFullscreen(boolean) fullscreen} can be toggled. </li>
      * <li>{@link #STATE_MASK_POINTERVISIBLE}: Window {@link #setPointerVisible(boolean) pointer visibility} can be toggled. </li>
      * <li>{@link #STATE_MASK_POINTERCONFINED}: Window {@link #confinePointer(boolean) pointer can be confined}. </li>
+     * <li>{@link #STATE_MASK_REPOSITIONABLE}: Window {@link #setPosition(int, int) position} can be changed.</li>
      * </ul>
      * </p>
      * @see #getStateMask()
@@ -560,12 +624,6 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
     //
 
     /**
-     * Returns a newly created {@link Rectangle} containing window origin, {@link #getX()} & {@link #getY()},
-     * and size, {@link #getWidth()} & {@link #getHeight()}, in window units.
-     */
-    Rectangle getBounds();
-
-    /**
      * Returns the <i>pixels per millimeter</i> of this window's {@link NativeSurface}
      * according to the {@link #getMainMonitor() main monitor}'s <i>current</i> {@link MonitorMode mode}'s
      * {@link SurfaceSize#getResolution() surface resolution}.
@@ -605,6 +663,8 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
      * @param width of the window's client area in window units
      * @param height of the window's client area in window units
      *
+     * @see {@link #STATE_BIT_RESIZABLE}
+     * @see {@link #STATE_MASK_RESIZABLE}
      * @see #setSurfaceSize(int, int)
      * @see #setTopLevelSize(int, int)
      * @see #getInsets()
@@ -981,6 +1041,33 @@ public interface Window extends NativeWindow, WindowClosingProtocol, ScalableSur
 
     void runOnEDTIfAvail(boolean wait, final Runnable task);
 
+    /**
+     * Appends this class simple string one-line representation to the given {@link StringBuilder} instance
+     * @param sb given instance where this class simple string representation is added to
+     * @return the given {@link StringBuilder} for chaining
+     */
+    StringBuilder toSimpleString(StringBuilder sb);
+
+    /**
+     * Returns a simple string one-line representation of this instance using {@link #toSimpleString(StringBuilder)}.
+     */
+    String toSimpleString();
+
+    /**
+     * Appends this class full string multi-line representation to the given {@link StringBuilder} instance
+     * @param sb given instance where this class full string representation is added to
+     * @return the given {@link StringBuilder} for chaining
+     */
+    StringBuilder toString(StringBuilder sb);
+
+    /**
+     * Returns a full string multi-line representation of this instance using {@link #toString(StringBuilder)}.
+     * <p>
+     * {@inheritDoc}
+     * </p>
+     */
+    @Override
+    String toString();
 
     //
     // WindowListener

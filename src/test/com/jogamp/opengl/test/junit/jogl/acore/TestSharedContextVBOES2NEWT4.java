@@ -41,7 +41,8 @@ import com.jogamp.opengl.GLContext;
 import com.jogamp.opengl.GLProfile;
 
 import com.jogamp.opengl.util.Animator;
-import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
+import com.jogamp.opengl.test.junit.util.NewtTestUtil;
+import com.jogamp.opengl.test.junit.util.GLTestUtil;
 import com.jogamp.opengl.test.junit.util.MiscUtils;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
@@ -53,7 +54,9 @@ import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
 
 /**
- * Test sharing w/ different shared-master context.
+ * Expected error test sharing w/ different shared-master context,
+ * i.e. 3rd instance using GL buffers from 1st instance
+ * but the context from the 2nd instance.
  * <p>
  * This is achieved by using the 1st GLWindow as the <i>master</i>
  * and synchronizing via GLSharedContextSetter to postpone creation
@@ -93,7 +96,7 @@ public class TestSharedContextVBOES2NEWT4 extends UITestCase {
 
     @Test
     public void test01() throws InterruptedException {
-        final Animator animator = new Animator();
+        final Animator animator = new Animator(0 /* w/o AWT */);
         animator.start();
 
         final GearsES2 g1 = new GearsES2(0);
@@ -110,10 +113,10 @@ public class TestSharedContextVBOES2NEWT4 extends UITestCase {
         f2.setVisible(true);
 
         final GearsES2 g3 = new GearsES2(0);
-        g3.setSharedGears(g1);
+        g3.setSharedGears(g1); // GL objects from 1st instance
         final GLWindow f3 = createGLWindow(f1.getX()+0,
                                            f1.getY()+height+insets.getTotalHeight(), g3);
-        f3.setSharedAutoDrawable(f2); // Mixed master!
+        f3.setSharedAutoDrawable(f2); // GL context from 2nd instance: ERROR! (Mixed master)
         animator.add(f3);
         final AtomicBoolean gotAnimException = new AtomicBoolean(false);
         final AtomicBoolean gotOtherException = new AtomicBoolean(false);
@@ -132,33 +135,33 @@ public class TestSharedContextVBOES2NEWT4 extends UITestCase {
         });
         f3.setVisible(true);
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f1, false));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f1, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f1, false, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f1, false, null));
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f2, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f2, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f2, false));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f2, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f2, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f2, false, null));
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f3, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f3, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f3, false));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f3, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f3, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f3, false, null));
 
         f1.setVisible(true); // kick off f1 GLContext .. and hence allow f2 + f3 creation
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f1, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f1, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f1, true));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f1, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f1, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f1, true, null));
         Assert.assertTrue("Gears1 not initialized", g1.waitForInit(true));
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f2, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f2, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f2, true));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f2, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f2, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f2, true, null));
         Assert.assertTrue("Gears2 not initialized", g2.waitForInit(true));
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f3, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f3, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(f3, true));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f3, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f3, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(f3, true, null));
         Assert.assertTrue("Gears3 not initialized", g3.waitForInit(true));
 
         Assert.assertFalse("Unexpected exception (animator) caught", gotAnimException.get());
@@ -203,12 +206,12 @@ public class TestSharedContextVBOES2NEWT4 extends UITestCase {
         f2.destroy();
         f1.destroy();
 
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(f3, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(f3, false));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f1, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f1, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f2, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f2, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(f3, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(f3, false, null));
     }
 
     static long duration = 1000; // ms

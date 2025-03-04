@@ -31,7 +31,7 @@ package com.jogamp.opengl.test.junit.jogl.demos.es2.newt;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 
-import com.jogamp.common.util.InterruptSource;
+import com.jogamp.nativewindow.NativeWindowFactory;
 import com.jogamp.nativewindow.swt.SWTAccessor;
 import com.jogamp.newt.NewtFactory;
 import com.jogamp.newt.event.KeyAdapter;
@@ -39,13 +39,19 @@ import com.jogamp.newt.event.KeyEvent;
 import com.jogamp.newt.event.WindowEvent;
 import com.jogamp.newt.event.WindowAdapter;
 import com.jogamp.newt.opengl.GLWindow;
+import com.jogamp.newt.opengl.util.NEWTDemoListener;
 import com.jogamp.newt.swt.NewtCanvasSWT;
-import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
+import com.jogamp.opengl.test.junit.util.GLTestUtil;
 import com.jogamp.opengl.test.junit.util.MiscUtils;
+import com.jogamp.opengl.test.junit.util.NewtTestUtil;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 import com.jogamp.opengl.test.junit.util.QuitAdapter;
+import com.jogamp.opengl.test.junit.util.SWTTestUtil;
 import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.AnimatorBase;
+
+import jogamp.newt.DisplayImpl;
+
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
 
 import com.jogamp.nativewindow.util.Dimension;
@@ -108,12 +114,14 @@ public class TestGearsES2NewtCanvasSWT extends UITestCase {
 
     @Before
     public void init() {
-        SWTAccessor.invoke(true, new Runnable() {
+        SWTAccessor.invokeOnOSTKThread(true, new Runnable() {
+            @Override
             public void run() {
                 display = new Display();
                 Assert.assertNotNull( display );
             }});
         display.syncExec(new Runnable() {
+            @Override
             public void run() {
                 shell = new Shell( display );
                 Assert.assertNotNull( shell );
@@ -132,14 +140,16 @@ public class TestGearsES2NewtCanvasSWT extends UITestCase {
         Assert.assertNotNull( composite );
         try {
             display.syncExec(new Runnable() {
-               public void run() {
-                composite.dispose();
-                shell.dispose();
-               }});
-            SWTAccessor.invoke(true, new Runnable() {
-               public void run() {
-                display.dispose();
-               }});
+                @Override
+                public void run() {
+                    composite.dispose();
+                    shell.dispose();
+                }});
+            SWTAccessor.invokeOnOSTKThread(true, new Runnable() {
+                @Override
+                public void run() {
+                    display.dispose();
+                }});
         }
         catch( final Throwable throwable ) {
             throwable.printStackTrace();
@@ -151,7 +161,30 @@ public class TestGearsES2NewtCanvasSWT extends UITestCase {
         composite = null;
     }
 
+    private String isOSXMainThread() {
+        if( NativeWindowFactory.getNativeWindowType(true) == NativeWindowFactory.TYPE_MACOSX ) {
+            return ", isOSX-Main-Thread: " + jogamp.nativewindow.macosx.OSXUtil.IsMainThread();
+        } else {
+            return "";
+        }
+    }
     protected void runTestGL(final GLCapabilitiesImmutable caps) throws InterruptedException, InvocationTargetException {
+        System.err.println("CCC00: Run Thread: "+Thread.currentThread()+isOSXMainThread());
+        display.syncExec( new Runnable() {
+           @Override
+            public void run() {
+                   System.err.println("CCC01: SWT Thread: "+Thread.currentThread()+isOSXMainThread());
+            } } );
+        {
+            final DisplayImpl d = (DisplayImpl)NewtFactory.createDisplay(null);
+            d.runOnEDTIfAvail(true, new Runnable() {
+               @Override
+                public void run() {
+                       System.err.println("CCC02: NEWT EDT Thread: "+Thread.currentThread()+isOSXMainThread());
+                   }
+                });
+        }
+
         System.err.println("requested: vsync "+swapInterval+", "+caps);
         final com.jogamp.newt.Screen screen = NewtFactory.createScreen(swtNewtDisplay, screenIdx);
         final GLWindow glWindow = GLWindow.create(screen, caps);
@@ -160,8 +193,7 @@ public class TestGearsES2NewtCanvasSWT extends UITestCase {
         final GearsES2 demo = new GearsES2(swapInterval);
         glWindow.addGLEventListener(demo);
 
-        final Animator animator = new Animator();
-        animator.setModeBits(false, AnimatorBase.MODE_EXPECT_AWT_RENDERING_THREAD);
+        final Animator animator = new Animator(0 /* w/o AWT */);
         animator.setExclusiveContext(exclusiveContext);
 
         final QuitAdapter quitAdapter = new QuitAdapter();
@@ -171,21 +203,25 @@ public class TestGearsES2NewtCanvasSWT extends UITestCase {
         glWindow.addWindowListener(quitAdapter);
 
         glWindow.addWindowListener(new WindowAdapter() {
+            @Override
             public void windowResized(final WindowEvent e) {
                 System.err.println("window resized: "+glWindow.getX()+"/"+glWindow.getY()+" "+glWindow.getSurfaceWidth()+"x"+glWindow.getSurfaceHeight());
             }
+            @Override
             public void windowMoved(final WindowEvent e) {
                 System.err.println("window moved:   "+glWindow.getX()+"/"+glWindow.getY()+" "+glWindow.getSurfaceWidth()+"x"+glWindow.getSurfaceHeight());
             }
         });
 
         glWindow.addKeyListener(new KeyAdapter() {
+            @Override
             public void keyReleased(final KeyEvent e) {
                 if( !e.isPrintableKey() || e.isAutoRepeat() ) {
                     return;
                 }
                 if(e.getKeyChar()=='f') {
                     glWindow.invokeOnNewThread(null, false, new Runnable() {
+                        @Override
                         public void run() {
                             System.err.println("[set fullscreen  pre]: "+glWindow.getX()+"/"+glWindow.getY()+" "+glWindow.getSurfaceWidth()+"x"+glWindow.getSurfaceHeight()+", f "+glWindow.isFullscreen()+", a "+glWindow.isAlwaysOnTop()+", "+glWindow.getInsets());
                             glWindow.setFullscreen(!glWindow.isFullscreen());
@@ -194,6 +230,11 @@ public class TestGearsES2NewtCanvasSWT extends UITestCase {
                 }
             }
         });
+        final NEWTDemoListener newtDemoListener = new NEWTDemoListener(glWindow);
+        newtDemoListener.quitAdapterEnable(false);
+        glWindow.addKeyListener(newtDemoListener);
+        glWindow.addMouseListener(newtDemoListener);
+        glWindow.addWindowListener(newtDemoListener);
 
         animator.add(glWindow);
         animator.start();
@@ -205,17 +246,21 @@ public class TestGearsES2NewtCanvasSWT extends UITestCase {
         Assert.assertNotNull( canvas1 );
 
         display.syncExec( new Runnable() {
-           public void run() {
-              shell.setText( getSimpleTestName(".") );
-              shell.setSize( wsize.getWidth(), wsize.getHeight() );
-              if( null != wpos ) {
-                  shell.setLocation( wpos.getX(), wpos.getY() );
-              }
-              shell.open();
-           }
-        });
+            @Override
+            public void run() {
+                shell.setText( getSimpleTestName(".") );
+                shell.setSize( wsize.getWidth(), wsize.getHeight() );
+                if( null != wpos ) {
+                    shell.setLocation( wpos.getX(), wpos.getY() );
+                }
+                shell.open();
+            } } );
 
         animator.setUpdateFPSFrames(60, showFPS ? System.err : null);
+
+        final SWTTestUtil.WaitAction waitAction = new SWTTestUtil.WaitAction(display, true, 10);
+        Assert.assertEquals(true,  NewtTestUtil.waitForVisible(glWindow, true, waitAction));
+        Assert.assertEquals(true,  GLTestUtil.waitForRealized(glWindow, true, waitAction));
 
         System.err.println("NW chosen: "+glWindow.getDelegatedWindow().getChosenCapabilities());
         System.err.println("GL chosen: "+glWindow.getChosenCapabilities());
@@ -223,24 +268,18 @@ public class TestGearsES2NewtCanvasSWT extends UITestCase {
 
         if( null != rwsize ) {
             for(int i=0; i<50; i++) { // 500 ms dispatched delay
-                if( !display.readAndDispatch() ) {
-                    // blocks on linux .. display.sleep();
-                    Thread.sleep(10);
-                }
+                waitAction.run();
             }
             display.syncExec( new Runnable() {
-               public void run() {
-                  shell.setSize( rwsize.getWidth(), rwsize.getHeight() );
-               }
-            });
+                @Override
+                public void run() {
+                    shell.setSize( rwsize.getWidth(), rwsize.getHeight() );
+                } } );
             System.err.println("window resize pos/siz: "+glWindow.getX()+"/"+glWindow.getY()+" "+glWindow.getSurfaceWidth()+"x"+glWindow.getSurfaceHeight()+", "+glWindow.getInsets());
         }
 
         while(!quitAdapter.shouldQuit() && animator.isAnimating() && animator.getTotalFPSDuration()<duration) {
-            if( !display.readAndDispatch() ) {
-                // blocks on linux .. display.sleep();
-                Thread.sleep(10);
-            }
+            waitAction.run();
         }
 
         Assert.assertEquals(exclusiveContext ? animator.getThread() : null, glWindow.getExclusiveContextThread());
@@ -249,9 +288,14 @@ public class TestGearsES2NewtCanvasSWT extends UITestCase {
         Assert.assertFalse(animator.isStarted());
         Assert.assertEquals(null, glWindow.getExclusiveContextThread());
 
-        canvas1.dispose();
+        display.syncExec( new Runnable() {
+            @Override
+            public void run() {
+                canvas1.dispose();
+            }
+        });
         glWindow.destroy();
-        Assert.assertEquals(true,  AWTRobotUtil.waitForRealized(glWindow, false));
+        Assert.assertEquals(true,  NewtTestUtil.waitForRealized(glWindow, false, null));
     }
 
     @Test

@@ -43,13 +43,16 @@ import com.jogamp.nativewindow.AbstractGraphicsConfiguration;
 import com.jogamp.nativewindow.AbstractGraphicsDevice;
 import com.jogamp.nativewindow.AbstractGraphicsScreen;
 import com.jogamp.nativewindow.CapabilitiesChooser;
+import com.jogamp.nativewindow.CapabilitiesFilter;
 import com.jogamp.nativewindow.CapabilitiesImmutable;
 import com.jogamp.nativewindow.GraphicsConfigurationFactory;
 import com.jogamp.nativewindow.NativeWindowFactory;
 import com.jogamp.nativewindow.VisualIDHolder;
+import com.jogamp.nativewindow.CapabilitiesFilter.Test;
 import com.jogamp.nativewindow.VisualIDHolder.VIDType;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLCapabilitiesChooser;
+import com.jogamp.opengl.GLCapabilitiesFilter;
 import com.jogamp.opengl.GLCapabilitiesImmutable;
 import com.jogamp.opengl.GLContext;
 import com.jogamp.opengl.GLDrawableFactory;
@@ -216,6 +219,37 @@ public class EGLGraphicsConfigurationFactory extends GLGraphicsConfigurationFact
         return availableCaps;
     }
 
+    /**
+     * Returns a {@link GLCapabilitiesImmutable} based on the given {@link CapabilitiesImmutable}.
+     * <p>
+     * If the given {@code caps} is an instance of {@link GLCapabilitiesImmutable}, same reference will be returned,
+     * otherwise a new {@link GLCapabilitiesImmutable} using the default EGL GLProfile will be created and all
+     * given {@link CapabilitiesImmutable} values copied into.
+     * </p>
+     * @param caps
+     * @return immutable {@link GLCapabilitiesImmutable} either identical to {@code caps} or a new instance, see above.
+     */
+    public static final GLCapabilitiesImmutable castOrCopyImmutable(final CapabilitiesImmutable caps) {
+        if ( caps instanceof GLCapabilitiesImmutable ) {
+            return (GLCapabilitiesImmutable)caps;
+        } else {
+            final GLCapabilities glCapsReq = new GLCapabilities( GLProfile.getDefault( GLDrawableFactory.getEGLFactory().getDefaultDevice() ) );
+            return glCapsReq.copyFrom(caps);
+        }
+    }
+
+    /**
+     * Called mainly by {@link #chooseGraphicsConfigurationImpl(CapabilitiesImmutable, CapabilitiesImmutable, CapabilitiesChooser, AbstractGraphicsScreen, int)}
+     * @param capsChosen     the intermediate chosen capabilities to be refined by this implementation, may be equal to capsRequested
+     * @param capsReq        the original requested capabilities
+     * @param chooser        the choosing implementation
+     * @param absScreen      the referring Screen
+     * @param nativeVisualID if not {@link VisualIDHolder#VID_UNDEFINED} it reflects a pre-chosen visualID of the native platform's windowing system.
+     * @param forceTransparentFlag
+     * @return               the complete GraphicsConfiguration
+     * @see #chooseGraphicsConfigurationImpl(CapabilitiesImmutable, CapabilitiesImmutable, CapabilitiesChooser, AbstractGraphicsScreen, int)
+     * @see GraphicsConfigurationFactory#chooseGraphicsConfiguration(CapabilitiesImmutable, CapabilitiesImmutable, CapabilitiesChooser, AbstractGraphicsScreen, int)
+     */
     public static EGLGraphicsConfiguration chooseGraphicsConfigurationStatic(GLCapabilitiesImmutable capsChosen,
                                                                              final GLCapabilitiesImmutable capsReq,
                                                                              final GLCapabilitiesChooser chooser,
@@ -331,8 +365,9 @@ public class EGLGraphicsConfigurationFactory extends GLGraphicsConfigurationFact
                                                     final int nativeVisualID, final boolean forceTransparentFlag) {
         final long eglDisplay = device.getHandle();
         final GLProfile glp = capsChosen.getGLProfile();
+        final GLRendererQuirks glrq = GLDrawableFactory.getEGLFactory().getRendererQuirks(device, glp);
         final int winattrmask = GLGraphicsConfigurationUtil.getExclusiveWinAttributeBits(capsChosen);
-        List<GLCapabilitiesImmutable> availableCaps = null;
+        ArrayList<GLCapabilitiesImmutable> availableCaps = null;
         int recommendedIndex = -1;
         final IntBuffer numConfigs = Buffers.newDirectIntBuffer(1);
 
@@ -375,25 +410,33 @@ public class EGLGraphicsConfigurationFactory extends GLGraphicsConfigurationFact
             }
             hasEGLChosenCaps = false;
         }
-        final boolean useRecommendedIndex = hasEGLChosenCaps && !forceTransparentFlag && capsChosen.isBackgroundOpaque(); // only use recommended idx if not translucent
-        final boolean skipCapsChooser = null == chooser && useRecommendedIndex; // fast path: skip choosing if using recommended idx and null chooser is used
+        final boolean isPBufferOrBitmap = capsChosen.isBitmap() || capsChosen.isPBuffer();
+        final boolean dontChooseFBConfigBestMatch = GLRendererQuirks.exist(glrq, GLRendererQuirks.DontChooseFBConfigBestMatch) ||
+                                                    ( isPBufferOrBitmap && GLRendererQuirks.exist(glrq, GLRendererQuirks.No10BitColorCompOffscreen) );
+        final boolean useRecommendedIndex = !dontChooseFBConfigBestMatch &&
+                                            hasEGLChosenCaps && !forceTransparentFlag && capsChosen.isBackgroundOpaque();
+        final boolean shallSkipCapsChooser = null == chooser && useRecommendedIndex;
         if( hasEGLChosenCaps ) {
-            availableCaps = eglConfigs2GLCaps(device, glp, configs, numConfigs.get(0), winattrmask, forceTransparentFlag, skipCapsChooser /* onlyFirsValid */);
+            availableCaps = eglConfigs2GLCaps(device, glp, configs, numConfigs.get(0), winattrmask, forceTransparentFlag, shallSkipCapsChooser /* onlyFirsValid */);
             if(availableCaps.size() > 0) {
-                final long recommendedEGLConfig =  configs.get(0);
-                recommendedIndex = 0;
+                if( useRecommendedIndex ) {
+                    recommendedIndex = 0;
+                }
                 if (DEBUG) {
+                    final long recommendedEGLConfig =  configs.get(0);
                     System.err.println("EGLGraphicsConfiguration.eglChooseConfig: #1 eglChooseConfig: recommended fbcfg " + toHexString(recommendedEGLConfig) + ", idx " + recommendedIndex);
-                    System.err.println("EGLGraphicsConfiguration.eglChooseConfig: #1 useRecommendedIndex "+useRecommendedIndex+", skipCapsChooser "+skipCapsChooser);
-                    System.err.println("EGLGraphicsConfiguration.eglChooseConfig: #1 fbcfg caps " + availableCaps.get(recommendedIndex));
+                    System.err.println("EGLGraphicsConfiguration.eglChooseConfig: #1 useRecommendedIndex "+useRecommendedIndex+", shallSkipCapsChooser "+shallSkipCapsChooser);
+                    if( 0 <= recommendedIndex ) {
+                        System.err.println("EGLGraphicsConfiguration.eglChooseConfig: #1 fbcfg recommended caps " + availableCaps.get(recommendedIndex));
+                    }
                 }
             } else if (DEBUG) {
                 System.err.println("EGLGraphicsConfiguration.eglChooseConfig: #1 eglChooseConfig: no caps for recommended fbcfg " + toHexString(configs.get(0)));
-                System.err.println("EGLGraphicsConfiguration.eglChooseConfig: #1 useRecommendedIndex "+useRecommendedIndex+", skipCapsChooser "+skipCapsChooser);
+                System.err.println("EGLGraphicsConfiguration.eglChooseConfig: #1 useRecommendedIndex "+useRecommendedIndex+", shallSkipCapsChooser "+shallSkipCapsChooser);
             }
         } else if (DEBUG) {
             System.err.println("EGLGraphicsConfiguration.eglChooseConfig: #1 eglChooseConfig: no configs");
-            System.err.println("EGLGraphicsConfiguration.eglChooseConfig: #1 useRecommendedIndex "+useRecommendedIndex+", skipCapsChooser "+skipCapsChooser);
+            System.err.println("EGLGraphicsConfiguration.eglChooseConfig: #1 useRecommendedIndex "+useRecommendedIndex+", shallSkipCapsChooser "+shallSkipCapsChooser);
         }
 
         // 2nd choice: get all GLCapabilities available, no preferred recommendedIndex available
@@ -419,43 +462,47 @@ public class EGLGraphicsConfigurationFactory extends GLGraphicsConfigurationFact
             return null;
         }
 
+        final boolean skipCapsChooser = shallSkipCapsChooser && 0 <= recommendedIndex;
         if(DEBUG) {
             System.err.println("EGLGraphicsConfiguration.eglChooseConfig: got configs: "+availableCaps.size());
             for(int i=0; i<availableCaps.size(); i++) {
                 System.err.println(i+": "+availableCaps.get(i));
             }
         }
-
-        if( VisualIDHolder.VID_UNDEFINED != nativeVisualID ) { // implies !hasEGLChosenCaps
-            final List<GLCapabilitiesImmutable> removedCaps = new ArrayList<GLCapabilitiesImmutable>();
-            for(int i=0; i<availableCaps.size(); ) {
-                final GLCapabilitiesImmutable aCap = availableCaps.get(i);
-                if(aCap.getVisualID(VIDType.NATIVE) != nativeVisualID) {
-                    if(DEBUG) { System.err.println("Remove["+i+"] (mismatch VisualID): "+aCap); }
-                    removedCaps.add(availableCaps.remove(i));
-                } else if( 0 == aCap.getDepthBits() && 0 < capsChosen.getDepthBits() ) {
-                    // Hack for HiSilicon/Vivante/Immersion.16 Renderer ..
-                    if(DEBUG) { System.err.println("Remove["+i+"] (mismatch depth-bits): "+aCap); }
-                    removedCaps.add(availableCaps.remove(i));
-                } else {
-                    i++;
-                }
+        // Filter availableCaps
+        {
+            final ArrayList<Test<GLCapabilitiesImmutable>> criteria = new ArrayList<Test<GLCapabilitiesImmutable>>();
+            if( !skipCapsChooser && isPBufferOrBitmap && GLRendererQuirks.exist(glrq, GLRendererQuirks.No10BitColorCompOffscreen) ) {
+                criteria.add(new CapabilitiesFilter.TestMoreColorCompBits<GLCapabilitiesImmutable>(8));
             }
-            if(0==availableCaps.size()) {
-                availableCaps = removedCaps;
-                if(DEBUG) {
-                    System.err.println("EGLGraphicsConfiguration.eglChooseConfig: post filter nativeVisualID "+toHexString(nativeVisualID)+" no config found, revert to all");
+            if( VisualIDHolder.VID_UNDEFINED != nativeVisualID) {
+                criteria.add(new CapabilitiesFilter.TestUnmatchedNativeVisualID<GLCapabilitiesImmutable>(nativeVisualID));
+            }
+            if( 0 < capsChosen.getDepthBits() ) {
+                // Hack for HiSilicon/Vivante/Immersion.16 Renderer ..
+                criteria.add(new GLCapabilitiesFilter.TestLessDepthBits<GLCapabilitiesImmutable>(1));
+            }
+            if( criteria.size() > 0 ) {
+                final ArrayList<GLCapabilitiesImmutable> removedCaps = CapabilitiesFilter.removeMatching(availableCaps, criteria);
+                if( removedCaps.size() > 0 ) {
+                    if(DEBUG) {
+                        System.err.println("EGLGraphicsConfiguration.eglChooseConfig: filtered configs: "+availableCaps.size());
+                        for(int i=0; i<availableCaps.size(); i++) {
+                            System.err.println(i+": "+availableCaps.get(i));
+                        }
+                    }
                 }
-            } else if(DEBUG) {
-                System.err.println("EGLGraphicsConfiguration.eglChooseConfig: post filter nativeVisualID "+toHexString(nativeVisualID)+" got configs: "+availableCaps.size());
-                for(int i=0; i<availableCaps.size(); i++) {
-                    System.err.println(i+": "+availableCaps.get(i));
+                if(0==availableCaps.size()) {
+                    availableCaps = removedCaps;
+                    if(DEBUG) {
+                        System.err.println("EGLGraphicsConfiguration.eglChooseConfig: post filter visualID "+toHexString(nativeVisualID )+" no config found, revert to all");
+                    }
                 }
             }
         }
 
         final int chosenIndex;
-        if( skipCapsChooser && 0 <= recommendedIndex ) {
+        if( skipCapsChooser ) {
             chosenIndex = recommendedIndex;
         } else {
             chosenIndex = chooseCapabilities(chooser, capsChosen, availableCaps, recommendedIndex);
@@ -474,9 +521,9 @@ public class EGLGraphicsConfigurationFactory extends GLGraphicsConfigurationFact
         return res;
     }
 
-    static List<GLCapabilitiesImmutable> eglConfigs2GLCaps(final EGLGraphicsDevice device, final GLProfile glp, final PointerBuffer configs, final int num, final int winattrmask, final boolean forceTransparentFlag, final boolean onlyFirstValid) {
+    static ArrayList<GLCapabilitiesImmutable> eglConfigs2GLCaps(final EGLGraphicsDevice device, final GLProfile glp, final PointerBuffer configs, final int num, final int winattrmask, final boolean forceTransparentFlag, final boolean onlyFirstValid) {
         final GLRendererQuirks defaultQuirks = GLRendererQuirks.getStickyDeviceQuirks( GLDrawableFactory.getEGLFactory().getDefaultDevice() );
-        final List<GLCapabilitiesImmutable> bucket = new ArrayList<GLCapabilitiesImmutable>(num);
+        final ArrayList<GLCapabilitiesImmutable> bucket = new ArrayList<GLCapabilitiesImmutable>(num);
         for(int i=0; i<num; i++) {
             final GLCapabilitiesImmutable caps = EGLGraphicsConfiguration.EGLConfig2Capabilities(defaultQuirks, device, glp, configs.get(i), winattrmask, forceTransparentFlag);
             if(null != caps) {

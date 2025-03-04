@@ -47,7 +47,7 @@ import com.jogamp.opengl.test.junit.util.QuitAdapter;
 import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.PNGPixelRect;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
-
+import com.jogamp.opengl.test.junit.newt.parenting.NewtReparentingKeyAdapter;
 import com.jogamp.nativewindow.ScalableSurface;
 import com.jogamp.nativewindow.util.Dimension;
 import com.jogamp.nativewindow.util.DimensionImmutable;
@@ -61,6 +61,14 @@ import org.junit.Test;
 import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
 
+/**
+ * <p>
+ * The demo code uses {@link NEWTDemoListener} functionality.
+ * </p>
+ * <p>
+ * Manual invocation via main allows setting each tests's duration in milliseconds, e.g.{@code -duration 10000} and using a translucent window {@code -translucent}.
+ * </p>
+ */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestGearsES2SimpleNEWT extends UITestCase {
     static final DimensionImmutable wsize = new Dimension(800, 600);
@@ -94,17 +102,19 @@ public class TestGearsES2SimpleNEWT extends UITestCase {
         final SnapshotGLEventListener snap = new SnapshotGLEventListener();
         glWindow.addGLEventListener(snap);
 
-        final Animator animator = new Animator();
+        final Animator animator = new Animator(0 /* w/o AWT */);
 
         final QuitAdapter quitAdapter = new QuitAdapter();
         glWindow.addKeyListener(quitAdapter);
         glWindow.addWindowListener(quitAdapter);
 
         glWindow.addWindowListener(new WindowAdapter() {
+            @Override
             public void windowResized(final WindowEvent e) {
                 System.err.println("window resized: "+glWindow.getX()+"/"+glWindow.getY()+" "+glWindow.getSurfaceWidth()+"x"+glWindow.getSurfaceHeight());
                 setTitle(glWindow, caps);
             }
+            @Override
             public void windowMoved(final WindowEvent e) {
                 System.err.println("window moved:   "+glWindow.getX()+"/"+glWindow.getY()+" "+glWindow.getSurfaceWidth()+"x"+glWindow.getSurfaceHeight());
                 setTitle(glWindow, caps);
@@ -118,7 +128,7 @@ public class TestGearsES2SimpleNEWT extends UITestCase {
             int idx = 0;
             {
                 PointerIcon _pointerIcon = null;
-                final IOUtil.ClassResources res = new IOUtil.ClassResources(new String[] { "newt/data/cross-grey-alpha-16x16.png" }, glWindow.getClass().getClassLoader(), null);
+                final IOUtil.ClassResources res = new IOUtil.ClassResources(new String[] { "jogamp/newt/assets/cross-grey-alpha-16x16.png" }, glWindow.getClass().getClassLoader(), null);
                 try {
                     _pointerIcon = disp.createPointerIcon(res, 8, 8);
                     System.err.printf("Create PointerIcon #%02d: %s%n", idx, _pointerIcon.toString());
@@ -130,7 +140,7 @@ public class TestGearsES2SimpleNEWT extends UITestCase {
             idx++;
             {
                 PointerIcon _pointerIcon = null;
-                final IOUtil.ClassResources res = new IOUtil.ClassResources(new String[] { "newt/data/pointer-grey-alpha-16x24.png" }, glWindow.getClass().getClassLoader(), null);
+                final IOUtil.ClassResources res = new IOUtil.ClassResources(new String[] { "jogamp/newt/assets/pointer-grey-alpha-16x24.png" }, glWindow.getClass().getClassLoader(), null);
                 try {
                     _pointerIcon = disp.createPointerIcon(res, 0, 0);
                     System.err.printf("Create PointerIcon #%02d: %s%n", idx, _pointerIcon.toString());
@@ -193,7 +203,7 @@ public class TestGearsES2SimpleNEWT extends UITestCase {
 
         System.err.println("NW chosen: "+glWindow.getDelegatedWindow().getChosenCapabilities());
         System.err.println("GL chosen: "+glWindow.getChosenCapabilities());
-        System.err.println("window pos/siz: "+glWindow.getX()+"/"+glWindow.getY()+" "+glWindow.getSurfaceWidth()+"x"+glWindow.getSurfaceHeight()+", "+glWindow.getInsets());
+        System.err.println("window pos/siz: "+glWindow.getX()+"/"+glWindow.getY()+"[wu] "+glWindow.getWidth()+"x"+glWindow.getHeight()+"[wu] "+glWindow.getSurfaceWidth()+"x"+glWindow.getSurfaceHeight()+"[px], "+glWindow.getInsets());
 
         final float[] hasSurfacePixelScale1 = glWindow.getCurrentSurfaceScale(new float[2]);
         System.err.println("HiDPI PixelScale: "+reqSurfacePixelScale[0]+"x"+reqSurfacePixelScale[1]+" (req) -> "+

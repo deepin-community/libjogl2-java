@@ -1,0 +1,46 @@
+Description: removing attributes of the cc ant task that are not understood
+Author: Pierre Gruet <pgt@debian.org>
+Forwarded: not-needed
+Last-Update: 2023-04-15
+
+--- a/make/build-jogl.xml
++++ b/make/build-jogl.xml
+@@ -1615,8 +1615,6 @@
+           </targetfiles>
+           <sequential>
+             <cc outtype="${output.lib.type}" 
+-                usehighleveltool="true"
+-                writesoname="true"
+                 objdir="${obj.joglsub}" 
+                 outfile="${obj.joglsub}/@{output.lib.name}"
+                 optimize="${c.compiler.optimise}" 
+@@ -1745,7 +1743,6 @@
+           </targetfiles>
+           <sequential>
+             <cc outtype="${output.lib.type}" 
+-                usehighleveltool="true"
+                 objdir="${obj.joglsub}" 
+                 outfile="${obj.jogl}/@{output.lib.name}"
+                 optimize="${c.compiler.optimise}" 
+--- a/make/build-nativewindow.xml
++++ b/make/build-nativewindow.xml
+@@ -952,8 +952,6 @@
+           </targetfiles>
+           <sequential>
+             <cc outtype="${output.lib.type}" 
+-                usehighleveltool="true"
+-                writesoname="true"
+                 objdir="${obj.nativewindow}" 
+                 outfile="${obj.nativewindow}/@{output.lib.name}"
+                 optimize="${c.compiler.optimise}" 
+--- a/make/build-newt.xml
++++ b/make/build-newt.xml
+@@ -1013,8 +1013,6 @@
+           </targetfiles>
+           <sequential>
+             <cc outtype="${output.lib.type}" 
+-                usehighleveltool="true"
+-                writesoname="true"
+                 objdir="${obj.newt}"
+                 outfile="${obj.newt}/@{output.lib.name}"
+                 optimize="${c.compiler.optimise}"

@@ -30,21 +30,21 @@ package jogamp.opengl.util.av.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2ES2;
 import com.jogamp.opengl.GLException;
-
+import com.jogamp.common.av.AudioFormat;
+import com.jogamp.common.av.AudioSink;
+import com.jogamp.common.av.AudioSinkFactory;
+import com.jogamp.common.av.TimeFrameI;
 import com.jogamp.common.util.IOUtil;
+import com.jogamp.common.util.PropertyAccess;
+import com.jogamp.common.util.SecurityUtil;
 import com.jogamp.common.util.VersionNumber;
 import com.jogamp.gluegen.runtime.ProcAddressTable;
-import com.jogamp.opengl.util.TimeFrameI;
 import com.jogamp.opengl.util.GLPixelStorageModes;
-import com.jogamp.opengl.util.av.AudioSink;
-import com.jogamp.opengl.util.av.AudioSink.AudioFormat;
-import com.jogamp.opengl.util.av.AudioSinkFactory;
 import com.jogamp.opengl.util.av.GLMediaPlayer;
 import com.jogamp.opengl.util.texture.Texture;
 
@@ -55,16 +55,12 @@ import jogamp.opengl.util.av.GLMediaPlayerImpl;
 import jogamp.opengl.util.av.VideoPixelFormat;
 
 /***
- * Implementation utilizes <a href="http://libav.org/">Libav</a>
- * or  <a href="http://ffmpeg.org/">FFmpeg</a> which are ubiquitous
+ * Implementation utilizes <a href="http://ffmpeg.org/">FFmpeg</a> which is ubiquitous
  * available and usually pre-installed on Unix platforms.
- * <p>
- * Due to legal reasons we cannot deploy binaries of it, which contains patented codecs.
- * </p>
  * <p>
  * Besides the default BSD/Linux/.. repositories and installations,
  * precompiled binaries can be found at the
- * <a href="#libavavail">listed location below</a>.
+ * <a href="#ffmpegavail">listed location below</a>.
  * </p>
  *
  * <a name="implspecifics"><h5>Implementation specifics</h5></a>
@@ -89,29 +85,26 @@ import jogamp.opengl.util.av.VideoPixelFormat;
  * </p>
  * <p>
  *
- * <a name="libavspecifics"><h5>Libav Specifics</h5></a>
+ * <a name="ffmpegspecifics"><h5>FFmpeg Specifics</h5></a>
  * <p>
- * Utilizes a slim dynamic and native binding to the Lib_av
- * libraries:
+ * Utilizes a slim dynamic and native binding to the FFmpeg libraries:
  * <ul>
- *   <li>libavcodec</li>
- *   <li>libavformat</li>
- *   <li>libavutil</li>
- *   <li>libavresample (opt)</li>
- *   <li>libavdevice (opt)</li>
+ *   <li>avcodec</li>
+ *   <li>avformat</li>
+ *   <li>avutil</li>
+ *   <li>avdevice (optional for video input devices)</li>
+ *   <li>swresample</li>
  * </ul>
  * </p>
  *
- * <a name="compatibility"><h5>LibAV Compatibility</h5></a>
+ * <a name="compatibility"><h5>FFmpeg Compatibility</h5></a>
  * <p>
- * Currently we are binary compatible w/:
+ * Currently we are binary compatible with the following major versions:
  * <table border="1">
- * <tr><th>libav / ffmpeg</th><th>lavc</th><th>lavf</th><th>lavu</th><th>lavr/lswr</th>  <th>FFMPEG* class</th></tr>
- * <tr><td>0.8</td>           <td>53</td>  <td>53</td>  <td>51</td>     <td></td>        <td>FFMPEGv08</td></tr>
- * <tr><td>9.0 / 1.2</td>     <td>54</td>  <td>54</td>  <td>52</td>     <td>01/00</td>   <td>FFMPEGv09</td></tr>
- * <tr><td>10 / 2.[0-3]</td>  <td>55</td>  <td>55</td>  <td>53/52</td>  <td>01/00</td>   <td>FFMPEGv10</td></tr>
- * <tr><td>11 / 2.[4-8]</td>  <td>56</td>  <td>56</td>  <td>54</td>     <td>02/01</td>   <td>FFMPEGv11</td></tr>
- * <tr><td>12 / 2.[9-x]</td>  <td>57</td>  <td>57</td>  <td>55</td>     <td>02/01</td>   <td>TODO</td></tr>
+ * <tr><th>ffmpeg</th><th>avcodec</th><th>avformat</th><th>avdevice</th><th>avutil</th><th>swresample</th>  <th>FFMPEG* class</th></tr>
+ * <tr><td>4</td>     <td>58</td>     <td>58</td>      <td>58</td>      <td>56</td>    <td>03</td>          <td>FFMPEGv0400</td></tr>
+ * <tr><td>5</td>     <td>59</td>     <td>59</td>      <td>59</td>      <td>57</td>    <td>04</td>          <td>FFMPEGv0500</td></tr>
+ * <tr><td>6</td>     <td>60</td>     <td>60</td>      <td>60</td>      <td>58</td>    <td>04</td>          <td>FFMPEGv0600</td></tr>
  * </table>
  * </p>
  * <p>
@@ -119,11 +112,6 @@ import jogamp.opengl.util.av.VideoPixelFormat;
  * <ul>
  *  <li>http://ffmpeg.org/documentation.html</li>
  *  <li>http://git.videolan.org/?p=ffmpeg.git;a=blob;f=doc/APIchanges;hb=HEAD</li>
- * </ul>
- * See libav:
- * <ul>
- *  <li>https://libav.org/documentation.html</li>
- *  <li>http://upstream-tracker.org/versions/libav.html</li>
  * </ul>
  * </p>
  * <p>
@@ -140,36 +128,66 @@ import jogamp.opengl.util.av.VideoPixelFormat;
  * </ul>
  * </p>
  *
- * <a name="libavavail"><h5>FFMPEG / LibAV Availability</h5></a>
+ * <a name="ffmpegavail"><h5>FFmpeg Availability</h5></a>
  * <p>
  * <ul>
- *   <li>GNU/Linux: ffmpeg or libav are deployed in most distributions.</li>
+ *   <li>GNU/Linux: ffmpeg is deployed in most distributions.</li>
  *   <li>Windows:
  *   <ul>
  *     <li>https://ffmpeg.org/download.html#build-windows</li>
  *     <li>http://ffmpeg.zeranoe.com/builds/ (ffmpeg) <i>recommended, works w/ dshow</i></li>
- *     <li>http://win32.libav.org/releases/  (libav)</li>
  *   </ul></li>
  *   <li>MacOSX
  *   <ul>
+ *     <li>Building using Homebrew *
+ *     <ul>
+ *       <li>https://github.com/Homebrew/homebrew/wiki/Installation</li>
+ *       <li>https://trac.ffmpeg.org/wiki/CompilationGuide/MacOSX<pre>
+ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+brew install ffmpeg
+ *       </pre></li>
+ *     </ul></li>
  *     <li>Builds
  *     <ul>
  *       <li>https://ffmpeg.org/download.html#build-mac</li>
  *     </ul></li>
- *     <li>Building using Homebrew *
- *     <ul>
- *       <li>https://github.com/Homebrew/homebrew/wiki/Installation</li>
- *       <li>https://trac.ffmpeg.org/wiki/CompilationGuide/MacOSX</li>
- *     </ul></li>
  *   </ul></li>
  *   <li>OpenIndiana/Solaris:<pre>
- *       pkg set-publisher -p http://pkg.openindiana.org/sfe-encumbered.
- *       pkt install pkg:/video/ffmpeg
+pkg set-publisher -p http://pkg.openindiana.org/sfe-encumbered.
+pkt install pkg:/video/ffmpeg
  *       </pre></li>
  * </ul>
  * </p>
  */
 public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
+
+    /**
+     * Defaults to {@code true} for now.
+     * However, in case we ship our own ffmpeg library this may change.
+     * <p>
+     * Property {@code jogl.ffmpeg.lib} set to {@code internal}
+     * will set {@code PREFER_SYSTEM_LIBS} to {@code false}.
+     * </p>
+     * <p>
+     * Non system internal libraries are named 'internal_<basename>',
+     * e.g. 'internal_avutil'.
+     * </p>
+     * <p>
+     * System default libraries are named '<basename>',
+     * e.g. 'avutil'.
+     * </p>
+     * <p>
+     * If {@code PREFER_SYSTEM_LIBS} is {@code true} (default),
+     * we lookup the default library first,
+     * then the versioned library names and last the internal library.
+     * </p>
+     * <p>
+     * If {@code PREFER_SYSTEM_LIBS} is {@code false},
+     * we lookup the internal library first,
+     * then the versioned library names and last the default library.
+     * </p>
+     */
+    /* pp */ static final boolean PREFER_SYSTEM_LIBS;
 
     /** POSIX ENOSYS {@value}: Function not implemented. FIXME: Move to GlueGen ?!*/
     private static final int ENOSYS = 38;
@@ -179,13 +197,15 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
     private static final int avUtilMajorVersionCC;
     private static final int avFormatMajorVersionCC;
     private static final int avCodecMajorVersionCC;
-    private static final int avResampleMajorVersionCC;
+    private static final int avDeviceMajorVersionCC;
     private static final int swResampleMajorVersionCC;
     private static final boolean available;
-    private static final boolean enableAvResample;
-    private static final boolean enableSwResample;
 
     static {
+        // PREFER_SYSTEM_LIBS default on all systems is true for now!
+        final String choice = PropertyAccess.getProperty("jogl.ffmpeg.lib", true);
+        PREFER_SYSTEM_LIBS = null == choice || !choice.equals("internal");
+
         final boolean libAVGood = FFMPEGDynamicLibraryBundleInfo.initSingleton();
         final boolean libAVVersionGood;
         if( FFMPEGDynamicLibraryBundleInfo.libsLoaded() ) {
@@ -194,58 +214,51 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
                 avCodecMajorVersionCC = natives.getAvCodecMajorVersionCC0();
                 avFormatMajorVersionCC = natives.getAvFormatMajorVersionCC0();
                 avUtilMajorVersionCC = natives.getAvUtilMajorVersionCC0();
-                avResampleMajorVersionCC = natives.getAvResampleMajorVersionCC0();
+                avDeviceMajorVersionCC = natives.getAvDeviceMajorVersionCC0();
                 swResampleMajorVersionCC = natives.getSwResampleMajorVersionCC0();
             } else {
                 avUtilMajorVersionCC = 0;
                 avFormatMajorVersionCC = 0;
                 avCodecMajorVersionCC = 0;
-                avResampleMajorVersionCC = 0;
+                avDeviceMajorVersionCC = 0;
                 swResampleMajorVersionCC = 0;
             }
             final VersionNumber avCodecVersion = FFMPEGDynamicLibraryBundleInfo.avCodecVersion;
             final VersionNumber avFormatVersion = FFMPEGDynamicLibraryBundleInfo.avFormatVersion;
             final VersionNumber avUtilVersion = FFMPEGDynamicLibraryBundleInfo.avUtilVersion;
-            final VersionNumber avResampleVersion = FFMPEGDynamicLibraryBundleInfo.avResampleVersion;
-            final boolean avResampleLoaded = FFMPEGDynamicLibraryBundleInfo.avResampleLoaded();
+            final VersionNumber avDeviceVersion = FFMPEGDynamicLibraryBundleInfo.avDeviceVersion;
             final VersionNumber swResampleVersion = FFMPEGDynamicLibraryBundleInfo.swResampleVersion;
+            final boolean avDeviceLoaded = FFMPEGDynamicLibraryBundleInfo.avDeviceLoaded();
             final boolean swResampleLoaded = FFMPEGDynamicLibraryBundleInfo.swResampleLoaded();
-            if( DEBUG ) {
-                System.err.println("LIB_AV Codec   : "+avCodecVersion+" [cc "+avCodecMajorVersionCC+"]");
-                System.err.println("LIB_AV Format  : "+avFormatVersion+" [cc "+avFormatMajorVersionCC+"]");
-                System.err.println("LIB_AV Util    : "+avUtilVersion+" [cc "+avUtilMajorVersionCC+"]");
-                System.err.println("LIB_AV Resample: "+avResampleVersion+" [cc "+avResampleMajorVersionCC+", loaded "+avResampleLoaded+"]");
-                System.err.println("LIB_SW Resample: "+swResampleVersion+" [cc "+swResampleMajorVersionCC+", loaded "+swResampleLoaded+"]");
-                System.err.println("LIB_AV Device  : [loaded "+FFMPEGDynamicLibraryBundleInfo.avDeviceLoaded()+"]");
-                System.err.println("LIB_AV Class   : "+(null!= natives ? natives.getClass().getSimpleName() : "n/a"));
-            }
             final int avCodecMajor = avCodecVersion.getMajor();
             final int avFormatMajor = avFormatVersion.getMajor();
             final int avUtilMajor = avUtilVersion.getMajor();
+            final int avDeviceMajor = avDeviceVersion.getMajor();
+            final int swResampleMajor = swResampleVersion.getMajor();
             libAVVersionGood = avCodecMajorVersionCC  == avCodecMajor &&
                                avFormatMajorVersionCC == avFormatMajor &&
-                               ( avUtilMajorVersionCC == avUtilMajor ||
-                                 55 == avCodecMajorVersionCC && 53 == avUtilMajorVersionCC && 52 == avUtilMajor /* ffmpeg 2.x */
-                               );
-            enableAvResample = avResampleLoaded && avResampleMajorVersionCC  == avResampleVersion.getMajor();
-            enableSwResample = swResampleLoaded && swResampleMajorVersionCC  == swResampleVersion.getMajor();
-            if( DEBUG ) {
-                System.err.println("LIB_AV Resample: enabled "+enableAvResample);
-                System.err.println("LIB_SW Resample: enabled "+enableSwResample);
-            }
+                               avUtilMajorVersionCC == avUtilMajor &&
+                               ( avDeviceMajorVersionCC == avDeviceMajor || 0 == avDeviceMajor ) &&
+                               swResampleMajorVersionCC == swResampleMajor;
             if( !libAVVersionGood ) {
-                System.err.println("LIB_AV Not Matching Compile-Time / Runtime Major-Version");
+                System.err.println("FFmpeg Not Matching Compile-Time / Runtime Major-Version");
+            }
+            if( !libAVVersionGood || DEBUG ) {
+                System.err.println("FFmpeg Codec   : "+avCodecVersion+" [cc "+avCodecMajorVersionCC+"]");
+                System.err.println("FFmpeg Format  : "+avFormatVersion+" [cc "+avFormatMajorVersionCC+"]");
+                System.err.println("FFmpeg Util    : "+avUtilVersion+" [cc "+avUtilMajorVersionCC+"]");
+                System.err.println("FFmpeg Device  : "+avDeviceVersion+" [cc "+avDeviceMajorVersionCC+", loaded "+avDeviceLoaded+"]");
+                System.err.println("FFmpeg Resample: "+swResampleVersion+" [cc "+swResampleMajorVersionCC+", loaded "+swResampleLoaded+"]");
+                System.err.println("FFmpeg Class   : "+(null!= natives ? natives.getClass().getSimpleName() : "n/a"));
             }
         } else {
             natives = null;
             avUtilMajorVersionCC = 0;
             avFormatMajorVersionCC = 0;
             avCodecMajorVersionCC = 0;
-            avResampleMajorVersionCC = 0;
+            avDeviceMajorVersionCC = 0;
             swResampleMajorVersionCC = 0;
             libAVVersionGood = false;
-            enableAvResample = false;
-            enableSwResample = false;
         }
         available = libAVGood && libAVVersionGood && null != natives;
     }
@@ -262,7 +275,6 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
     // Video
     //
 
-    private String texLookupFuncName = "ffmpegTexture2D";
     private boolean usesTexLookupShader = false;
     private VideoPixelFormat vPixelFmt = null;
     private int vPlanes = 0;
@@ -276,23 +288,26 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
     // Audio
     //
 
-    private AudioSink.AudioFormat avChosenAudioFormat;
+    private AudioFormat avChosenAudioFormat;
     private int audioSamplesPerFrameAndChannel = 0;
 
     public FFMPEGMediaPlayer() {
         if(!available) {
             throw new RuntimeException("FFMPEGMediaPlayer not available");
         }
-        moviePtr = natives.createInstance0(this, enableAvResample, enableSwResample, DEBUG_NATIVE);
+        psm = new GLPixelStorageModes();
+        initSelf();
+    }
+    private void initSelf() {
+        moviePtr = natives.createInstance0(this, DEBUG_NATIVE);
         if(0==moviePtr) {
             throw new GLException("Couldn't create FFMPEGInstance");
         }
-        psm = new GLPixelStorageModes();
         audioSink = null;
     }
 
     @Override
-    protected final void destroyImpl(final GL gl) {
+    protected final void destroyImpl() {
         if (moviePtr != 0) {
             natives.destroyInstance0(moviePtr);
             moviePtr = 0;
@@ -305,6 +320,12 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
             audioSink = null;
             _audioSink.destroy();
         }
+    }
+
+    @Override
+    protected void stopImpl() {
+        destroyImpl();
+        initSelf();
     }
 
     public static final String dev_video_linux = "/dev/video";
@@ -323,11 +344,17 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
         if( GLMediaPlayer.STREAM_ID_NONE == aid ) {
             audioSink = AudioSinkFactory.createNull();
         } else {
-            audioSink = AudioSinkFactory.createDefault();
+            audioSink = AudioSinkFactory.createDefault(FFMPEGMediaPlayer.class.getClassLoader());
+        }
+        {
+            final int audioChannelLimit = getAudioChannelLimit();
+            if( audioChannelLimit >= 1 ) {
+                audioSink.setChannelLimit(audioChannelLimit);
+            }
         }
         final AudioFormat preferredAudioFormat = audioSink.getPreferredFormat();
         if(DEBUG) {
-            System.err.println("initStream: p2 preferred "+preferredAudioFormat+", "+this);
+            System.err.println("initStream: p2 aid "+aid+", preferred "+preferredAudioFormat+" on "+audioSink+", "+this);
         }
 
         final boolean isCameraInput = null != cameraPath;
@@ -364,7 +391,7 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
         } else {
             resStreamLocS = streamLocS;
         }
-        final int aMaxChannelCount = audioSink.getMaxSupportedChannels();
+        final int aMaxChannelCount = preferredAudioFormat.channelCount;
         final int aPrefSampleRate = preferredAudioFormat.sampleRate;
          // setStream(..) issues updateAttributes*(..), and defines avChosenAudioFormat, vid, aid, .. etc
         if(DEBUG) {
@@ -380,13 +407,10 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
         if(0==moviePtr) {
             throw new GLException("FFMPEG native instance null");
         }
-        if(null == audioSink) {
-            throw new GLException("AudioSink null");
-        }
         final int audioQueueLimit;
         if( null != gl && STREAM_ID_NONE != getVID() ) {
             final GLContextImpl ctx = (GLContextImpl)gl.getContext();
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            SecurityUtil.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
                 public Object run() {
                     final ProcAddressTable pt = ctx.getGLProcAddressTable();
@@ -402,17 +426,19 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
             audioQueueLimit = AudioSink.DefaultQueueLimitAudioOnly;
         }
         if(DEBUG) {
-            System.err.println("initGL: p3 avChosen "+avChosenAudioFormat);
+            System.err.println("initGL: p3 aid "+getAID()+", avChosen "+avChosenAudioFormat+" on "+audioSink);
         }
 
-        if( STREAM_ID_NONE == getAID() ) {
-            audioSink.destroy();
+        if( STREAM_ID_NONE == getAID() || null == audioSink ) {
+            if(null != audioSink) {
+                audioSink.destroy();
+            }
             audioSink = AudioSinkFactory.createNull();
             audioSink.init(AudioSink.DefaultFormat, 0, AudioSink.DefaultInitialQueueSize, AudioSink.DefaultQueueGrowAmount, audioQueueLimit);
         } else {
-            final float frameDuration;
+            final int frameDuration;
             if( audioSamplesPerFrameAndChannel > 0 ) {
-                frameDuration= avChosenAudioFormat.getSamplesDuration(audioSamplesPerFrameAndChannel);
+                frameDuration = Math.round( 1000f * avChosenAudioFormat.getSamplesDuration(audioSamplesPerFrameAndChannel) );
             } else {
                 frameDuration = AudioSink.DefaultFrameDuration;
             }
@@ -426,7 +452,7 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
         }
         if(DEBUG) {
             System.err.println("initGL: p4 chosen "+avChosenAudioFormat);
-            System.err.println("initGL: p4 chosen "+audioSink);
+            System.err.println("initGL: p4 chosen aid "+getAID()+", "+audioSink);
         }
 
         if( null != gl && STREAM_ID_NONE != getVID() ) {
@@ -461,6 +487,7 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
             }
             setTextureFormat(tif, tf);
             setTextureType(tt);
+            setIsGLOriented(false);
             if(DEBUG) {
                 System.err.println("initGL: p5: video "+vPixelFmt+", planes "+vPlanes+", bpp "+vBitsPerPixel+"/"+vBytesPerPixelPerPlane+
                                    ", tex "+texWidth+"x"+texHeight+", usesTexLookupShader "+usesTexLookupShader);
@@ -485,8 +512,8 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
 
     /**
      * Native callback
-     * Converts the given libav/ffmpeg values to {@link AudioFormat} and returns {@link AudioSink#isSupported(AudioFormat)}.
-     * @param audioSampleFmt ffmpeg/libav audio-sample-format, see {@link AudioSampleFormat}.
+     * Converts the given ffmpeg values to {@link AudioFormat} and returns {@link AudioSink#isSupported(AudioFormat)}.
+     * @param audioSampleFmt ffmpeg audio-sample-format, see {@link AudioSampleFormat}.
      * @param audioSampleRate sample rate in Hz (1/s)
      * @param audioChannels number of channels
      */
@@ -501,8 +528,8 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
     }
 
     /**
-     * Returns {@link AudioFormat} as converted from the given libav/ffmpeg values.
-     * @param audioSampleFmt ffmpeg/libav audio-sample-format, see {@link AudioSampleFormat}.
+     * Returns {@link AudioFormat} as converted from the given ffmpeg values.
+     * @param audioSampleFmt ffmpeg audio-sample-format, see {@link AudioSampleFormat}.
      * @param audioSampleRate sample rate in Hz (1/s)
      * @param audioChannels number of channels
      */
@@ -680,17 +707,16 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
      * Otherwise the call is delegated to it's super class.
      */
     @Override
-    public final String getTextureLookupFunctionName(final String desiredFuncName) throws IllegalStateException {
-        if( State.Uninitialized == getState() ) {
-            throw new IllegalStateException("Instance not initialized: "+this);
-        }
+    public String setTextureLookupFunctionName(final String texLookupFuncName) throws IllegalStateException {
         if( usesTexLookupShader ) {
-            if(null != desiredFuncName && desiredFuncName.length()>0) {
-                texLookupFuncName = desiredFuncName;
+            if(null != texLookupFuncName && texLookupFuncName.length()>0) {
+                textureLookupFunctionName = texLookupFuncName;
+            } else {
+                textureLookupFunctionName = "ffmpegTexture2D";
             }
-            return texLookupFuncName;
+            return textureLookupFunctionName;
         }
-        return super.getTextureLookupFunctionName(desiredFuncName);
+        return super.getTextureLookupFunctionName();
     }
 
     /**
@@ -700,10 +726,7 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
      * e.g. YUV420P to RGB. Otherwise the call is delegated to it's super class.
      */
     @Override
-    public final String getTextureLookupFragmentShaderImpl() throws IllegalStateException {
-      if( State.Uninitialized == getState() ) {
-          throw new IllegalStateException("Instance not initialized: "+this);
-      }
+    public final String getTextureLookupFragmentShaderImpl() {
       if( !usesTexLookupShader ) {
           return super.getTextureLookupFragmentShaderImpl();
       }
@@ -712,7 +735,7 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
         case YUVJ420P:
         case YUV420P: // < planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)
           return
-              "vec4 "+texLookupFuncName+"(in "+getTextureSampler2DType()+" image, in vec2 texCoord) {\n"+
+              "vec4 "+getTextureLookupFunctionName()+"(in "+getTextureSampler2DType()+" image, in vec2 texCoord) {\n"+
               "  const vec2 u_off = vec2("+tc_w_1+", 0.0);\n"+
               "  const vec2 v_off = vec2("+tc_w_1+", 0.5);\n"+
               "  vec2 tc_half = texCoord*0.5;\n"+
@@ -733,7 +756,7 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
         case YUVJ422P:
         case YUV422P: ///< planar YUV 4:2:2, 16bpp, (1 Cr & Cb sample per 2x1 Y samples)
           return
-              "vec4 "+texLookupFuncName+"(in "+getTextureSampler2DType()+" image, in vec2 texCoord) {\n"+
+              "vec4 "+getTextureLookupFunctionName()+"(in "+getTextureSampler2DType()+" image, in vec2 texCoord) {\n"+
               "  const vec2 u_off = vec2("+tc_w_1+"      , 0.0);\n"+
               "  const vec2 v_off = vec2("+tc_w_1+" * 1.5, 0.0);\n"+
               "  vec2 tc_halfw = vec2(texCoord.x*0.5, texCoord.y);\n"+
@@ -754,7 +777,7 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
         case YUYV422: // < packed YUV 4:2:2, 2 x 16bpp, [Y0 Cb] [Y1 Cr]
                       // Stuffed into RGBA half width texture
           return
-              "vec4 "+texLookupFuncName+"(in "+getTextureSampler2DType()+" image, in vec2 texCoord) {\n"+
+              "vec4 "+getTextureLookupFunctionName()+"(in "+getTextureSampler2DType()+" image, in vec2 texCoord) {\n"+
               "  "+
               "  float y1,u,y2,v,y,r,g,b;\n"+
               "  vec2 tc_halfw = vec2(texCoord.x*0.5, texCoord.y);\n"+
@@ -776,7 +799,7 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
         case UYVY422: // < packed YUV 4:2:2, 2 x 16bpp, Cb Y0 Cr Y1
                       // Stuffed into RGBA half width texture
           return
-              "vec4 "+texLookupFuncName+"(in "+getTextureSampler2DType()+" image, in vec2 texCoord) {\n"+
+              "vec4 "+getTextureLookupFunctionName()+"(in "+getTextureSampler2DType()+" image, in vec2 texCoord) {\n"+
               "  "+
               "  float y1,u,y2,v,y,r,g,b;\n"+
               "  vec2 tc_halfw = vec2(texCoord.x*0.5, texCoord.y);\n"+
@@ -798,7 +821,7 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
 
         case BGR24:
           return
-              "vec4 "+texLookupFuncName+"(in "+getTextureSampler2DType()+" image, in vec2 texCoord) {\n"+
+              "vec4 "+getTextureLookupFunctionName()+"(in "+getTextureSampler2DType()+" image, in vec2 texCoord) {\n"+
               "  "+
               "  vec3 bgr = texture2D(image, texCoord).rgb;\n"+
               "  return vec4(bgr.b, bgr.g, bgr.r, 1);\n"+ /* just swizzle */
@@ -811,13 +834,13 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
     }
 
     @Override
-    public final boolean playImpl() {
+    public final boolean resumeImpl() {
         if(0==moviePtr) {
             return false;
         }
         final int errno = natives.play0(moviePtr);
         if( DEBUG_NATIVE && errno != 0 && errno != -ENOSYS) {
-            System.err.println("libav play err: "+errno);
+            System.err.println("ffmpeg play err: "+errno);
         }
         return true;
     }
@@ -829,7 +852,7 @@ public class FFMPEGMediaPlayer extends GLMediaPlayerImpl {
         }
         final int errno = natives.pause0(moviePtr);
         if( DEBUG_NATIVE && errno != 0 && errno != -ENOSYS) {
-            System.err.println("libav pause err: "+errno);
+            System.err.println("ffmpeg pause err: "+errno);
         }
         return true;
     }

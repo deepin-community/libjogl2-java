@@ -55,6 +55,7 @@ import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
 
 import com.jogamp.common.os.Platform;
+import com.jogamp.junit.util.JunitTracer;
 import com.jogamp.nativewindow.swt.SWTAccessor;
 import com.jogamp.opengl.test.junit.jogl.demos.es1.OneTriangle;
 import com.jogamp.opengl.test.junit.util.MiscUtils;
@@ -82,7 +83,7 @@ public class TestSWTAccessor03AWTGLn extends UITestCase {
             // NSLocking issues on OSX and AWT, able to freeze whole test suite!
             // Since this test is merely a technical nature to validate the accessor w/ SWT
             // we can drop it w/o bothering.
-            UITestCase.setTestSupported(false);
+            JunitTracer.setTestSupported(false);
             return;
         }
         System.out.println( "GLProfile " + GLProfile.glAvailabilityToString() );
@@ -103,10 +104,11 @@ public class TestSWTAccessor03AWTGLn extends UITestCase {
     }
 
     protected void init() throws InterruptedException, InvocationTargetException {
-        SWTAccessor.invoke(true, new Runnable() {
+        SWTAccessor.invokeOnOSTKThread(true, new Runnable() {
             public void run() {
                 display = new Display();
                 Assert.assertNotNull( display );
+                SWTAccessor.printInfo(System.err, display);
                 shell = new Shell( display );
                 Assert.assertNotNull( shell );
                 shell.setLayout( new FillLayout() );
@@ -136,7 +138,7 @@ public class TestSWTAccessor03AWTGLn extends UITestCase {
         // javax.swing.SwingUtilities.invokeAndWait( releaseAWT );
         releaseAWT.run();
 
-        SWTAccessor.invoke(true, new Runnable() {
+        SWTAccessor.invokeOnOSTKThread(true, new Runnable() {
             public void run() {
                 composite.dispose();
                 shell.close();
@@ -180,7 +182,7 @@ public class TestSWTAccessor03AWTGLn extends UITestCase {
                 }
             });
 
-            SWTAccessor.invoke(true, new Runnable() {
+            SWTAccessor.invokeOnOSTKThread(true, new Runnable() {
                 public void run() {
                     shell.setText( getClass().getName() );
                     shell.setSize( 640, 480 );
@@ -191,7 +193,7 @@ public class TestSWTAccessor03AWTGLn extends UITestCase {
             final long lEndTime = lStartTime + duration;
             try {
                 while( (System.currentTimeMillis() < lEndTime) && !composite.isDisposed() ) {
-                    SWTAccessor.invoke(true, new Runnable() {
+                    SWTAccessor.invokeOnOSTKThread(true, new Runnable() {
                         public void run() {
                             if( !display.readAndDispatch() ) {
                                 // blocks on linux .. display.sleep();

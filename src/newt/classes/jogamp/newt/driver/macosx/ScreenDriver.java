@@ -88,7 +88,7 @@ public class ScreenDriver extends ScreenImpl {
             //
             for(int crtIdx=0; crtIdx<count; crtIdx++) {
                 final int crt_id = crtIDs[crtIdx];
-                final float pixelScaleRaw = (float)OSXUtil.GetPixelScaleByDisplayID(crt_id);
+                final float pixelScaleRaw = OSXUtil.GetScreenPixelScaleByDisplayID(crt_id);
                 pixelScaleArray[crtIdx] = FloatUtil.isZero(pixelScaleRaw, FloatUtil.EPSILON) ? 1.0f : pixelScaleRaw;
                 propsOrigArray[crtIdx] = getMonitorProps0(crt_id);
                 if ( null == propsOrigArray[crtIdx] ) {
@@ -109,8 +109,8 @@ public class ScreenDriver extends ScreenImpl {
                 final int x = thisMonitorProps[MonitorModeProps.IDX_MONITOR_DEVICE_VIEWPORT+0];
                 final int y = thisMonitorProps[MonitorModeProps.IDX_MONITOR_DEVICE_VIEWPORT+1];
                 final float thisPixelScale = pixelScaleArray[crtIdx];
-                thisMonitorProps[MonitorModeProps.IDX_MONITOR_DEVICE_VIEWPORT+2] *= thisPixelScale; // fix width
-                thisMonitorProps[MonitorModeProps.IDX_MONITOR_DEVICE_VIEWPORT+3] *= thisPixelScale; // fix height
+                thisMonitorProps[MonitorModeProps.IDX_MONITOR_DEVICE_VIEWPORT+2] *= thisPixelScale; // fix width in pixel
+                thisMonitorProps[MonitorModeProps.IDX_MONITOR_DEVICE_VIEWPORT+3] *= thisPixelScale; // fix height in pixel
                 if( 0 != x ) {
                     // find matching viewport width for x-offset to apply it's pixelSize
                     for(int i=0; i<count; i++) {
@@ -182,9 +182,9 @@ public class ScreenDriver extends ScreenImpl {
             }
             // merge monitor-props + supported modes
             final float pixelScale = crtProps.pixelScaleArray[crtIdx];
-            MonitorModeProps.streamInMonitorDevice(cache, this, currentMode,
-                                                   new float[] { pixelScale, pixelScale },
-                                                   supportedModes, crtProps.propsFixedArray[crtIdx], 0, null);
+            MonitorModeProps.streamInMonitorDevice(cache, this, crt_id, null,
+                                                   currentMode, new float[] { pixelScale, pixelScale },
+                                                   false /* invscale_wuviewport */, supportedModes, crtProps.propsFixedArray[crtIdx], 0, null);
         }
     }
 

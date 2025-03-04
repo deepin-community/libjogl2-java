@@ -54,6 +54,7 @@ import com.jogamp.opengl.egl.EGL;
 import jogamp.opengl.egl.EGLDisplayUtil;
 import jogamp.opengl.egl.EGLGraphicsConfiguration;
 import jogamp.opengl.egl.EGLGraphicsConfigurationFactory;
+import jogamp.opengl.egl.EGLSurface;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -224,8 +225,8 @@ public class WindowDriver extends jogamp.newt.WindowImpl implements Callback2 {
         surface = null;
         surfaceHandle = 0;
         eglSurface = 0;
-        definePosition(0, 0); // default to 0/0
-        defineSize(0, 0); // default size -> TBD !
+        defineWindowPosition(0, 0); // default to 0/0
+        defineWindowSize(0, 0); // default size -> TBD !
 
         setBrokenFocusChange(true);
     }
@@ -286,8 +287,8 @@ public class WindowDriver extends jogamp.newt.WindowImpl implements Callback2 {
         if( isFullscreen() ) {
             final MonitorDevice mainMonitor = getMainMonitor();
             final RectangleImmutable winRect = mainMonitor.getViewportInWindowUnits();
-            definePosition(winRect.getX(), winRect.getY());
-            defineSize(winRect.getWidth(), winRect.getHeight());
+            defineWindowPosition(winRect.getX(), winRect.getY());
+            defineWindowSize(winRect.getWidth(), winRect.getHeight());
         }
 
         final boolean b;
@@ -323,7 +324,7 @@ public class WindowDriver extends jogamp.newt.WindowImpl implements Callback2 {
     }
 
     @Override
-    protected final void createNativeImpl() {
+    protected final void createNativeImpl(boolean[] positionModified) {
         // Create own screen/device resource instance allowing independent ownership,
         // while still utilizing shared EGL resources.
         final AbstractGraphicsScreen aScreen = getScreen().getGraphicsScreen();
@@ -358,15 +359,15 @@ public class WindowDriver extends jogamp.newt.WindowImpl implements Callback2 {
             setSurfaceVisualID0(surfaceHandle, nativeVisualID);
         }
 
-        eglSurface = EGL.eglCreateWindowSurface(eglDevice.getHandle(), eglConfig.getNativeConfig(), surfaceHandle, null);
+        eglSurface = EGLSurface.eglCreateWindowSurface(eglDevice.getHandle(), eglConfig.getNativeConfig(), surfaceHandle);
         if (EGL.EGL_NO_SURFACE==eglSurface) {
-            throw new NativeWindowException("Creation of window surface failed: "+eglConfig+", surfaceHandle 0x"+Long.toHexString(surfaceHandle)+", error "+toHexString(EGL.eglGetError()));
+            throw new NativeWindowException("Creation of eglSurface failed: "+eglConfig+", surfaceHandle 0x"+Long.toHexString(surfaceHandle)+", error "+toHexString(EGL.eglGetError()));
         }
 
         // propagate data ..
         setGraphicsConfiguration(eglConfig);
         setWindowHandle(surfaceHandle);
-        visibleChanged(false, true);
+        visibleChanged(true);
         focusChanged(false, true);
 
         setupInputListener(true);
@@ -455,7 +456,7 @@ public class WindowDriver extends jogamp.newt.WindowImpl implements Callback2 {
 
     @Override
     protected final int getSupportedReconfigMaskImpl() {
-        return minimumReconfigStateMask;
+        return mutableSizePosReconfigStateMask;
     }
 
     @Override
@@ -471,7 +472,7 @@ public class WindowDriver extends jogamp.newt.WindowImpl implements Callback2 {
                 Log.d(MD.TAG, "reconfigureWindowImpl.setSize n/a");
                 res = false;
             } else {
-                defineSize(width, height);
+                defineWindowSize(width, height);
             }
         }
         if(getX() != x || getY() != y) {
@@ -479,11 +480,11 @@ public class WindowDriver extends jogamp.newt.WindowImpl implements Callback2 {
                 Log.d(MD.TAG, "reconfigureWindowImpl.setPos n/a");
                 res = false;
             } else {
-                definePosition(x, y);
+                defineWindowPosition(x, y);
             }
         }
         if( 0 != ( CHANGE_MASK_VISIBILITY & flags) ) {
-            visibleChanged(false, 0 != ( STATE_MASK_VISIBLE & flags));
+            visibleChanged(0 != ( STATE_MASK_VISIBLE & flags));
         }
         return res;
     }
@@ -573,7 +574,7 @@ public class WindowDriver extends jogamp.newt.WindowImpl implements Callback2 {
         }
 
         if(0>getX() || 0>getY()) {
-            positionChanged(false, 0, 0);
+            positionChanged(false, true, 0, 0);
         }
 
         if(0 == surfaceHandle) {
@@ -589,7 +590,7 @@ public class WindowDriver extends jogamp.newt.WindowImpl implements Callback2 {
             final int[] newSurfSize = { getWidth0(surfaceHandle), getHeight0(surfaceHandle) };
             final int[] newWinSize = convertToWindowUnits(new int[]{ newSurfSize[0], newSurfSize[1] }); // HiDPI: Not necessary yet ..
             capsByFormat = (GLCapabilitiesImmutable) fixCaps(true /* matchFormatPrecise */, nativeFormat, getRequestedCapabilities());
-            sizeChanged(false, newWinSize[0], newWinSize[1], false);
+            sizeChanged(false, false, newWinSize[0], newWinSize[1], false);
 
             Log.d(MD.TAG, "surfaceRealized: isValid: "+surface.isValid()+
                           ", new surfaceHandle 0x"+Long.toHexString(surfaceHandle)+
@@ -600,7 +601,7 @@ public class WindowDriver extends jogamp.newt.WindowImpl implements Callback2 {
                setVisible(false, true);
             }
         }
-        sizeChanged(false, aWidth, aHeight, false);
+        sizeChanged(false, false, aWidth, aHeight, false);
         windowRepaint(0, 0, aWidth, aHeight);
         Log.d(MD.TAG, "surfaceChanged: X");
     }

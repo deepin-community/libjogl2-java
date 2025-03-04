@@ -1,5 +1,5 @@
 /**
- * Copyright 2011 JogAmp Community. All rights reserved.
+ * Copyright 2011-2023 JogAmp Community. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
  * permitted provided that the following conditions are met:
@@ -77,24 +77,25 @@ import com.jogamp.common.nio.Buffers;
 import com.jogamp.newt.awt.NewtCanvasAWT;
 import com.jogamp.newt.opengl.GLWindow;
 import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
+import com.jogamp.opengl.test.junit.util.TestUtil;
+import com.jogamp.opengl.test.junit.util.TestUtil.WindowClosingListener;
 import com.jogamp.opengl.test.junit.util.UITestCase;
-import com.jogamp.opengl.test.junit.util.AWTRobotUtil.WindowClosingListener;
 import com.jogamp.opengl.util.Animator;
 
 
 /**
  * TestSharedContextNewtAWTBug523
  *
- * Opens a single JFrame with two OpenGL windows and sliders to adjust the view orientation.
+ * Opens a single JFrame with two OpenGL widgets and sliders to adjust the view orientation.
  *
- * Each window renders a red triangle and a blue triangle.
+ * Each OpenGL widget renders a red triangle and a blue triangle.
  * The red triangle is rendered using glBegin / glVertex / glEnd.
  * The blue triangle is rendered using vertex buffer objects.
  *
  * VAO's are not used to allow testing on OSX GL2 context!
  *
- * If static useNewt is true, then those windows are GLWindow objects in a NewtCanvasAWT.
- * If static useNewt is false, then those windows are GLCanvas objects.
+ * If static useNewt is true, then those OpenGL widgets are GLWindow objects in a NewtCanvasAWT.
+ * If static useNewt is false, then those OpenGL widgets are GLCanvas objects.
  *
  * If shareContext is true, then the two OpenGL windows are initialized with a shared context,
  * so that they share the vertex buffer and array objects and display lists.
@@ -221,6 +222,7 @@ public class TestSharedContextNewtAWTBug523 extends UITestCase {
         }
 
 
+        @Override
         public void init(final GLAutoDrawable drawable) {
             final GL2 gl2 = drawable.getGL().getGL2();
 
@@ -299,12 +301,9 @@ public class TestSharedContextNewtAWTBug523 extends UITestCase {
 
                 initializationCounter++;
             } // synchronized (this)
-
-
-            viewDistance = setupViewFrustum(gl2, canvasWidth, canvasHeight, boundsRadius, 1.0f, viewFovDegrees);
-
         }
 
+        @Override
         public void dispose(final GLAutoDrawable drawable) {
 
             synchronized (this) {
@@ -339,9 +338,16 @@ public class TestSharedContextNewtAWTBug523 extends UITestCase {
             } // synchronized (this)
         }
 
+        @Override
         public void reshape(final GLAutoDrawable drawable, final int x, final int y, final int width, final int height) {
+            System.err.println("reshape: "+canvasWidth+"x"+canvasHeight+" -> "+width+"x"+height+", [drawable pixel "+drawable.getSurfaceWidth()+"x"+drawable.getSurfaceHeight()+"]");
+            canvasWidth = width;
+            canvasHeight = height;
+            final GL2 gl2 = drawable.getGL().getGL2();
+            viewDistance = setupViewFrustum(gl2, canvasWidth, canvasHeight, boundsRadius, 1.0f, viewFovDegrees);
         }
 
+        @Override
         public void display(final GLAutoDrawable drawable) {
 
             // wait until all instances are initialized before attempting to draw using the
@@ -552,8 +558,8 @@ public class TestSharedContextNewtAWTBug523 extends UITestCase {
      * It waits until the window is closed an then attempts orderly shutdown and resource deallocation.
      */
     public void testContextSharingCreateVisibleDestroy(final boolean useNewt, final boolean shareContext) throws InterruptedException, InvocationTargetException {
-        final JFrame frame = new JFrame("Simple JOGL App for testing context sharing");
-        final WindowClosingListener awtClosingListener = AWTRobotUtil.addClosingListener(frame);
+        final JFrame frame = new JFrame("JSlider with "+(shareContext?"Shared":"NonShared")+" "+(useNewt?"NEWT":"AWT")+"-OpenGL Widget");
+        final TestUtil.WindowClosingListener awtClosingListener = AWTRobotUtil.addClosingListener(frame);
 
         //
         // GLDrawableFactory factory = GLDrawableFactory.getFactory(GLProfile.get(GLProfile.GL2));
@@ -570,8 +576,8 @@ public class TestSharedContextNewtAWTBug523 extends UITestCase {
             sharedDrawable = null;
         }
 
-        final TwoTriangles eventListener1 = new TwoTriangles(640, 480, shareContext);
-        final TwoTriangles eventListener2 = new TwoTriangles(320, 480, shareContext);
+        final TwoTriangles eventListener1 = new TwoTriangles(480, 480, shareContext);
+        final TwoTriangles eventListener2 = new TwoTriangles(480, 480, shareContext);
 
         final Component openGLComponent1;
         final Component openGLComponent2;
@@ -636,6 +642,7 @@ public class TestSharedContextNewtAWTBug523 extends UITestCase {
         xAxisRotationSlider.setSnapToTicks(false);
         xAxisRotationSlider.addChangeListener(new ChangeListener() {
 
+            @Override
             public void stateChanged(final ChangeEvent e) {
                 eventListener1.setXAxisRotation(xAxisRotationSlider.getValue());
                 eventListener2.setXAxisRotation(xAxisRotationSlider.getValue());
@@ -651,6 +658,7 @@ public class TestSharedContextNewtAWTBug523 extends UITestCase {
         yAxisRotationSlider.setSnapToTicks(false);
         yAxisRotationSlider.addChangeListener(new ChangeListener() {
 
+            @Override
             public void stateChanged(final ChangeEvent e) {
                 eventListener1.setYAxisRotation(yAxisRotationSlider.getValue());
                 eventListener2.setYAxisRotation(yAxisRotationSlider.getValue());
@@ -667,6 +675,7 @@ public class TestSharedContextNewtAWTBug523 extends UITestCase {
         viewDistanceFactorSlider.setSnapToTicks(false);
         viewDistanceFactorSlider.addChangeListener(new ChangeListener() {
 
+            @Override
             public void stateChanged(final ChangeEvent e) {
                 eventListener1.setViewDistanceFactor(viewDistanceFactorSlider.getValue() / 10.0f);
                 eventListener2.setViewDistanceFactor(viewDistanceFactorSlider.getValue() / 10.0f);
@@ -730,6 +739,7 @@ public class TestSharedContextNewtAWTBug523 extends UITestCase {
 
         // make the window visible using the EDT
         SwingUtilities.invokeLater( new Runnable() {
+            @Override
             public void run() {
                 frame.pack();
                 frame.setVisible(true);
@@ -751,7 +761,7 @@ public class TestSharedContextNewtAWTBug523 extends UITestCase {
             while(animator.isAnimating() && animator.getTotalFPSDuration() < durationPerTest) {
                 Thread.sleep(100);
             }
-            AWTRobotUtil.closeWindow(frame, true, awtClosingListener);
+            AWTRobotUtil.closeWindow(frame, true, awtClosingListener, null);
             final boolean windowClosed = closingSemaphore.tryAcquire(5000, TimeUnit.MILLISECONDS);
             Assert.assertEquals(true, windowClosed);
         } catch (final InterruptedException e) {
@@ -762,6 +772,7 @@ public class TestSharedContextNewtAWTBug523 extends UITestCase {
         // ask the EDT to dispose of the frame;
         // if using newt, explicitly dispose of the canvases because otherwise it seems our destroy methods are not called
         SwingUtilities.invokeLater( new Runnable() {
+            @Override
             public void run() {
                 frame.setVisible(false);
                 frame.dispose();

@@ -36,6 +36,7 @@ import com.jogamp.opengl.awt.GLJPanel;
 
 import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
+import com.jogamp.opengl.test.junit.util.GLTestUtil;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
 
@@ -46,8 +47,8 @@ import org.junit.runners.MethodSorters;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestAnimatorGLJPanel01AWT extends UITestCase {
-    static final int width = 640;
-    static final int height = 480;
+    static final int width = 400;
+    static final int height = 400;
 
     protected GLJPanel createGLJPanel(final GLCapabilities caps, final Frame frame, final int x, final int y, final GearsES2 gears) throws InterruptedException {
         final GLJPanel glCanvas = new GLJPanel(caps);
@@ -110,25 +111,26 @@ public class TestAnimatorGLJPanel01AWT extends UITestCase {
         animator.add(c3);
 
         javax.swing.SwingUtilities.invokeAndWait(new Runnable() {
+            @Override
             public void run() {
                 f1.setVisible(true);
                 f2.setVisible(true);
                 f3.setVisible(true);
             } } );
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c1, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(c1, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(c1, true));
+        Assert.assertTrue(AWTRobotUtil.waitForRealized(c1, true, null));
+        Assert.assertTrue(AWTRobotUtil.waitForVisible(c1, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(c1, true, null));
         Assert.assertTrue("Gears1 not initialized", g1.waitForInit(true));
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c2, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(c2, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(c2, true));
+        Assert.assertTrue(AWTRobotUtil.waitForRealized(c2, true, null));
+        Assert.assertTrue(AWTRobotUtil.waitForVisible(c2, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(c2, true, null));
         Assert.assertTrue("Gears2 not initialized", g2.waitForInit(true));
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c3, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(c3, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(c3, true));
+        Assert.assertTrue(AWTRobotUtil.waitForRealized(c3, true, null));
+        Assert.assertTrue(AWTRobotUtil.waitForVisible(c3, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(c3, true, null));
         Assert.assertTrue("Gears3 not initialized", g3.waitForInit(true));
 
         try {
@@ -158,6 +160,7 @@ public class TestAnimatorGLJPanel01AWT extends UITestCase {
         stopAnimator(animator);
 
         javax.swing.SwingUtilities.invokeAndWait(new Runnable() {
+            @Override
             public void run() {
                 try {
                     f1.dispose();
@@ -168,9 +171,9 @@ public class TestAnimatorGLJPanel01AWT extends UITestCase {
                 }
             }});
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c3, false));
+        Assert.assertTrue(AWTRobotUtil.waitForRealized(c1, false, null));
+        Assert.assertTrue(AWTRobotUtil.waitForRealized(c2, false, null));
+        Assert.assertTrue(AWTRobotUtil.waitForRealized(c3, false, null));
     }
 
     @Test
@@ -186,6 +189,7 @@ public class TestAnimatorGLJPanel01AWT extends UITestCase {
         Assert.assertEquals(false, a1.isPaused());
         Assert.assertEquals(true, a1.isAnimating());
         javax.swing.SwingUtilities.invokeAndWait(new Runnable() {
+            @Override
             public void run() {
                 f1.setVisible(true);
             } } );
@@ -200,6 +204,7 @@ public class TestAnimatorGLJPanel01AWT extends UITestCase {
         Assert.assertEquals(false, a2.isPaused());
         Assert.assertEquals(true, a2.isAnimating());
         javax.swing.SwingUtilities.invokeAndWait(new Runnable() {
+            @Override
             public void run() {
                 f2.setVisible(true);
             } } );
@@ -214,23 +219,24 @@ public class TestAnimatorGLJPanel01AWT extends UITestCase {
         Assert.assertEquals(false, a3.isPaused());
         Assert.assertEquals(true, a3.isAnimating());
         javax.swing.SwingUtilities.invokeAndWait(new Runnable() {
+            @Override
             public void run() {
                 f3.setVisible(true);
             } } );
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c1, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(c1, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(c1, true));
+        Assert.assertTrue(AWTRobotUtil.waitForRealized(c1, true, null));
+        Assert.assertTrue(AWTRobotUtil.waitForVisible(c1, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(c1, true, null));
         Assert.assertTrue("Gears1 not initialized", g1.waitForInit(true));
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c2, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(c2, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(c2, true));
+        Assert.assertTrue(AWTRobotUtil.waitForRealized(c2, true, null));
+        Assert.assertTrue(AWTRobotUtil.waitForVisible(c2, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(c2, true, null));
         Assert.assertTrue("Gears2 not initialized", g2.waitForInit(true));
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c3, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(c3, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(c3, true));
+        Assert.assertTrue(AWTRobotUtil.waitForRealized(c3, true, null));
+        Assert.assertTrue(AWTRobotUtil.waitForVisible(c3, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(c3, true, null));
         Assert.assertTrue("Gears3 not initialized", g3.waitForInit(true));
 
         try {
@@ -266,6 +272,7 @@ public class TestAnimatorGLJPanel01AWT extends UITestCase {
         stopAnimator(a3);
 
         javax.swing.SwingUtilities.invokeAndWait(new Runnable() {
+            @Override
             public void run() {
                 try {
                     f1.dispose();
@@ -276,9 +283,9 @@ public class TestAnimatorGLJPanel01AWT extends UITestCase {
                 }
             }});
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c3, false));
+        Assert.assertTrue(AWTRobotUtil.waitForRealized(c1, false, null));
+        Assert.assertTrue(AWTRobotUtil.waitForRealized(c2, false, null));
+        Assert.assertTrue(AWTRobotUtil.waitForRealized(c3, false, null));
     }
 
     static long duration = 3*500; // ms

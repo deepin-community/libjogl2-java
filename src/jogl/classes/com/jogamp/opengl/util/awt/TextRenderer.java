@@ -42,7 +42,8 @@ package com.jogamp.opengl.util.awt;
 import com.jogamp.common.nio.Buffers;
 import com.jogamp.common.util.InterruptSource;
 import com.jogamp.common.util.PropertyAccess;
-import com.jogamp.opengl.GLExtensions;
+import com.jogamp.nativewindow.NativeSurface;
+import com.jogamp.nativewindow.ScalableSurface;
 import com.jogamp.opengl.util.*;
 import com.jogamp.opengl.util.packrect.*;
 import com.jogamp.opengl.util.texture.*;
@@ -292,7 +293,18 @@ public class TextRenderer {
     public TextRenderer(final Font font, final boolean antialiased,
                         final boolean useFractionalMetrics, RenderDelegate renderDelegate,
                         final boolean mipmap) {
-        this.font = font;
+       
+    	NativeSurface surface = GLContext.getCurrent().getGLDrawable().getNativeSurface();
+        if (surface instanceof ScalableSurface) {
+        	// DPI scaling for surface
+        	float[] surfaceScale = new float[2];
+        	((ScalableSurface) surface).getCurrentSurfaceScale(surfaceScale);
+        	float newSize = font.getSize() * surfaceScale[0];
+        	this.font = font.deriveFont(newSize);
+        } else {
+        	this.font = font;
+        }
+
         this.antialiased = antialiased;
         this.useFractionalMetrics = useFractionalMetrics;
         this.mipmap = mipmap;
@@ -566,6 +578,9 @@ public class TextRenderer {
         @throws GLException If an OpenGL context is not current when this method is called
     */
     public void dispose() throws GLException {
+        if( null != mPipelinedQuadRenderer ) {
+            mPipelinedQuadRenderer.dispose();
+        }
         packer.dispose();
         packer = null;
         cachedBackingStore = null;
@@ -1862,7 +1877,7 @@ public class TextRenderer {
                     gl.glTexCoordPointer(2, GL.GL_FLOAT, 0, mTexCoords);
                 }
 
-                gl.glDrawArrays(GL2GL3.GL_QUADS, 0,
+                gl.glDrawArrays(GL2ES3.GL_QUADS, 0,
                                 mOutstandingGlyphsVerticesPipeline);
 
                 mVertCoords.rewind();
@@ -1877,7 +1892,7 @@ public class TextRenderer {
                 renderer.getTexture(); // triggers texture uploads.  Maybe this should be more obvious?
 
                 final GL2 gl = GLContext.getCurrentGL().getGL2();
-                gl.glBegin(GL2GL3.GL_QUADS);
+                gl.glBegin(GL2ES3.GL_QUADS);
 
                 try {
                     final int numberOfQuads = mOutstandingGlyphsVerticesPipeline / 4;
@@ -1911,6 +1926,14 @@ public class TextRenderer {
                 }
             }
         }
+
+		public void dispose() {
+		    final GL2 gl = GLContext.getCurrentGL().getGL2();
+		    final int[] vbos = new int[2];
+		    vbos[0] = mVBO_For_ResuableTileVertices;
+		    vbos[1] = mVBO_For_ResuableTileTexCoords;
+		    gl.glDeleteBuffers(2, IntBuffer.wrap(vbos));
+		}
     }
 
     class DebugListener implements GLEventListener {
@@ -1950,6 +1973,8 @@ public class TextRenderer {
 
         @Override
         public void dispose(final GLAutoDrawable drawable) {
+            mPipelinedQuadRenderer.dispose();
+            // n/a glu.destroy(); ??
             glu=null;
             frame=null;
         }

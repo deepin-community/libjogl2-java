@@ -1,202 +1,1377 @@
-This package was intially debianized by by Sylvestre Ledru <sylvestre@debian.org> on Sat, 04 Dec 2010 16:22:37 +0100
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Source: https://jogamp.org
+Files-Excluded: .gitignore
+                .htaccess
+                make/lib
+                make/stub_includes/embedded/IntelGDL/gdl.h
+                src/test/com/jogamp/opengl/test/junit/jogl/demos/es2/shader/landscape.fp
+                www
 
-It was downloaded from <http://jogamp.org/>
+Files: *
+Copyright: 2009-2023 JogAmp Community.
+License: BSD-2-Clause-Views
 
-Copyright:
+Files: make/*
+Copyright: 2007-2015 The Khronos Group Inc.
+License: Expat
 
-Copyright (c) 2003-2005 Sun Microsystems, Inc.
-Copyright (c) 2010 JogAmp Community.
+Files: make/stub_includes/cg/*
+Copyright: 2002-2004 NVIDIA Corporation.
+License: NVIDIA-MIT-License
 
-Upstream Authors: Kenneth Bradley Russell
-                  Christopher John Kline
-				  and others
+Files: make/stub_includes/drm/*
+Copyright: 2000 VA Linux Systems, Inc., Sunnyvale, California.
+           1999-2000 Precision Insight, Inc., Cedar Park, Texas.
+License: Expat
 
-License:
+Files: make/stub_includes/drm/drm-gbm-lib.c
+Copyright: 2010-2020 JogAmp Community.
+License: BSD-2-Clause-Views
 
-This package is licensed under the terms of the Berkeley Software Distribution
-(BSD) License.
+Files: make/stub_includes/drm/drm_mode.h
+Copyright: 2008 Red Hat Inc.
+           2007 Jakob Bornecrantz <wallbraker@gmail.com>
+           2007 Dave Airlie <airlied@linux.ie>
+           2007-2008, Tungsten Graphics, Inc., Cedar Park, TX., USA
+           2007-2008, Intel Corporation
+License: Expat
 
-/*
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- * 
- * - Redistribution of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- * 
- * - Redistribution in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer in the
- *   documentation and/or other materials provided with the distribution.
- * 
- * Neither the name of Sun Microsystems, Inc. or the names of
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
- * 
- * This software is provided "AS IS," without a warranty of any kind. ALL
- * EXPRESS OR IMPLIED CONDITIONS, REPRESENTATIONS AND WARRANTIES,
- * INCLUDING ANY IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A
- * PARTICULAR PURPOSE OR NON-INFRINGEMENT, ARE HEREBY EXCLUDED. SUN
- * MICROSYSTEMS, INC. ("SUN") AND ITS LICENSORS SHALL NOT BE LIABLE FOR
- * ANY DAMAGES SUFFERED BY LICENSEE AS A RESULT OF USING, MODIFYING OR
- * DISTRIBUTING THIS SOFTWARE OR ITS DERIVATIVES. IN NO EVENT WILL SUN OR
- * ITS LICENSORS BE LIABLE FOR ANY LOST REVENUE, PROFIT OR DATA, OR FOR
- * DIRECT, INDIRECT, SPECIAL, CONSEQUENTIAL, INCIDENTAL OR PUNITIVE
- * DAMAGES, HOWEVER CAUSED AND REGARDLESS OF THE THEORY OF LIABILITY,
- * ARISING OUT OF THE USE OF OR INABILITY TO USE THIS SOFTWARE, EVEN IF
- * SUN HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
- * 
- * You acknowledge that this software is not designed or intended for use
- * in the design, construction, operation or maintenance of any nuclear
- * facility.
- */
+Files: make/stub_includes/drm/gbm.h
+Copyright: 2011 Intel Corporation
+License: Expat
 
+Files: make/stub_includes/drm/xf86drmMode.h
+Copyright: 2007-2008 Tungsten Graphics, Inc., Cedar Park, Texas.
+           2007-2008 Jakob Bornecrantz <wallbraker@gmail.com>
+           2007-2008 Dave Airlie <airlied@linux.ie>
+License: Expat
 
-Files: ./make/stub_includes/embedded/IntelGDL/gdl_pd.h,
-./make/stub_includes/embedded/IntelGDL/gdl_pd.h,
-./make/stub_includes/embedded/IntelGDL/gdl_version.h
-
+Files: make/stub_includes/embedded/*
 Copyright: 2005-2009 Intel Corporation.
+License: BSD-3-Clause or GPL-2
 
-License:
-This file is provided under a dual BSD/GPLv2 license.  When using or 
-redistributing this file, you may do so under either license.
+Files: make/stub_includes/ffmpeg/v0400/libavcodec/ac3_parser.h
+Copyright: 2003 Michael Niedermayer <michaelni@gmx.at>
+           2003 Fabrice Bellard
+License: LGPL-2.1+
 
-The complete text of the GNU General Public License can be found in
-/usr/share/common-licenses/GPL-2
+Files: make/stub_includes/ffmpeg/v0400/libavcodec/avcodec.h
+Copyright: 2000-2003 Fabrice Bellard
+License: LGPL-2.1+
 
-Redistribution and use in source and binary forms, with or without 
-modification, are permitted provided that the following conditions 
-are met:
+Files: make/stub_includes/ffmpeg/v0400/libavcodec/d3d11va.h
+Copyright: 2015 Steve Lhomme
+           2009 Laurent Aimar
+License: LGPL-2.1+
 
-  - Redistributions of source code must retain the above copyright 
-    notice, this list of conditions and the following disclaimer.
-  - Redistributions in binary form must reproduce the above copyright 
-    notice, this list of conditions and the following disclaimer in 
-    the documentation and/or other materials provided with the 
-    distribution.
-  - Neither the name of Intel Corporation nor the names of its 
-    contributors may be used to endorse or promote products derived 
-    from this software without specific prior written permission.
+Files: make/stub_includes/ffmpeg/v0400/libavcodec/dirac.h
+Copyright: 2011 Jordi Ortiz
+           2009 David Conrad
+           2007 Marco Gerards <marco@gnu.org>
+License: LGPL-2.1+
 
+Files: make/stub_includes/ffmpeg/v0400/libavcodec/dxva2.h
+Copyright: 2009 Laurent Aimar
+License: LGPL-2.1+
 
-Files:
-./make/stub_includes/opengl/GL/glu.h
-./make/stub_includes/opengl/GL/glxext.h
-./make/stub_includes/opengl/GL/wglext.h
-./src/jogl/classes/com/jogamp/opengl/impl/gl2/ProjectDouble.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/error/Error.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/Glue.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/GLUquadricImpl.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/BuildMipmap.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract1010102.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract1555rev.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract2101010rev.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract233rev.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract332.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract4444.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract4444rev.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract5551.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract565.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract565rev.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract8888.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract8888rev.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractFloat.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Extract.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractPrimitive.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractSByte.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractSInt.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractSShort.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractUByte.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractUInt.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ExtractUShort.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/HalveImage.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Image.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Mipmap.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/PixelStorageModes.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/ScaleInternal.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/mipmap/Type_Widget.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/registry/Registry.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/ActiveRegion.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/CachedVertex.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/Dict.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/DictNode.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/Geom.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/GLUface.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/GLUhalfEdge.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/GLUmesh.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/GLUtessellatorImpl.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/GLUvertex.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/Mesh.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/Normal.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/PriorityQHeap.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/PriorityQ.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/PriorityQSort.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/Render.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/Sweep.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/TessMono.java
-./src/jogl/classes/com/jogamp/opengl/impl/glu/tessellator/TessState.java
-./src/jogl/classes/com/jogamp/opengl/impl/ProjectFloat.java
-./src/jogl/classes/com/jogamp/opengl/util/texture/spi/SGIImage.java
-./src/jogl/classes/javax/media/opengl/glu/GLUtessellatorCallbackAdapter.java
-./src/jogl/classes/javax/media/opengl/glu/GLUtessellatorCallback.java
-./src/jogl/classes/javax/media/opengl/glu/GLUtessellator.java
+Files: make/stub_includes/ffmpeg/v0400/libavcodec/jni.h
+       make/stub_includes/ffmpeg/v0400/libavcodec/mediacodec.h
+Copyright: 2015-2016 Matthieu Bouron <matthieu.bouron stupeflix.com>
+License: LGPL-2.1+
 
+Files: make/stub_includes/ffmpeg/v0400/libavcodec/vaapi.h
+Copyright: 2008-2009 Splitted-Desktop Systems
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavcodec/vdpau.h
+Copyright: 2008 NVIDIA
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavcodec/videotoolbox.h
+Copyright: 2012 Sebastien Zwickert
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavcodec/xvmc.h
+Copyright: 2003 Ivan Kalvachev
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavfilter/avfilter.h
+Copyright: 2007 Bobby Bingham
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavformat/*
+Copyright: 2000-2003 Fabrice Bellard
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/adler32.h
+       make/stub_includes/ffmpeg/v0400/libavutil/avstring.h
+       make/stub_includes/ffmpeg/v0400/libavutil/intfloat.h
+Copyright: 2006-2011 Mans Rullgard
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/aes.h
+       make/stub_includes/ffmpeg/v0400/libavutil/attributes.h
+       make/stub_includes/ffmpeg/v0400/libavutil/avassert.h
+       make/stub_includes/ffmpeg/v0400/libavutil/avutil.h
+       make/stub_includes/ffmpeg/v0400/libavutil/bswap.h
+       make/stub_includes/ffmpeg/v0400/libavutil/common.h
+       make/stub_includes/ffmpeg/v0400/libavutil/crc.h
+       make/stub_includes/ffmpeg/v0400/libavutil/eval.h
+       make/stub_includes/ffmpeg/v0400/libavutil/lfg.h
+       make/stub_includes/ffmpeg/v0400/libavutil/log.h
+       make/stub_includes/ffmpeg/v0400/libavutil/mathematics.h
+       make/stub_includes/ffmpeg/v0400/libavutil/md5.h
+       make/stub_includes/ffmpeg/v0400/libavutil/mem.h
+       make/stub_includes/ffmpeg/v0400/libavutil/opt.h
+       make/stub_includes/ffmpeg/v0400/libavutil/pixdesc.h
+       make/stub_includes/ffmpeg/v0400/libavutil/pixfmt.h
+       make/stub_includes/ffmpeg/v0400/libavutil/rational.h
+       make/stub_includes/ffmpeg/v0400/libavutil/sha.h
+       make/stub_includes/ffmpeg/v0400/libavutil/tree.h
+Copyright: 2001-2012 Michael Niedermayer <michaelni@gmx.at>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/aes_ctr.h
+Copyright: 2015 Eran Kornblau <erankor at gmail dot com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/audio_fifo.h
+Copyright: 2012 Justin Ruggles <justin.ruggles@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/base64.h
+Copyright: 2006 Ryan Martell. (rdm4@martellventures.com)
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/blowfish.h
+       make/stub_includes/ffmpeg/v0400/libavutil/xtea.h
+Copyright: 2012 Samuel Pitoiset
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/bprint.h
+Copyright: 2012 Nicolas George
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/camellia.h
+       make/stub_includes/ffmpeg/v0400/libavutil/cast5.h
+       make/stub_includes/ffmpeg/v0400/libavutil/twofish.h
+Copyright: 2014-2015 Supraja Meedinti
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/channel_layout.h
+Copyright: 2008 Peter Ross
+           2006 Michael Niedermayer <michaelni@gmx.at>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/cpu.h
+       make/stub_includes/ffmpeg/v0400/libavutil/time.h
+       make/stub_includes/ffmpeg/v0400/libavutil/version.h
+Copyright: 2000-2003 Fabrice Bellard
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/des.h
+       make/stub_includes/ffmpeg/v0400/libavutil/lzo.h
+Copyright: 2006-2007 Reimar Doeffinger
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/display.h
+       make/stub_includes/ffmpeg/v0400/libavutil/spherical.h
+       make/stub_includes/ffmpeg/v0400/libavutil/stereo3d.h
+Copyright: 2013-2016 Vittorio Giovara <vittorio.giovara@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/dovi_meta.h
+Copyright: 2020 Vacing Fang <vacingfang@tencent.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/downmix_info.h
+Copyright: 2014 Tim Walker <tdskywalker@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/hash.h
+       make/stub_includes/ffmpeg/v0400/libavutil/murmur3.h
+Copyright: 2013 Reimar DÃ¶ffinger <Reimar.Doeffinger@gmx.de>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/hdr_dynamic_metadata.h
+Copyright: 2018 Mohammad Izadi <moh.izadi at gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/hmac.h
+Copyright: 2012 Martin Storsjo
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/mastering_display_metadata.h
+Copyright: 2016 Neil Birkbeck <neil.birkbeck@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/random_seed.h
+Copyright: 2009 Baptiste Coudurier <baptiste.coudurier@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/ripemd.h
+       make/stub_includes/ffmpeg/v0400/libavutil/sha512.h
+Copyright: 2013 James Almer <jamrial@gmail.com>
+           2007 Michael Niedermayer <michaelni@gmx.at>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/tea.h
+Copyright: 2015 Vesselin Bontchev
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libavutil/timecode.h
+Copyright: 2011 2012 Smartjog S.A.S ClÃ©ment BÅsch <clement.boesch@smartjog.com>
+           2006 Smartjog S.A.S Baptiste Coudurier <baptiste.coudurier@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libswresample/*
+Copyright: 2011-2013 Michael Niedermayer (michaelni@gmx.at)
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0400/libswscale/swscale.h
+Copyright: 2001-2012 Michael Niedermayer <michaelni@gmx.at>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavcodec/ac3_parser.h
+Copyright: 2003 Michael Niedermayer <michaelni@gmx.at>
+           2003 Fabrice Bellard
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavcodec/avcodec.h
+Copyright: 2000-2003 Fabrice Bellard
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavcodec/d3d11va.h
+Copyright: 2015 Steve Lhomme
+           2009 Laurent Aimar
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavcodec/dirac.h
+Copyright: 2011 Jordi Ortiz
+           2009 David Conrad
+           2007 Marco Gerards <marco@gnu.org>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavcodec/dxva2.h
+Copyright: 2009 Laurent Aimar
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavcodec/jni.h
+       make/stub_includes/ffmpeg/v0500/libavcodec/mediacodec.h
+Copyright: 2015-2016 Matthieu Bouron <matthieu.bouron stupeflix.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavcodec/vdpau.h
+Copyright: 2008 NVIDIA
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavcodec/videotoolbox.h
+Copyright: 2012 Sebastien Zwickert
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavcodec/xvmc.h
+Copyright: 2003 Ivan Kalvachev
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavfilter/avfilter.h
+Copyright: 2007 Bobby Bingham
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavformat/*
+Copyright: 2000-2003 Fabrice Bellard
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/adler32.h
+       make/stub_includes/ffmpeg/v0500/libavutil/avstring.h
+       make/stub_includes/ffmpeg/v0500/libavutil/intfloat.h
+Copyright: 2006-2011 Mans Rullgard
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/aes.h
+       make/stub_includes/ffmpeg/v0500/libavutil/attributes.h
+       make/stub_includes/ffmpeg/v0500/libavutil/avassert.h
+       make/stub_includes/ffmpeg/v0500/libavutil/avutil.h
+       make/stub_includes/ffmpeg/v0500/libavutil/bswap.h
+       make/stub_includes/ffmpeg/v0500/libavutil/common.h
+       make/stub_includes/ffmpeg/v0500/libavutil/crc.h
+       make/stub_includes/ffmpeg/v0500/libavutil/eval.h
+       make/stub_includes/ffmpeg/v0500/libavutil/lfg.h
+       make/stub_includes/ffmpeg/v0500/libavutil/log.h
+       make/stub_includes/ffmpeg/v0500/libavutil/mathematics.h
+       make/stub_includes/ffmpeg/v0500/libavutil/md5.h
+       make/stub_includes/ffmpeg/v0500/libavutil/mem.h
+       make/stub_includes/ffmpeg/v0500/libavutil/opt.h
+       make/stub_includes/ffmpeg/v0500/libavutil/pixdesc.h
+       make/stub_includes/ffmpeg/v0500/libavutil/pixfmt.h
+       make/stub_includes/ffmpeg/v0500/libavutil/rational.h
+       make/stub_includes/ffmpeg/v0500/libavutil/sha.h
+       make/stub_includes/ffmpeg/v0500/libavutil/tree.h
+Copyright: 2001-2012 Michael Niedermayer <michaelni@gmx.at>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/aes_ctr.h
+Copyright: 2015 Eran Kornblau <erankor at gmail dot com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/audio_fifo.h
+Copyright: 2012 Justin Ruggles <justin.ruggles@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/base64.h
+Copyright: 2006 Ryan Martell. (rdm4@martellventures.com)
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/blowfish.h
+       make/stub_includes/ffmpeg/v0500/libavutil/xtea.h
+Copyright: 2012 Samuel Pitoiset
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/bprint.h
+Copyright: 2012 Nicolas George
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/camellia.h
+       make/stub_includes/ffmpeg/v0500/libavutil/cast5.h
+       make/stub_includes/ffmpeg/v0500/libavutil/twofish.h
+Copyright: 2014-2015 Supraja Meedinti
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/channel_layout.h
+Copyright: 2008 Peter Ross
+           2006 Michael Niedermayer <michaelni@gmx.at>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/cpu.h
+       make/stub_includes/ffmpeg/v0500/libavutil/time.h
+       make/stub_includes/ffmpeg/v0500/libavutil/version.h
+Copyright: 2000-2003 Fabrice Bellard
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/csp.h
+Copyright: 2016 Ronald S. Bultje <rsbultje@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/des.h
+ make/stub_includes/ffmpeg/v0500/libavutil/lzo.h
+Copyright: 2006-2007 Reimar Doeffinger
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/display.h
+       make/stub_includes/ffmpeg/v0500/libavutil/spherical.h
+       make/stub_includes/ffmpeg/v0500/libavutil/stereo3d.h
+Copyright: 2013-2016 Vittorio Giovara <vittorio.giovara@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/dovi_meta.h
+Copyright: 2020 Vacing Fang <vacingfang@tencent.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/downmix_info.h
+Copyright: 2014 Tim Walker <tdskywalker@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/hash.h
+       make/stub_includes/ffmpeg/v0500/libavutil/murmur3.h
+Copyright: 2013 Reimar DÃ¶ffinger <Reimar.Doeffinger@gmx.de>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/hdr_dynamic_metadata.h
+Copyright: 2018 Mohammad Izadi <moh.izadi at gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/hdr_dynamic_vivid_metadata.h
+Copyright: 2021 Limin Wang <lance.lmwang at gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/hmac.h
+Copyright: 2012 Martin Storsjo
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/mastering_display_metadata.h
+Copyright: 2016 Neil Birkbeck <neil.birkbeck@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/random_seed.h
+Copyright: 2009 Baptiste Coudurier <baptiste.coudurier@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/ripemd.h
+       make/stub_includes/ffmpeg/v0500/libavutil/sha512.h
+Copyright: 2013 James Almer <jamrial@gmail.com>
+           2007 Michael Niedermayer <michaelni@gmx.at>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/tea.h
+Copyright: 2015 Vesselin Bontchev
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/timecode.h
+Copyright: 2011-2012 Smartjog S.A.S ClÃ©ment BÅsch <clement.boesch@smartjog.com>
+           2006 Smartjog S.A.S Baptiste Coudurier <baptiste.coudurier@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libavutil/uuid.h
+Copyright: 2022 Pierre-Anthony Lemieux <pal@palemieux.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libswresample/swresample.h
+Copyright: 2011-2013 Michael Niedermayer (michaelni@gmx.at)
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0500/libswscale/swscale.h
+Copyright: 2001-2012 Michael Niedermayer <michaelni@gmx.at>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavcodec/ac3_parser.h
+Copyright: 2003 Michael Niedermayer <michaelni@gmx.at>
+           2003 Fabrice Bellard
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavcodec/avcodec.h
+Copyright: 2000-2003 Fabrice Bellard
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavcodec/d3d11va.h
+Copyright: 2015 Steve Lhomme
+           2009 Laurent Aimar
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavcodec/dirac.h
+Copyright: 2011 Jordi Ortiz
+           2009 David Conrad
+           2007 Marco Gerards <marco@gnu.org>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavcodec/dxva2.h
+Copyright: 2009 Laurent Aimar
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavcodec/jni.h
+       make/stub_includes/ffmpeg/v0600/libavcodec/mediacodec.h
+Copyright: 2015-2016 Matthieu Bouron <matthieu.bouron stupeflix.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavcodec/vdpau.h
+Copyright: 2008 NVIDIA
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavcodec/videotoolbox.h
+Copyright: 2012 Sebastien Zwickert
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavcodec/xvmc.h
+Copyright: 2003 Ivan Kalvachev
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavfilter/avfilter.h
+Copyright: 2007 Bobby Bingham
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavformat/*
+Copyright: 2000-2003 Fabrice Bellard
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/adler32.h
+       make/stub_includes/ffmpeg/v0600/libavutil/avstring.h
+       make/stub_includes/ffmpeg/v0600/libavutil/intfloat.h
+Copyright: 2006-2011 Mans Rullgard
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/aes.h
+       make/stub_includes/ffmpeg/v0600/libavutil/attributes.h
+       make/stub_includes/ffmpeg/v0600/libavutil/avassert.h
+       make/stub_includes/ffmpeg/v0600/libavutil/avutil.h
+       make/stub_includes/ffmpeg/v0600/libavutil/bswap.h
+       make/stub_includes/ffmpeg/v0600/libavutil/common.h
+       make/stub_includes/ffmpeg/v0600/libavutil/crc.h
+       make/stub_includes/ffmpeg/v0600/libavutil/eval.h
+       make/stub_includes/ffmpeg/v0600/libavutil/lfg.h
+       make/stub_includes/ffmpeg/v0600/libavutil/log.h
+       make/stub_includes/ffmpeg/v0600/libavutil/mathematics.h
+       make/stub_includes/ffmpeg/v0600/libavutil/md5.h
+       make/stub_includes/ffmpeg/v0600/libavutil/mem.h
+       make/stub_includes/ffmpeg/v0600/libavutil/opt.h
+       make/stub_includes/ffmpeg/v0600/libavutil/pixdesc.h
+       make/stub_includes/ffmpeg/v0600/libavutil/pixfmt.h
+       make/stub_includes/ffmpeg/v0600/libavutil/rational.h
+       make/stub_includes/ffmpeg/v0600/libavutil/sha.h
+       make/stub_includes/ffmpeg/v0600/libavutil/tree.h
+Copyright: 2001-2012 Michael Niedermayer <michaelni@gmx.at>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/aes_ctr.h
+Copyright: 2015 Eran Kornblau <erankor at gmail dot com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/ambient_viewing_environment.h
+Copyright: 2023 Jan EkstrÃ¶m <jeebjp@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/audio_fifo.h
+Copyright: 2012 Justin Ruggles <justin.ruggles@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/base64.h
+Copyright: 2006 Ryan Martell. (rdm4@martellventures.com)
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/blowfish.h
+ make/stub_includes/ffmpeg/v0600/libavutil/xtea.h
+Copyright: 2012 Samuel Pitoiset
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/bprint.h
+Copyright: 2012 Nicolas George
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/camellia.h
+       make/stub_includes/ffmpeg/v0600/libavutil/cast5.h
+       make/stub_includes/ffmpeg/v0600/libavutil/twofish.h
+Copyright: 2014-2015 Supraja Meedinti
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/channel_layout.h
+Copyright: 2008 Peter Ross
+           2006 Michael Niedermayer <michaelni@gmx.at>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/cpu.h
+       make/stub_includes/ffmpeg/v0600/libavutil/time.h
+       make/stub_includes/ffmpeg/v0600/libavutil/version.h
+Copyright: 2000-2003 Fabrice Bellard
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/csp.h
+Copyright: 2023 Leo Izen <leo.izen@gmail.com>
+           2016 Ronald S. Bultje <rsbultje@gmail.com>
+           2015 Kevin Wheatley <kevin.j.wheatley@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/des.h
+       make/stub_includes/ffmpeg/v0600/libavutil/lzo.h
+Copyright: 2006-2007 Reimar Doeffinger
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/display.h
+       make/stub_includes/ffmpeg/v0600/libavutil/spherical.h
+       make/stub_includes/ffmpeg/v0600/libavutil/stereo3d.h
+Copyright: 2013-2016 Vittorio Giovara <vittorio.giovara@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/dovi_meta.h
+Copyright: 2020 Vacing Fang <vacingfang@tencent.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/downmix_info.h
+Copyright: 2014 Tim Walker <tdskywalker@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/hash.h
+       make/stub_includes/ffmpeg/v0600/libavutil/murmur3.h
+Copyright: 2013 Reimar DÃ¶ffinger <Reimar.Doeffinger@gmx.de>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/hdr_dynamic_metadata.h
+Copyright: 2018 Mohammad Izadi <moh.izadi at gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/hdr_dynamic_vivid_metadata.h
+Copyright: 2021 Limin Wang <lance.lmwang at gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/hmac.h
+Copyright: 2012 Martin Storsjo
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/mastering_display_metadata.h
+Copyright: 2016 Neil Birkbeck <neil.birkbeck@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/random_seed.h
+Copyright: 2009 Baptiste Coudurier <baptiste.coudurier@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/ripemd.h
+       make/stub_includes/ffmpeg/v0600/libavutil/sha512.h
+Copyright: 2013 James Almer <jamrial@gmail.com>
+           2007 Michael Niedermayer <michaelni@gmx.at>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/tea.h
+Copyright: 2015 Vesselin Bontchev
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/timecode.h
+Copyright: 2011-2012 Smartjog S.A.S ClÃ©ment BÅsch <clement.boesch@smartjog.com>
+           2006 Smartjog S.A.S, Baptiste Coudurier <baptiste.coudurier@gmail.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libavutil/uuid.h
+Copyright: 2022 Pierre-Anthony Lemieux <pal@palemieux.com>
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libswresample/swresample.h
+Copyright: 2011-2013 Michael Niedermayer (michaelni@gmx.at)
+License: LGPL-2.1+
+
+Files: make/stub_includes/ffmpeg/v0600/libswscale/swscale.h
+Copyright: 2001-2012 Michael Niedermayer <michaelni@gmx.at>
+License: LGPL-2.1+
+
+Files: make/stub_includes/khr/KD/kdplatform.h
+       make/stub_includes/khr/KHR/*
+Copyright: 2007-2015 The Khronos Group Inc.
+License: Expat
+
+Files: make/stub_includes/opengl/GL/gl.h
+       make/stub_includes/opengl/GL/glx.h
+Copyright: 1999-2002 Brian Paul
+License: Expat
+
+Files: make/stub_includes/opengl/GL/glcorearbext.h
+       make/stub_includes/opengl/GL/glext-supplement.h
+Copyright: 2010-2015 JogAmp Developer Team
+License: Expat
+
+Files: make/stub_includes/opengl/GL/glu.h
+Copyright: 1991-2000, Silicon Graphics, Inc.
+License: SGI-1.1
+
+Files: make/stub_includes/opengl/GLES/*
+       make/stub_includes/opengl/GLES2/gl2platform.h
+       make/stub_includes/opengl/GLES3/*
+Copyright: 2010-2015 JogAmp Developer Team
+License: SGI-B-2.0
+
+Files: make/stub_includes/opengl/GLES/glext-supplement.h
+       make/stub_includes/opengl/GLES2/gl2ext-supplement.h
+Copyright: 2010-2015 JogAmp Developer Team
+License: Expat
+
+Files: make/stub_includes/opengl/GLES3/gl3x.h
+Copyright: 2007-2015 The Khronos Group Inc.
+License: Expat
+
+Files: make/stub_includes/opengl/ios-window-system.h
+Copyright: 2009-2023 JogAmp Community.
+License: BSD-2-Clause-Views
+
+Files: make/stub_includes/openmax/*
+Copyright: 2007 The Khronos Group Inc.
+License: Expat
+
+Files: src/demos/com/jogamp/opengl/demos/GearsObject.java
+       src/demos/com/jogamp/opengl/demos/es2/GearsES2.java
+       src/demos/com/jogamp/opengl/demos/es2/GearsObjectES2.java
+Copyright: 2011-2015 JogAmp Community.
+License: Expat
+
+Files: src/demos/com/jogamp/opengl/demos/ios/*
+Copyright: 2019 Gothel Software e.K.
+License: BSD-2-Clause-Views
+
+Files: src/jogl/classes/com/jogamp/audio/*
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause
+
+Files: src/jogl/classes/com/jogamp/gluegen/opengl/*
+       src/jogl/classes/com/jogamp/gluegen/runtime/opengl/GLNameResolver.java
+       src/jogl/classes/com/jogamp/opengl/DefaultGLCapabilitiesChooser.java
+       src/jogl/classes/com/jogamp/opengl/GLAutoDrawable.java
+       src/jogl/classes/com/jogamp/opengl/GLCapabilities.java
+       src/jogl/classes/com/jogamp/opengl/GLCapabilitiesChooser.java
+       src/jogl/classes/com/jogamp/opengl/GLContext.java
+       src/jogl/classes/com/jogamp/opengl/GLDrawable.java
+       src/jogl/classes/com/jogamp/opengl/GLDrawableFactory.java
+       src/jogl/classes/com/jogamp/opengl/GLException.java
+       src/jogl/classes/com/jogamp/opengl/GLProfile.java
+       src/jogl/classes/com/jogamp/opengl/Threading.java
+       src/jogl/classes/com/jogamp/opengl/awt/*
+Copyright: 2010-2023 JogAmp Community.
+           2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/jogl/classes/com/jogamp/gluegen/opengl/ant/*
+Copyright: 2010 JogAmp Community.
+           2003-2005 Sun Microsystems, Inc.
+           2003 Rob Grzywinski (rgrzywinski@realityinteractive.com)
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/jogl/classes/com/jogamp/opengl/GLBase.java
+Copyright: 2010 JogAmp Community.
+           2009 Sun Microsystems, Inc.
+License: BSD-2-Clause-Views
+
+Files: src/jogl/classes/com/jogamp/opengl/GLEventListener.java
+       src/jogl/classes/com/jogamp/opengl/GLPipelineFactory.java
+       src/jogl/classes/com/jogamp/opengl/awt/AWTGLAutoDrawable.java
+       src/jogl/classes/com/jogamp/opengl/awt/ComponentEvents.java
+       src/jogl/classes/com/jogamp/opengl/cg/CgException.java
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/jogl/classes/com/jogamp/opengl/fixedfunc/*
+Copyright: 2010 JogAmp Community.
+           2009 Sun Microsystems, Inc.
+License: BSD-2-Clause-Views
+
+Files: src/jogl/classes/com/jogamp/opengl/fixedfunc/GLPointerFuncUtil.java
+Copyright: 2009-2023 JogAmp Community.
+License: BSD-2-Clause-Views
+
+Files: src/jogl/classes/com/jogamp/opengl/glu/*
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: SGI-B-2.0
+
+Files: src/jogl/classes/com/jogamp/opengl/math/FixedPoint.java
+       src/jogl/classes/com/jogamp/opengl/util/glsl/ShaderUtil.java
+       src/jogl/classes/com/jogamp/opengl/util/glsl/fixedfunc/*
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause
+
+Files: src/jogl/classes/com/jogamp/opengl/util/AWTAnimatorImpl.java
+       src/jogl/classes/com/jogamp/opengl/util/DefaultAnimatorImpl.java
+       src/jogl/classes/com/jogamp/opengl/util/PMVMatrix.java
+Copyright: 2010-2023 JogAmp Community.
+           2008-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause
+
+Files: src/jogl/classes/com/jogamp/opengl/util/Animator.java
+       src/jogl/classes/com/jogamp/opengl/util/FPSAnimator.java
+       src/jogl/classes/com/jogamp/opengl/util/awt/TextRenderer.java
+       src/jogl/classes/com/jogamp/opengl/util/awt/TextureRenderer.java
+       src/jogl/classes/com/jogamp/opengl/util/texture/*
+Copyright: 2010-2023 JogAmp Community.
+           2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/jogl/classes/com/jogamp/opengl/util/GLBuffers.java
+       src/jogl/classes/com/jogamp/opengl/util/Gamma.java
+       src/jogl/classes/com/jogamp/opengl/util/awt/ImageUtil.java
+       src/jogl/classes/com/jogamp/opengl/util/awt/Overlay.java
+       src/jogl/classes/com/jogamp/opengl/util/gl2/*
+       src/jogl/classes/com/jogamp/opengl/util/packrect/*
+       src/jogl/classes/com/jogamp/opengl/util/texture/awt/AWTTextureIO.java
+       src/jogl/classes/com/jogamp/opengl/util/texture/spi/*
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/jogl/classes/com/jogamp/opengl/util/texture/ImageSequence.java
+       src/jogl/classes/com/jogamp/opengl/util/texture/ImageType.java
+       src/jogl/classes/com/jogamp/opengl/util/texture/TextureSequence.java
+       src/jogl/classes/com/jogamp/opengl/util/texture/TextureState.java
+       src/jogl/classes/com/jogamp/opengl/util/texture/spi/JPEGImage.java
+Copyright: 2009-2023 JogAmp Community.
+License: BSD-2-Clause-Views
+
+Files: src/jogl/classes/com/jogamp/opengl/util/texture/spi/TextureProvider.java
+       src/jogl/classes/com/jogamp/opengl/util/texture/spi/awt/*
+Copyright: 2010-2023 JogAmp Community.
+           2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/jogl/classes/com/jogamp/opengl/util/texture/spi/awt/IIOTextureWriter.java
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/jogl/classes/jogamp/graph/font/typecast/ot/*
+Copyright: 2004-2007 David Schweinsberg
+License: Apache-2.0
+
+Files: src/jogl/classes/jogamp/graph/font/typecast/ot/Disassembler.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/Mnemonic.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/Point.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/OTFont.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/*
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/ClassDef.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/ClassDefFormat1.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/ClassDefFormat2.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/CvtTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/Device.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/DsigEntry.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/DsigTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/FpgmTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/GaspRange.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/GaspTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/HheaTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/KernSubtable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/KernSubtableFormat0.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/KernSubtableFormat2.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/KernTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/KerningPair.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/LocaTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/LtshTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/MaxpTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/Panose.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/PcltTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/PostTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/PrepTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/Program.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/SignatureBlock.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/TTCHeader.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/Table.java
+Copyright: 1999-2003 The Apache Software Foundation.
+License: Apache-1.1
+
+Files: src/jogl/classes/jogamp/graph/font/typecast/ot/table/BaseTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/CffTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/CmapFormatUnknown.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/GposTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/HdmxTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/ID.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/TableException.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/VdmxTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/VheaTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/ot/table/VmtxTable.java
+       src/jogl/classes/jogamp/graph/font/typecast/tt/*
+Copyright: 2004-2007 David Schweinsberg
+License: Apache-2.0
+
+Files: src/jogl/classes/com/jogamp/graph/geom/*
+Copyright: The Apache Software Foundation
+License: Apache-2.0
+
+Files: src/jogl/classes/jogamp/opengl/ExtensionAvailabilityCache.java
+       src/jogl/classes/jogamp/opengl/GLBufferStateTracker.java
+       src/jogl/classes/jogamp/opengl/GLContextImpl.java
+       src/jogl/classes/jogamp/opengl/GLContextShareSet.java
+       src/jogl/classes/jogamp/opengl/GLDrawableFactoryImpl.java
+       src/jogl/classes/jogamp/opengl/GLDrawableHelper.java
+       src/jogl/classes/jogamp/opengl/GLDrawableImpl.java
+       src/jogl/classes/jogamp/opengl/ToolkitThreadingPlugin.java
+Copyright: 2010-2023 JogAmp Community.
+           2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/jogl/classes/jogamp/opengl/GLStateTracker.java
+       src/jogl/classes/jogamp/opengl/GLWorkerThread.java
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/jogl/classes/jogamp/opengl/ProjectFloat.java
+Copyright: 2003 Sun Microsystems
+           1991-2000 Silicon Graphics, Inc.
+           2002-2004 LWJGL Project
+License: SGI-B-2.0 and BSD-3-Clause-No-Nuclear-Warranty and BSD-3-Clause
+
+Files: src/jogl/classes/jogamp/opengl/ThreadingImpl.java
+       src/jogl/classes/jogamp/opengl/egl/EGLContext.java
+       src/jogl/classes/jogamp/opengl/egl/EGLDrawable.java
+       src/jogl/classes/jogamp/opengl/egl/EGLDrawableFactory.java
+       src/jogl/classes/jogamp/opengl/egl/EGLGraphicsConfiguration.java
+       src/jogl/classes/jogamp/opengl/egl/EGLGraphicsConfigurationFactory.java
+Copyright: 2010-2023 JogAmp Community.
+           2008-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause
+
+Files: src/jogl/classes/jogamp/opengl/awt/*
+Copyright: 2010-2023 JogAmp Community.
+           2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/jogl/classes/jogamp/opengl/awt/AWTTilePainter.java
+Copyright: 2009-2023 JogAmp Community.
+License: BSD-2-Clause-Views
+
+Files: src/jogl/classes/jogamp/opengl/awt/Java2D.java
+       src/jogl/classes/jogamp/opengl/gl2/*
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/jogl/classes/jogamp/opengl/egl/EGLExternalContext.java
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause
+
+Files: src/jogl/classes/jogamp/opengl/glu/*
+Copyright: 1991-2000, Silicon Graphics, Inc.
+License: SGI-B-2.0
+
+Files: src/jogl/classes/jogamp/opengl/gl2/ProjectDouble.java
+       src/jogl/classes/jogamp/opengl/glu/GLUquadricImpl.java
+Copyright: 2003 Sun Microsystems
+           1991-2000 Silicon Graphics, Inc.
+           2002-2004 LWJGL Project
+License: SGI-B-2.0 and BSD-3-Clause-No-Nuclear-Warranty and BSD-3-Clause
+
+Files: src/jogl/classes/jogamp/opengl/glu/tessellator/*
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: SGI-B-2.0
+
+Files: src/jogl/classes/jogamp/opengl/glu/tessellator/PriorityQSort.java
 Copyright: 1991-2000 Silicon Graphics, Inc.
-2003-2006 Sun Microsystems, Inc.
+License: SGI-B-2.0
 
-License:
+Files: src/jogl/classes/jogamp/opengl/macosx/*
+Copyright: 2010-2023 JogAmp Community.
+           2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
 
-SGI FREE SOFTWARE LICENSE B (Version 2.0, Sept. 18, 2008)
+Files: src/jogl/classes/jogamp/opengl/macosx/cgl/MacOSXCGLDynamicLibraryBundleInfo.java
+Copyright: 2009-2023 JogAmp Community.
+License: BSD-2-Clause-Views
 
- Copyright (C) [dates of first publication] Silicon Graphics, Inc. All Rights
- Reserved.
+Files: src/jogl/classes/jogamp/opengl/macosx/cgl/MacOSXCGLGraphicsConfiguration.java
+       src/jogl/classes/jogamp/opengl/macosx/cgl/MacOSXCGLGraphicsConfigurationFactory.java
+       src/jogl/classes/jogamp/opengl/macosx/cgl/awt/*
+Copyright: 2010-2012 JogAmp Community.
+           2008-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause
 
- Permission is hereby granted, free of charge, to any person obtaining a copy of
- this software and associated documentation files (the "Software"), to deal in
- the Software without restriction, including without limitation the rights to
- use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- of the Software, and to permit persons to whom the Software is furnished to do
- so, subject to the following conditions:
- The above copyright notice including the dates of first publication and either
- this permission notice or a reference to http://oss.sgi.com/projects/FreeB/
- shall be included in all copies or substantial portions of the Software.
+Files: src/jogl/classes/jogamp/opengl/util/glsl/fixedfunc/*
+Copyright: 2010 JogAmp Community.
+           2009 Sun Microsystems, Inc.
+License: BSD-2-Clause-Views
+
+Files: src/jogl/classes/jogamp/opengl/util/jpeg/*
+Copyright: 2011 notmasteryet
+           2010 JogAmp Community.
+License: Apache-2.0 and BSD-2-Clause-Views
+
+Files: src/jogl/classes/jogamp/opengl/windows/*
+       src/jogl/classes/jogamp/opengl/x11/*
+       src/nativewindow/classes/com/jogamp/nativewindow/AbstractGraphicsConfiguration.java
+       src/nativewindow/classes/com/jogamp/nativewindow/AbstractGraphicsDevice.java
+       src/nativewindow/classes/com/jogamp/nativewindow/Capabilities.java
+       src/nativewindow/classes/com/jogamp/nativewindow/DefaultCapabilitiesChooser.java
+       src/nativewindow/classes/com/jogamp/nativewindow/NativeWindow.java
+Copyright: 2010-2023 JogAmp Community.
+           2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/jogl/classes/jogamp/opengl/windows/wgl/WGLGLCapabilities.java
+       src/jogl/classes/jogamp/opengl/windows/wgl/WGLUtil.java
+       src/jogl/classes/jogamp/opengl/windows/wgl/WindowsWGLDynamicLibraryBundleInfo.java
+Copyright: 2009-2023 JogAmp Community.
+License: BSD-2-Clause-Views
+
+Files: src/jogl/classes/jogamp/opengl/windows/wgl/WindowsWGLGraphicsConfiguration.java
+       src/jogl/classes/jogamp/opengl/windows/wgl/WindowsWGLGraphicsConfigurationFactory.java
+       src/jogl/classes/jogamp/opengl/windows/wgl/awt/*
+       src/jogl/classes/jogamp/opengl/x11/glx/GLXUtil.java
+       src/jogl/classes/jogamp/opengl/x11/glx/X11GLXGraphicsConfiguration.java
+       src/jogl/classes/jogamp/opengl/x11/glx/X11GLXGraphicsConfigurationFactory.java
+       src/nativewindow/classes/com/jogamp/nativewindow/DefaultGraphicsDevice.java
+       src/nativewindow/classes/com/jogamp/nativewindow/GraphicsConfigurationFactory.java
+       src/nativewindow/classes/com/jogamp/nativewindow/NativeWindowFactory.java
+       src/nativewindow/classes/com/jogamp/nativewindow/SurfaceUpdatedListener.java
+Copyright: 2010-2023 JogAmp Community.
+           2008-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause
+
+Files: src/jogl/classes/jogamp/opengl/x11/glx/X11ExternalGLXDrawable.java
+       src/jogl/native/GLXGetProcAddressARB.c
+       src/nativewindow/classes/com/jogamp/nativewindow/AbstractGraphicsScreen.java
+       src/nativewindow/classes/com/jogamp/nativewindow/CapabilitiesChooser.java
+       src/nativewindow/classes/com/jogamp/nativewindow/NativeWindowException.java
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/jogl/classes/jogamp/opengl/x11/glx/X11GLCapabilities.java
+       src/jogl/classes/jogamp/opengl/x11/glx/X11GLXDynamicLibraryBundleInfo.java
+Copyright: 2010-2020 JogAmp Community.
+License: BSD-2-Clause-Views
+
+Files: src/nativewindow/classes/com/jogamp/nativewindow/DefaultGraphicsConfiguration.java
+       src/nativewindow/classes/com/jogamp/nativewindow/DefaultGraphicsScreen.java
+       src/nativewindow/classes/com/jogamp/nativewindow/egl/*
+       src/nativewindow/classes/com/jogamp/nativewindow/macosx/*
+       src/nativewindow/classes/com/jogamp/nativewindow/windows/*
+       src/nativewindow/classes/jogamp/nativewindow/NativeWindowFactoryImpl.java
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause
+
+Files: src/nativewindow/classes/com/jogamp/nativewindow/awt/*
+       src/nativewindow/classes/jogamp/nativewindow/jawt/*
+       src/newt/classes/com/jogamp/newt/util/MainThread.java
+       src/newt/classes/jogamp/newt/DefaultEDTUtil.java
+Copyright: 2010-2015 JogAmp Community.
+           2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/nativewindow/classes/com/jogamp/nativewindow/awt/AWTPrintLifecycle.java
+       src/nativewindow/classes/com/jogamp/nativewindow/awt/AWTWindowClosingProtocol.java
+       src/nativewindow/classes/com/jogamp/nativewindow/awt/DirectDataBufferInt.java
+Copyright: 2009-2023 JogAmp Community.
+License: BSD-2-Clause-Views
+
+Files: src/nativewindow/classes/com/jogamp/nativewindow/x11/*
+       src/nativewindow/classes/jogamp/nativewindow/DefaultGraphicsConfigurationFactoryImpl.java
+       src/nativewindow/classes/jogamp/nativewindow/x11/*
+       src/newt/classes/com/jogamp/newt/NewtFactory.java
+       src/newt/classes/com/jogamp/newt/event/InputEvent.java
+       src/newt/classes/com/jogamp/newt/event/KeyEvent.java
+       src/newt/classes/com/jogamp/newt/event/KeyListener.java
+       src/newt/classes/com/jogamp/newt/event/MouseEvent.java
+       src/newt/classes/com/jogamp/newt/event/MouseListener.java
+       src/newt/classes/com/jogamp/newt/event/NEWTEvent.java
+       src/newt/classes/com/jogamp/newt/event/NEWTEventListener.java
+       src/newt/classes/com/jogamp/newt/event/WindowEvent.java
+       src/newt/classes/com/jogamp/newt/event/WindowListener.java
+       src/newt/classes/com/jogamp/newt/opengl/GLWindow.java
+       src/newt/classes/jogamp/newt/DisplayImpl.java
+       src/newt/classes/jogamp/newt/OffscreenWindow.java
+       src/newt/classes/jogamp/newt/ScreenImpl.java
+       src/newt/classes/jogamp/newt/driver/awt/*
+       src/newt/classes/jogamp/newt/driver/bcm/egl/*
+       src/newt/classes/jogamp/newt/driver/intel/*
+       src/newt/classes/jogamp/newt/driver/kd/*
+       src/newt/classes/jogamp/newt/driver/macosx/*
+       src/newt/classes/jogamp/newt/driver/windows/*
+       src/newt/classes/jogamp/newt/driver/x11/DisplayDriver.java
+       src/newt/classes/jogamp/newt/driver/x11/ScreenDriver.java
+       src/newt/classes/jogamp/newt/driver/x11/WindowDriver.java
+       src/newt/native/KDWindow.c
+       src/newt/native/MacNewtNSWindow.h
+       src/newt/native/MacNewtNSWindow.m
+       src/newt/native/MacWindow.m
+       src/newt/native/WindowsWindow.c
+       src/newt/native/X11Window.c
+Copyright: 2010-2023 JogAmp Community.
+           2008-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause
+
+Files: src/nativewindow/classes/jogamp/nativewindow/SurfaceScaleUtils.java
+Copyright: 2014-2023 Gothel Software e.K.
+           2014 JogAmp Community.
+License: BSD-2-Clause-Views
+
+Files: src/nativewindow/classes/jogamp/nativewindow/jawt/JAWTJNILibLoader.java
+       src/nativewindow/classes/jogamp/nativewindow/jawt/JAWT_PlatformInfo.java
+       src/nativewindow/native/JAWT_DrawingSurfaceInfo.c
+       src/newt/classes/jogamp/newt/NEWTJNILibLoader.java
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/nativewindow/classes/jogamp/nativewindow/x11/X11Capabilities.java
+       src/newt/classes/jogamp/newt/driver/awt/AWTEDTUtil.java
+       src/newt/classes/jogamp/newt/driver/macosx/AppKitEDTUtil.java
+       src/newt/classes/jogamp/newt/driver/macosx/MacKeyUtil.java
+Copyright: 2009-2023 JogAmp Community.
+License: BSD-2-Clause-Views
+
+Files: src/newt/classes/jogamp/newt/WindowImpl.java
+Copyright: 2010-2023 JogAmp Community.
+           2010-2023 Gothel Software e.K.
+           2008 Sun Microsystems, Inc.
+License: BSD-3-Clause
+
+Files: src/newt/classes/jogamp/newt/driver/awt/ScreenDriver.java
+       src/newt/native/InputEvent.h
+       src/newt/native/IntelGDL.c
+       src/newt/native/bcm_egl.c
+Copyright: 2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause
+
+Files: src/newt/native/xrandr_utils.c
+Copyright: 2013 NVIDIA Corporation
+           2006 Intel Corporation
+           2002 Hewlett Packard Company, Inc.
+           2001 Keith Packard, member of The XFree86 Project, Inc.
+License: Expat
+
+Files: src/test-native/ffmpeg/*
+Copyright: 2000-2002 Fabrice Bellard
+License: LGPL-2.1+
+
+Files: src/test-native/mesa-demos-patched/*
+Copyright: 1999-2002 Brian Paul
+License: Expat
+
+Files: src/test-native/mesa-demos-patched/EGL/*
+Copyright: 2007-2015 The Khronos Group Inc.
+License: Expat
+
+Files: src/test-native/mesa-demos-patched/eglut/*
+Copyright: 2010 LunarG Inc.
+License: Expat
+
+Files: src/test/com/jogamp/opengl/test/junit/jogl/acore/TestSharedContextWithJTabbedPaneAWT.java
+Copyright: 2013 United States Government as representedthe Administrator of the National Aeronautics and Space Administration.
+           2010 JogAmp Community.
+License: BSD-2-Clause-Views
+
+Files: src/test/com/jogamp/opengl/test/junit/jogl/caps/MultisampleChooser01.java
+       src/test/com/jogamp/opengl/test/junit/jogl/caps/TestMultisampleES1AWT.java
+       src/test/com/jogamp/opengl/test/junit/jogl/caps/TestMultisampleES1NEWT.java
+       src/test/com/jogamp/opengl/test/junit/jogl/caps/TestMultisampleES2NEWT.java
+       src/test/com/jogamp/opengl/test/junit/jogl/demos/es1/MultisampleDemoES1.java
+       src/test/com/jogamp/opengl/test/junit/jogl/demos/es2/MultisampleDemoES2.java
+Copyright: 2010-2023 JogAmp Community.
+           2003-2009 Sun Microsystems, Inc.
+License: BSD-3-Clause-No-Nuclear-Warranty
+
+Files: src/test/com/jogamp/opengl/test/junit/jogl/demos/GearsObject.java
+       src/test/com/jogamp/opengl/test/junit/jogl/demos/es1/GearsES1.java
+       src/test/com/jogamp/opengl/test/junit/jogl/demos/es1/GearsObjectES1.java
+       src/test/com/jogamp/opengl/test/junit/jogl/demos/es2/GearsES2.java
+       src/test/com/jogamp/opengl/test/junit/jogl/demos/es2/GearsObjectES2.java
+       src/test/com/jogamp/opengl/test/junit/jogl/demos/es2/LineSquareXDemoES2.java
+Copyright: 2011-2015 JogAmp Community.
+License: Expat
+
+Files: debian/*
+Copyright: 2010-2014 Sylvestre Ledru <sylvestre@debian.org>
+           2013-2022 tony mancill <tmancill@debian.org>
+           2023 Pierre Gruet <pgt@debian.org>
+License: Expat
+
+License: BSD-2-Clause-Views
+ Redistribution and use in source and binary forms, with or without modification, are
+ permitted provided that the following conditions are met:
+ .
+ 1. Redistributions of source code must retain the above copyright notice, this list of
+    conditions and the following disclaimer.
+ .
+ 2. Redistributions in binary form must reproduce the above copyright notice, this list
+    of conditions and the following disclaimer in the documentation and/or other materials
+    provided with the distribution.
+ .
+ THIS SOFTWARE IS PROVIDED BY JogAmp Community ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL JogAmp Community OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ .
+ The views and conclusions contained in the software and documentation are those of the
+ authors and should not be interpreted as representing official policies, either expressed
+ or implied, of JogAmp Community.
+ 
+License: Expat
+ Permission is hereby granted, free of charge, to any person obtaining
+ a copy of this software and associated documentation files (the
+ "Software"), to deal in the Software without restriction, including
+ without limitation the rights to use, copy, modify, merge, publish,
+ distribute, sublicense, and/or sell copies of the Software, and to
+ permit persons to whom the Software is furnished to do so, subject to
+ the following conditions:
+ . 
+ The above copyright notice and this permission notice shall be included
+ in all copies or substantial portions of the Software.
+ . 
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- NONINFRINGEMENT. IN NO EVENT SHALL SILICON GRAPHICS, INC. BE
- LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
- ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
- IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
- IN THE SOFTWARE.
- Except as contained in this notice, the name of Silicon Graphics, Inc. shall
- not be used in advertising or otherwise to promote the sale, use or other
- dealings in this Software without prior written authorization from Silicon
- Graphics, Inc.
+ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-Files: ./make/stub_includes/opengl/GL/gl.h
-./make/stub_includes/opengl/GL/glx.h
-./make/stub_includes/openmax/OMX_Audio.h
-./make/stub_includes/openmax/OMX_Component.h
-./make/stub_includes/openmax/OMX_ContentPipe.h
-./make/stub_includes/openmax/OMX_Core.h
-./make/stub_includes/openmax/OMX_Image.h
-./make/stub_includes/openmax/OMX_Index.h
-./make/stub_includes/openmax/OMX_IVCommon.h
-./make/stub_includes/openmax/OMX_Other.h
-./make/stub_includes/openmax/OMX_Types.h
-./make/stub_includes/openmax/OMX_Video.h
+License: NVIDIA-MIT-License
+ NVIDIA Corporation("NVIDIA") supplies this software to you in
+ consideration of your agreement to the following terms, and your use,
+ installation, modification or redistribution of this NVIDIA software
+ constitutes acceptance of these terms.  If you do not agree with these
+ terms, please do not use, install, modify or redistribute this NVIDIA
+ software.
+ .
+ In consideration of your agreement to abide by the following terms, and
+ subject to these terms, NVIDIA grants you a personal, non-exclusive
+ license, under NVIDIA's copyrights in this original NVIDIA software (the
+ "NVIDIA Software"), to use, reproduce, modify and redistribute the
+ NVIDIA Software, with or without modifications, in source and/or binary
+ forms; provided that if you redistribute the NVIDIA Software, you must
+ retain the copyright notice of NVIDIA, this notice and the following
+ text and disclaimers in all such redistributions of the NVIDIA Software.
+ Neither the name, trademarks, service marks nor logos of NVIDIA
+ Corporation may be used to endorse or promote products derived from the
+ NVIDIA Software without specific prior written permission from NVIDIA.
+ Except as expressly stated in this notice, no other rights or licenses
+ express or implied, are granted by NVIDIA herein, including but not
+ limited to any patent rights that may be infringed by your derivative
+ works or by other works in which the NVIDIA Software may be
+ incorporated. No hardware is licensed hereunder.
+ .
+ THE NVIDIA SOFTWARE IS BEING PROVIDED ON AN "AS IS" BASIS, WITHOUT
+ WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ INCLUDING WITHOUT LIMITATION, WARRANTIES OR CONDITIONS OF TITLE,
+ NON-INFRINGEMENT, MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR
+ ITS USE AND OPERATION EITHER ALONE OR IN COMBINATION WITH OTHER
+ PRODUCTS.
+ .
+ IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT,
+ INCIDENTAL, EXEMPLARY, CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ TO, LOST PROFITS; PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+ USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) OR ARISING IN ANY WAY
+ OUT OF THE USE, REPRODUCTION, MODIFICATION AND/OR DISTRIBUTION OF THE
+ NVIDIA SOFTWARE, HOWEVER CAUSED AND WHETHER UNDER THEORY OF CONTRACT,
+ TORT (INCLUDING NEGLIGENCE), STRICT LIABILITY OR OTHERWISE, EVEN IF
+ NVIDIA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-Copyright: 1999-2002  Brian Paul  
-2007 The Khronos Group Inc.
+License: BSD-3-Clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ 3. Neither the name of the copyright holder nor the names of its
+    contributors may be used to endorse or promote products derived from
+    this software without specific prior written permission.
 
-License:
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
+License: GPL-2
+ On Debian systems the full text of the GPL-2 can be found in
+ /usr/share/common-licenses/GPL-2
+
+License: LGPL-2.1+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU Lesser General Public License as published by
+ the Free Software Foundation; either version 2.1, or (at your option)
+ any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Lesser General Public License for more details.
+ .
+ You should have received a copy of the GNU Lesser General Public License along
+ with this program; if not, write to the Free Software Foundation,
+ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ .
+ On Debian systems, the complete text of the GNU Lesser General Public
+ License version 2.1 can be found in ‘/usr/share/common-licenses/LGPL-2.1’.
+
+License: SGI-1.1
+ License Applicability. Except to the extent portions of this file are
+ made subject to an alternative license as permitted in the SGI Free
+ Software License B, Version 1.1 (the "License"), the contents of this
+ file are subject only to the provisions of the License. You may not use
+ this file except in compliance with the License. You may obtain a copy
+ of the License at Silicon Graphics, Inc., attn: Legal Services, 1600
+ Amphitheatre Parkway, Mountain View, CA 94043-1351, or at:
+ . 
+ http://oss.sgi.com/projects/FreeB
+ .
+ Note that, as provided in the License, the Software is distributed on an
+ "AS IS" basis, with ALL EXPRESS AND IMPLIED WARRANTIES AND CONDITIONS
+ DISCLAIMED, INCLUDING, WITHOUT LIMITATION, ANY IMPLIED WARRANTIES AND
+ CONDITIONS OF MERCHANTABILITY, SATISFACTORY QUALITY, FITNESS FOR A
+ PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+ . 
+ Original Code. The Original Code is: OpenGL Sample Implementation,
+ Version 1.2.1, released January 26, 2000, developed by Silicon Graphics,
+ Inc. The Original Code is Copyright (c) 1991-2000 Silicon Graphics, Inc.
+ Copyright in any portions created by third parties is as indicated
+ elsewhere herein. All Rights Reserved.
+Comment:
+ The SGI FreeB license version 1.1 allows the Recipient to choose to use
+ Covered Code under the terms of a subsequent version of the license.  Debian
+ makes use of that possibility, using the 2.0 version as above.
+
+License: SGI-B-2.0
+ SGI FREE SOFTWARE LICENSE B
+ (Version 2.0, Sept. 18, 2008)
+ .
+ Permission is hereby granted, free of charge, to any person obtaining a
+ copy of this software and associated documentation files (the "Software"),
+ to deal in the Software without restriction, including without limitation
+ the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ and/or sell copies of the Software, and to permit persons to whom the
+ Software is furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice including the dates of first publication and
+ either this permission notice or a reference to
+ http://oss.sgi.com/projects/FreeB/
+ shall be included in all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ SILICON GRAPHICS, INC. BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ .
+ Except as contained in this notice, the name of Silicon Graphics, Inc.
+ shall not be used in advertising or otherwise to promote the sale, use or
+ other dealings in this Software without prior written authorization from
+ Silicon Graphics, Inc.
+
+License: BSD-3-Clause-No-Nuclear-Warranty
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are
+ met:
+ .
+ - Redistribution of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+ .
+ - Redistribution in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+ .
+ Neither the name of Sun Microsystems, Inc. or the names of
+ contributors may be used to endorse or promote products derived from
+ this software without specific prior written permission.
+ .
+ This software is provided "AS IS," without a warranty of any kind. ALL
+ EXPRESS OR IMPLIED CONDITIONS, REPRESENTATIONS AND WARRANTIES,
+ INCLUDING ANY IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A
+ PARTICULAR PURPOSE OR NON-INFRINGEMENT, ARE HEREBY EXCLUDED. SUN
+ MICROSYSTEMS, INC. ("SUN") AND ITS LICENSORS SHALL NOT BE LIABLE FOR
+ ANY DAMAGES SUFFERED BY LICENSEE AS A RESULT OF USING, MODIFYING OR
+ DISTRIBUTING THIS SOFTWARE OR ITS DERIVATIVES. IN NO EVENT WILL SUN OR
+ ITS LICENSORS BE LIABLE FOR ANY LOST REVENUE, PROFIT OR DATA, OR FOR
+ DIRECT, INDIRECT, SPECIAL, CONSEQUENTIAL, INCIDENTAL OR PUNITIVE
+ DAMAGES, HOWEVER CAUSED AND REGARDLESS OF THE THEORY OF LIABILITY,
+ ARISING OUT OF THE USE OF OR INABILITY TO USE THIS SOFTWARE, EVEN IF
+ SUN HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+ .
+ You acknowledge that this software is not designed or intended for use
+ in the design, construction, operation or maintenance of any nuclear
+ facility.
+
+License: Apache-2.0
+ On Debian systems, the complete text of the Apache 2.0 License
+ can be found in the `/usr/share/common-licenses/Apache-2.0' file.
+
+License: Apache-1.1
+ The Apache Software License, Version 1.1
+ .
+ Copyright (c) 2000 The Apache Software Foundation.  All rights
+ reserved.
+ .
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ .
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ .
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the
+    distribution.
+ .
+ 3. The end-user documentation included with the redistribution,
+    if any, must include the following acknowledgment:
+       "This product includes software developed by the
+        Apache Software Foundation (http://www.apache.org/)."
+    Alternately, this acknowledgment may appear in the software itself,
+    if and wherever such third-party acknowledgments normally appear.
+ .
+ 4. The names "Apache" and "Apache Software Foundation" must
+    not be used to endorse or promote products derived from this
+    software without prior written permission. For written
+    permission, please contact apache@apache.org.
+ .
+ 5. Products derived from this software may not be called "Apache",
+    nor may "Apache" appear in their name, without prior written
+    permission of the Apache Software Foundation.
+ .
+ THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
+ WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED.  IN NO EVENT SHALL THE APACHE SOFTWARE FOUNDATION OR
+ ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+ USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ SUCH DAMAGE.

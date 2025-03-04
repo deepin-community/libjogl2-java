@@ -1,0 +1,372 @@
+Description: as non-free headers of the JDK are not embedded in gluegen, we
+ use the ones of the default OpenJDK, that are tweaked a bit during the Debian
+ build.
+Author: Pierre Gruet <pgt@debian.org>
+Forwarded: not-needed
+Last-Update: 2023-04-16
+
+--- a/make/build-nativewindow.xml
++++ b/make/build-nativewindow.xml
+@@ -150,7 +150,7 @@
+             <include name="${stub.includes}/win32/**" />
+             <include name="${stub.includes}/x11/**" />
+             <include name="${stub.includes}/khr/**" />
+-            <include name="${stub.includes.gluegen}/jni/**" />
++            <include name="../jdkHeaders/**" />
+         </dirset>
+         <fileset id="stub.includes.dependencies.fileset.1" dir="${stub.includes}">
+             <include name="macosx/**" />
+@@ -164,8 +164,8 @@
+             <include name="*.java" />
+             <include name="*.c" />
+         </fileset>
+-        <fileset id="stub.includes.dependencies.fileset.4" dir="${stub.includes.gluegen}">
+-            <include name="jni/**" />
++        <fileset id="stub.includes.dependencies.fileset.4" dir="../jdkHeaders">
++            <include name="*.h" />
+         </fileset>
+ 
+         <!-- The javadoc dirs. -->
+@@ -270,7 +270,7 @@
+                  outputRootDir="${build.nativewindow}"
+                  config="${jawt.cfg}"
+                  includeRefid="stub.includes.fileset.platform"
+-                 literalInclude="${stub.includes.gluegen.gg}, ${stub.includes.gluegen}/jni, ${stub.includes.gluegen}/jni/${jni.platform.sub}, ${stub.includes}/${window.os.system}/gluegen"
++                 literalInclude="${stub.includes.gluegen.gg}, ../jdkHeaders, ../jdkHeaders/${jni.platform.sub}, ${stub.includes}/${window.os.system}/gluegen"
+                  emitter="com.jogamp.gluegen.JavaEmitter"
+                  debug="false"
+                  dumpCPP="false">
+@@ -315,8 +315,8 @@
+             <param name="window.os.system"                       value="x11"/>
+             <param name="windowlib.os.cfg"                       value="${config.nativewindow}/x11-lib.cfg" />
+             <param name="jawt.cfg"                               value="${config.nativewindow}/jawt-x11.cfg" />
+-            <param name="jawt.platform.header"                   value="${stub.includes.gluegen}/jni/x11/jawt_md.h" />
+-            <param name="jni.platform.sub"                       value="x11" />
++            <param name="jawt.platform.header"                   value="../jdkHeaders/linux/jawt_md.h" />
++            <param name="jni.platform.sub"                       value="linux" />
+         </antcall>
+ 
+         <echo message="Generating platform-specifics: Win32" />
+--- a/make/scripts/cpp-gluegen-test.sh
++++ b/make/scripts/cpp-gluegen-test.sh
+@@ -5,10 +5,10 @@
+ -DGL_GL3EXT_PROTOTYPES \
+ -Istub_includes/gluegen \
+ -Istub_includes/khr \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/macosx \
+ -Istub_includes/macosx/AppKit \
+ -Istub_includes/macosx/OpenGL \
+--- a/make/scripts/gluegen-gl.sh
++++ b/make/scripts/gluegen-gl.sh
+@@ -24,7 +24,7 @@
+ -C./config/nativewindow/drm-gbm-lib.cfg \
+ -Istub_includes/drm \
+ -I../../gluegen/make/stub_includes/gluegen \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ stub_includes/drm/drm-gbm-lib.c
+ }
+ 
+@@ -44,8 +44,8 @@
+ -Istub_includes/x11/X11 \
+ -Istub_includes/x11/X11/extensions \
+ -I../../gluegen/make/stub_includes/gluegen \
+--Istub_includes/jni \
+-stub_includes/jni/x11/jawt_md.h
++-I../jdkHeaders \
++jdkHeaders/linux/jawt_md.h
+ }
+ 
+ function gluegen_if_gl() {
+@@ -58,10 +58,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-if-gl.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -95,10 +95,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-if-gl2_es1.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -131,10 +131,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-es1.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -167,10 +167,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-if-gl2_es2.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -203,10 +203,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-es2.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -242,10 +242,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-if-gl2es3-subset.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -280,10 +280,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-if-gl2_es3.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -320,10 +320,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-if-gl3_es3.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -355,10 +355,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-if-es3.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -391,10 +391,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-es3-impl.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -428,10 +428,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-if-gl2.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -467,10 +467,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-if-gl2gl3-subset.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -500,10 +500,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-if-gl2_gl3.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -614,10 +614,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-if-gl4.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -650,10 +650,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/gl-gl4bc.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -725,10 +725,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/glx-x11.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -762,10 +762,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/glxext.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -799,10 +799,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/cgl-macosx.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -836,10 +836,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/cglext.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -873,10 +873,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/wgl-win32.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -910,10 +910,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/wglext.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \
+@@ -947,10 +947,10 @@
+ -O../$rootrel/jogl \
+ -Ecom.jogamp.gluegen.opengl.GLEmitter \
+ -C./config/jogl/glu-gl2.cfg \
+--Istub_includes/jni \
++-I../jdkHeaders \
+ -Istub_includes/jni/macosx \
+ -Istub_includes/jni/win32 \
+--Istub_includes/jni/x11 \
++-I../jdkHeaders/linux \
+ -Istub_includes/khr \
+ -Istub_includes/khr/KD \
+ -Istub_includes/khr/KHR \

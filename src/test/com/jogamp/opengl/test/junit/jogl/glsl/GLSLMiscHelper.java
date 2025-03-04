@@ -57,7 +57,7 @@ public class GLSLMiscHelper {
         gl.glGetVertexAttribiv(data.getLocation(), GL2ES2.GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, qi, 0);
         Assert.assertEquals(data.getVBOName(), qi[0]);
         final GLBufferStorage glStore = gl.getBufferStorage(data.getVBOName());
-        Assert.assertEquals("GLBufferStorage size mismatch, storage "+glStore, data.getSizeInBytes(), null != glStore ? glStore.getSize() : -1);
+        Assert.assertEquals("GLBufferStorage size mismatch, storage "+glStore, data.getByteCount(), null != glStore ? glStore.getSize() : -1);
     }
 
     public static void pause(final long ms) throws InterruptedException {
@@ -67,7 +67,11 @@ public class GLSLMiscHelper {
         }
     }
 
-    public static void displayVCArrays(final GLDrawable drawable, final GL2ES2 gl, final ShaderState st, final boolean preEnable, final GLArrayDataServer vertices, final GLArrayDataServer colors, final boolean postDisable, final int num, final long postDelay) throws InterruptedException {
+    public static void displayVCArrays(final GLDrawable drawable, final GL2ES2 gl, final ShaderState st,
+            final boolean preEnable, final GLArrayDataServer vertices, final GLArrayDataServer colors,
+            final boolean postDisable, final int num, final long postDelay)
+                    throws InterruptedException
+    {
         System.err.println("screen #"+num);
         if(preEnable) {
             vertices.enableBuffer(gl, true);
@@ -145,7 +149,7 @@ public class GLSLMiscHelper {
         vDataArray.seal(gl, true);
         Assert.assertTrue(vDataArray.isVBOWritten());
         Assert.assertTrue(vDataArray.sealed());
-        Assert.assertEquals(4, vDataArray.getElementCount());
+        Assert.assertEquals(4, vDataArray.getElemCount());
         Assert.assertEquals(GL.GL_NO_ERROR, gl.glGetError());
         Assert.assertEquals(0, gl.getBoundBuffer(GL.GL_ARRAY_BUFFER)); // should be cleared ASAP
         validateGLArrayDataServerState(gl, st, vDataArray);

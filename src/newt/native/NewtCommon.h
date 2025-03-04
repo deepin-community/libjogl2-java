@@ -39,6 +39,8 @@ jchar* NewtCommon_GetNullTerminatedStringChars(JNIEnv* env, jstring str);
 
 void NewtCommon_FatalError(JNIEnv *env, const char* msg, ...);
 void NewtCommon_throwNewRuntimeException(JNIEnv *env, const char* msg, ...);
+jboolean NewtCommon_ExceptionCheck0(JNIEnv *env);
+jboolean NewtCommon_ExceptionCheck1_throwNewRuntimeException(JNIEnv *env, const char* msg, ...);
 
 /**
  *
@@ -73,5 +75,7 @@ void NewtCommon_throwNewRuntimeException(JNIEnv *env, const char* msg, ...);
 JNIEnv* NewtCommon_GetJNIEnv (int asDaemon, int * shallBeDetached);
 
 void NewtCommon_ReleaseJNIEnv (int shallBeDetached);
+
+int NewtCommon_isFloatZero(float f);
 
 #endif

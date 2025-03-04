@@ -147,8 +147,8 @@ public class TestParentingFocus01SwingAWTRobot extends UITestCase {
             public void run() {
                 frame1.setVisible(true);
             } } );
-        Assert.assertEquals(true,  AWTRobotUtil.waitForVisible(frame1, true));
-        Assert.assertEquals(true,  AWTRobotUtil.waitForRealized(glWindow1, true));
+        Assert.assertEquals(true,  AWTRobotUtil.waitForVisible(frame1, true, null));
+        Assert.assertEquals(true,  NewtTestUtil.waitForRealized(glWindow1, true, null));
         AWTRobotUtil.clearAWTFocus(robot);
         Assert.assertTrue(AWTRobotUtil.toFrontAndRequestFocus(robot, frame1));
 
@@ -188,7 +188,7 @@ public class TestParentingFocus01SwingAWTRobot extends UITestCase {
         // Should be OK to have the AWT component assume it also has the focus.
         // Assert.assertTrue("Focus prev. gained, but NewtCanvasAWT didn't loose it. Gainer: "+glWindow1FA+"; Looser "+newtCanvasAWTFA,
         //         AWTRobotUtil.waitForFocus(glWindow1FA, newtCanvasAWTFA));
-        if( !AWTRobotUtil.waitForFocus(glWindow1FA, newtCanvasAWTFA) ) {
+        if( !TestUtil.waitForFocus(glWindow1FA, newtCanvasAWTFA, null) ) {
             System.err.println("Info: Focus prev. gained, but NewtCanvasAWT didn't loose it. Gainer: "+glWindow1FA+"; Looser "+newtCanvasAWTFA);
         }
         System.err.println("FOCUS NEWT Canvas/GLWindow sync");
@@ -217,7 +217,7 @@ public class TestParentingFocus01SwingAWTRobot extends UITestCase {
             Assume.assumeNoException( throwable );
         }
         glWindow1.destroy();
-        Assert.assertEquals(true,  AWTRobotUtil.waitForRealized(glWindow1, false));
+        Assert.assertEquals(true,  NewtTestUtil.waitForRealized(glWindow1, false, null));
     }
 
     static int atoi(final String a) {

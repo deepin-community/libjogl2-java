@@ -1,0 +1,21 @@
+Description: skipping an useless part of the build
+Author: Pierre Gruet <pgt@debian.org>
+Forwarded: not-needed
+Last-Update: 2023-04-16
+
+--- a/make/build-common.xml
++++ b/make/build-common.xml
+@@ -810,13 +810,6 @@
+     </target>
+     <target name="common.gluegen.build" unless="common.gluegen.build.done">
+         <property name="common.gluegen.build.done" value="true" />
+-
+-        <!-- Run the GlueGen build to ensure that the GlueGen ANT task
+-           - has been built. -->
+-        <ant antfile="${gluegen.build.xml}" dir="${gluegen.make}" target="base.compile" inheritAll="false">
+-          <property name="build" value="${basedir}/../"/>
+-          <property name="test.dir" value="${basedir}/../test"/>
+-        </ant>
+     </target>
+ 
+ 

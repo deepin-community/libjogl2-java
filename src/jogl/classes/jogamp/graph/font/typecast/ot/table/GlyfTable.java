@@ -56,24 +56,21 @@ import java.io.DataInputStream;
 import java.io.IOException;
 
 /**
- * @version $Id: GlyfTable.java,v 1.6 2010-08-10 11:46:30 davidsch Exp $
- * @author <a href="mailto:davidsch@dev.java.net">David Schweinsberg</a>
+ * @author <a href="mailto:david.schweinsberg@gmail.com">David Schweinsberg</a>
  */
 public class GlyfTable implements Table {
 
-    private final DirectoryEntry _de;
     private final GlyfDescript[] _descript;
 
-    protected GlyfTable(
-            final DirectoryEntry de,
+    public GlyfTable(
             final DataInput di,
+            final int length,
             final MaxpTable maxp,
             final LocaTable loca) throws IOException {
-        _de = (DirectoryEntry) de.clone();
         _descript = new GlyfDescript[maxp.getNumGlyphs()];
 
         // Buffer the whole table so we can randomly access it
-        final byte[] buf = new byte[de.getLength()];
+        final byte[] buf = new byte[length];
         di.readFully(buf);
         final ByteArrayInputStream bais = new ByteArrayInputStream(buf);
 
@@ -108,6 +105,8 @@ public class GlyfTable implements Table {
         }
     }
 
+    public int getSize() { return _descript.length; }
+
     public GlyfDescript getDescription(final int i) {
         if (i < _descript.length) {
             return _descript[i];
@@ -116,19 +115,4 @@ public class GlyfTable implements Table {
         }
     }
 
-    @Override
-    public int getType() {
-        return glyf;
-    }
-
-    /**
-     * Get a directory entry for this table.  This uniquely identifies the
-     * table in collections where there may be more than one instance of a
-     * particular table.
-     * @return A directory entry
-     */
-    @Override
-    public DirectoryEntry getDirectoryEntry() {
-        return _de;
-    }
 }

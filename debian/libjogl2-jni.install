@@ -1,6 +1,6 @@
+build/lib/libnativewindow_awt.so /usr/lib/jni/
 build/lib/libjogl_desktop.so /usr/lib/jni/
 build/lib/libjogl_mobile.so /usr/lib/jni/
-build/lib/libnativewindow_awt.so /usr/lib/jni/
 build/lib/libnativewindow_x11.so /usr/lib/jni/
-build/lib/libnewt.so /usr/lib/jni/
-
+build/lib/libjogl_cg.so /usr/lib/jni/
+build/lib/libnewt_head.so /usr/lib/jni/

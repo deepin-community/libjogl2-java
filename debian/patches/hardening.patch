@@ -1,0 +1,65 @@
+Description: passing hardening flags to the cc ant task
+Author: Pierre Gruet <pgt@debian.org>
+Forwarded: not-needed
+Last-Update: 2023-04-17
+
+--- a/make/build-jogl.xml
++++ b/make/build-jogl.xml
+@@ -1637,9 +1637,11 @@
+       
+                 <!-- This must come last to not override real include paths -->
+                 <!-- includepath path="stub_includes/macosx" if="isOSX" / -->
++                #COMPILER_ARGS#
+               </compiler>
+ 
+               <linker extends="@{linker.cfg.id}">
++                #LINKER_ARGS#
+               </linker>
+             </cc>
+             <gluegen.make.libsymbols builddir="${build}" 
+@@ -1778,11 +1780,13 @@
+       
+                 <!-- This must come last to not override real include paths -->
+                 <!-- includepath path="stub_includes/macosx" if="isOSX" / -->
++                #COMPILER_ARGS#
+               </compiler>
+     
+               <linker extends="@{linker.cfg.id}">
+                 <syslibset dir="${java.lib.platform}" libs="jawt" if="@{output.lib.name}.useLibJAWT"/>
+                 <syslibset dir="${java.lib.platform}/server" libs="jvm" if="@{output.lib.name}.useLibJVM"/>
++                #LINKER_ARGS#
+               </linker>
+             </cc>
+     
+--- a/make/build-nativewindow.xml
++++ b/make/build-nativewindow.xml
+@@ -983,11 +983,13 @@
+       
+                 <!-- This must come last to not override real include paths -->
+                 <!-- includepath path="stub_includes/macosx" if="isOSX" / -->
++                #COMPILER_ARGS#
+               </compiler>
+       
+               <linker extends="@{linker.cfg.id}">
+                 <syslibset dir="${java.lib.dir.platform}" libs="jawt" if="@{output.lib.name}.useLibJAWT"/>
+                 <syslibset dir="${java.lib.dir.platform}/server" libs="jvm" if="@{output.lib.name}.useLibJVM"/>
++                #LINKER_ARGS#
+               </linker>
+             </cc>
+ 
+--- a/make/build-newt.xml
++++ b/make/build-newt.xml
+@@ -1049,11 +1049,13 @@
+                 <includepath path="stub_includes/drm"               if="setup.addNativeDRMGBM" />
+                 <!-- This must come last to not override real include paths -->
+                 <!-- includepath path="stub_includes/macosx" if="isOSX" / -->
++                #COMPILER_ARGS#
+               </compiler>
+     
+               <linker extends="@{linker.cfg.id}">
+                 <syslibset dir="${java.lib.platform}" libs="jawt" if="@{output.lib.name}.useLibJAWT"/>
+                 <syslibset dir="${java.lib.platform}/server" libs="jvm" if="@{output.lib.name}.useLibJVM"/>
++                #LINKER_ARGS#
+               </linker>
+             </cc>
+     

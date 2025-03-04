@@ -1,7 +1,10 @@
-Index: jogl-v2.1.4/make/joglversion
-===================================================================
---- jogl-v2.1.4.orig/make/joglversion	2014-02-11 15:56:19.285429247 +0100
-+++ jogl-v2.1.4/make/joglversion	2014-02-11 15:57:01.845428206 +0100
+Description: specifying vendoring and updating classpath in the jar manifest
+Author: Sylvestre Ledru <sylvestre@debian.org>
+Forwarded: not-needed
+Last-Update: 2023-04-17
+
+--- a/make/joglversion
++++ b/make/joglversion
 @@ -2,7 +2,7 @@
  Application-Name: Java Bindings for OpenGL
  Specification-Title: Java Bindings for OpenGL API Specification
@@ -11,10 +14,11 @@ Index: jogl-v2.1.4/make/joglversion
  Implementation-Title: Java Bindings for OpenGL Runtime Environment
  Implementation-Version: @VERSION@
  Implementation-Build: @BUILD_VERSION@
-@@ -15,5 +15,6 @@
+@@ -15,6 +15,7 @@
  Trusted-Library: true
  Permissions: all-permissions
  Application-Library-Allowable-Codebase: *
 +Class-Path: /usr/share/java/gluegen2-rt.jar
+ Add-Opens: java.desktop/sun.awt java.desktop/sun.java2d
  @JAR_CODEBASE_TAG@
  

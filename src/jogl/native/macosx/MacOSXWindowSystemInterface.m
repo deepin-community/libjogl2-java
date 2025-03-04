@@ -524,42 +524,20 @@ static Bool lockViewIfReady(NSView *view) {
 }
 
 NSOpenGLContext* createContext(NSOpenGLContext* share,
-                    NSView* view,
-                    Bool incompleteView,
                     NSOpenGLPixelFormat* fmt,
-                    Bool opaque,
-                    int* viewNotReady)
+                    Bool opaque)
 {
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
 
     getRendererInfo();
     
-    DBG_PRINT("createContext.0: share %p, view %p, incompleteView %d, pixfmt %p, opaque %d\n",
-        share, view, (int)incompleteView, fmt, opaque);
-
-    Bool viewReadyAndLocked = incompleteView ? false : lockViewIfReady(view);
-
-    if (nil != viewNotReady) {
-        *viewNotReady = 1;
-    }
-
-    if (nil != view && !incompleteView && !viewReadyAndLocked) {
-        DBG_PRINT("createContext.X: Assumed complete view not ready yet\n");
-        [pool release];
-        return NULL;
-    }
+    DBG_PRINT("createContext.0: share %p, pixfmt %p, opaque %d\n", share, fmt, opaque);
 
     NSOpenGLContext* ctx = [[NSOpenGLContext alloc] initWithFormat:fmt shareContext:share];
         
-    if ( nil != ctx && nil != view ) {
-        if(!opaque) {
-            GLint zeroOpacity = 0;
-            [ctx setValues:&zeroOpacity forParameter:NSOpenGLCPSurfaceOpacity];
-        }
-        [ctx setView:view]; // Bug 1087: Set default framebuffer, hence enforce NSView realization
-        if( viewReadyAndLocked ) {
-            [view unlockFocus];        
-        }
+    if ( nil != ctx && !opaque ) {
+        GLint zeroOpacity = 0;
+        [ctx setValues:&zeroOpacity forParameter:NSOpenGLCPSurfaceOpacity];
     }
 
     DBG_PRINT("createContext.X: ctx: %p\n", ctx);
@@ -567,19 +545,34 @@ NSOpenGLContext* createContext(NSOpenGLContext* share,
     return ctx;
 }
 
+// #define NSOPENGLCONTEXT_LOCK_NSVIEW 1
+
 void setContextView(NSOpenGLContext* ctx, NSView* view) {
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+    BOOL isMainThread = [NSThread isMainThread];
+    DBG_PRINT("setContextView.0: ctx %p, view %p, isMainThread %d\n", ctx, view, isMainThread);
+#ifdef NSOPENGLCONTEXT_LOCK_NSVIEW
     if ( nil != ctx ) {
         if ( nil != view ) {
             Bool viewReadyAndLocked = lockViewIfReady(view);
-            DBG_PRINT("setContextView.0: ctx %p, view %p: setView: %d\n", ctx, view, viewReadyAndLocked);
+            DBG_PRINT("setContextView.1a: ctx %p, view %p: viewReadyAndLocked: %d\n", ctx, view, viewReadyAndLocked);
+            [ctx setView:view]; // Bug 1087: Set default framebuffer, hence enforce NSView realization
             if( viewReadyAndLocked ) {
-                [ctx setView:view];
+                // [ctx setView:view];
                 [view unlockFocus];        
             }
+        } else {
+            DBG_PRINT("setContextView.1b: ctx %p, view %p\n", ctx, view);
+            [ctx setView:view];
         }
-        DBG_PRINT("setContextView.X\n");
     }
+#else
+    if ( nil != ctx ) {
+        DBG_PRINT("setContextView.1c: ctx %p, view %p\n", ctx, view);
+        [ctx setView:view];
+    }
+#endif
+    DBG_PRINT("setContextView.X: ctx %p, view %p\n", ctx, view);
     [pool release];
 }
 
@@ -650,12 +643,17 @@ void setContextOpacity(NSOpenGLContext* ctx, int opacity) {
   [ctx setValues:&opacity forParameter:NSOpenGLCPSurfaceOpacity];
 }
 
-void updateContext(NSOpenGLContext* ctx) {
+void updateContext(NSOpenGLContext* ctx, Bool onMainThread) {
   NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
   NSView *nsView = [ctx view];
   if(NULL != nsView) {
-      DBG_PRINT("updateContext.0: ctx %p, ctx.view %p\n", ctx, nsView);
-      [ctx update];
+      Bool isMainThread = [NSThread isMainThread];
+      DBG_PRINT("updateContext.0: ctx %p, ctx.view %p, onMain %d, isMain %d\n", ctx, nsView, onMainThread, isMainThread);
+      if(onMainThread && NO == isMainThread) {
+          [ctx performSelectorOnMainThread:@selector(update) withObject:nil waitUntilDone:NO];
+      } else {
+          [ctx update];
+      }
       DBG_PRINT("updateContext.X\n");
   }
   [pool release];
@@ -665,14 +663,25 @@ void copyContext(NSOpenGLContext* dest, NSOpenGLContext* src, int mask) {
   [dest copyAttributesFromContext: src withMask: mask];
 }
 
-void* updateContextRegister(NSOpenGLContext* ctx, NSView* view) {
+void* updateContextRegister(NSOpenGLContext* ctx, NSView* view, Bool onMainThread) {
   NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
 
-  DBG_PRINT("updateContextRegister.0: ctx %p, view %p\n", ctx, view);
-  ContextUpdater *contextUpdater = [[ContextUpdater alloc] initWithContext: ctx view: view];
-  DBG_PRINT("updateContextRegister.X: ctxupd %p\n", contextUpdater);
-  [pool release];
-  return contextUpdater;
+  Bool isMainThread = [NSThread isMainThread];
+  DBG_PRINT("updateContextRegister.0: ctx %p, view %p, onMain %d, isMain %d\n", ctx, view, onMainThread, isMainThread);
+  if(onMainThread && NO == isMainThread) {
+      __block ContextUpdater *contextUpdater = NULL;
+      dispatch_sync(dispatch_get_main_queue(), ^{
+          contextUpdater = [[ContextUpdater alloc] initWithContext: ctx view: view];
+      });
+      DBG_PRINT("updateContextRegister.XM: ctxupd %p\n", contextUpdater);
+      [pool release];
+      return contextUpdater;
+  } else {
+      ContextUpdater *contextUpdater = [[ContextUpdater alloc] initWithContext: ctx view: view];
+      DBG_PRINT("updateContextRegister.X_: ctxupd %p\n", contextUpdater);
+      [pool release];
+      return contextUpdater;
+  }
 }
 
 Bool updateContextNeedsUpdate(void* updater) {

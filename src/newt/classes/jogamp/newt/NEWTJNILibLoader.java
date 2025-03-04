@@ -39,21 +39,41 @@
 
 package jogamp.newt;
 
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import com.jogamp.common.jvm.JNILibLoaderBase;
 import com.jogamp.common.os.Platform;
+import com.jogamp.common.util.SecurityUtil;
 import com.jogamp.common.util.cache.TempJarCache;
 
 public class NEWTJNILibLoader extends JNILibLoaderBase {
-    public static boolean loadNEWT() {
-        return AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+    /**
+     * Loads the NEWT native library for the main head display,
+     * i.e. X11 for Unix, GDI for Windows .. and so forth.
+     */
+    public static boolean loadNEWTHead() {
+        return SecurityUtil.doPrivileged(new PrivilegedAction<Boolean>() {
             @Override
             public Boolean run() {
                 Platform.initSingleton();
-                final String libName = "newt";
-                if(TempJarCache.isInitialized() && null == TempJarCache.findLibrary(libName)) {
+                final String libName = "newt_head";
+                if( TempJarCache.isInitialized(true) && null == TempJarCache.findLibrary(libName) ) {
+                    JNILibLoaderBase.addNativeJarLibsJoglCfg(new Class<?>[] { jogamp.nativewindow.Debug.class, jogamp.newt.Debug.class });
+                }
+                return Boolean.valueOf(loadLibrary(libName, false, NEWTJNILibLoader.class.getClassLoader()));
+            }
+        }).booleanValue();
+    }
+    /**
+     * Loads the NEWT native library for the drm/gbm display.
+     */
+    public static boolean loadNEWTDrmGbm() {
+        return SecurityUtil.doPrivileged(new PrivilegedAction<Boolean>() {
+            @Override
+            public Boolean run() {
+                Platform.initSingleton();
+                final String libName = "newt_drm";
+                if( TempJarCache.isInitialized(true) && null == TempJarCache.findLibrary(libName) ) {
                     JNILibLoaderBase.addNativeJarLibsJoglCfg(new Class<?>[] { jogamp.nativewindow.Debug.class, jogamp.newt.Debug.class });
                 }
                 return Boolean.valueOf(loadLibrary(libName, false, NEWTJNILibLoader.class.getClassLoader()));

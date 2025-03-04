@@ -1,0 +1,58 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use File::Copy;
+
+# In order to call gluegen during the build, one needs to provide JDK headers
+# that were previously provided by gluegen in a non-free flavour.
+
+mkdir "jdkHeaders" or die "Could not create directory jdkHeaders: $!";
+mkdir "jdkHeaders/linux" or die "Could not create directory jdkHeaders/linux: $!";
+
+# The two header files in /usr/lib/jvm/default-java/include/linux can be kept
+# as are.
+
+copy("/usr/lib/jvm/default-java/include/linux/jni_md.h", "jdkHeaders/linux") or die "File copy failed: $!";
+copy("/usr/lib/jvm/default-java/include/linux/jawt_md.h", "jdkHeaders/linux") or die "File copy failed: $!";
+
+# /usr/lib/jvm/default-java/include/jni.h has to be changed in three ways.
+
+open JNI, "<", "/usr/lib/jvm/default-java/include/jni.h"
+    or die "Cannot open /usr/lib/jvm/default-java/include/jni.h for reading: $!";
+
+open JNIOUT, ">", "jdkHeaders/jni.h"
+    or die "Cannot open jdkHeaders/jni.h for writing: $!";
+
+my $lignes = join '', <JNI>;
+
+# 1: adding a gluegen header for inclusion.
+$lignes =~ s/#include <stdarg.h>/$&\n#include <gluegen_stdint.h>/m;
+# 2: adding some definitions that are specific to a gluegen build, patching out
+# the remainder of the file.
+$lignes =~ s/#define JNI_ABORT \d+/$&\n\n#ifdef __GLUEGEN__\n\ntypedef long JNIEnv;\n#define JNI1_2\n#define JNI1_4\n#define JNI1_8\n#define _JNI_IMPORT_OR_EXPORT_ JNIIMPORT\n\n#else \/\* __GLUEGEN__ \*\//m;
+# 3: closing the opened #ifdef __GLUEGEN__.
+$lignes =~ s/#define JNI_VERSION_[0-9_]+\s+0x[0-9a-fA-F]+\n(?!#define JNI_VERSION_)/$&\n#endif \/\* __GLUEGEN__ \*\/\n/m;
+
+print JNIOUT $lignes;
+
+close JNI;
+close JNIOUT;
+
+# In /usr/lib/jvm/default-java/include/jawt.h, one has to remove some definitions in struct jawt.
+
+open JAWT, "<", "/usr/lib/jvm/default-java/include/jawt.h"
+    or die "Cannot open /usr/lib/jvm/default-java/include/jawt.h for reading: $!";
+
+open JAWTOUT, ">", "jdkHeaders/jawt.h"
+    or die "Cannot open jdkHeaders/jawt.h for writing: $!";
+
+$lignes = join '', <JAWT>;
+
+$lignes =~ s/jobject \(JNICALL \*GetComponent\)\(JNIEnv\* env, void\* platformInfo\);[\s\S]*^} JAWT;/jobject (JNICALL *GetComponent)(JNIEnv* env, void* platformInfo);\n} JAWT;/m;
+
+print JAWTOUT $lignes;
+
+close JAWT;
+close JAWTOUT;

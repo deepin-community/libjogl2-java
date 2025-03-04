@@ -28,7 +28,6 @@
 
 package com.jogamp.opengl.test.junit.util;
 
-import jogamp.newt.WindowImplAccess;
 import jogamp.newt.awt.event.AWTNewtEventFactory;
 
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -43,24 +42,17 @@ import java.awt.Robot;
 import com.jogamp.nativewindow.NativeWindow;
 import com.jogamp.nativewindow.NativeWindowFactory;
 import com.jogamp.opengl.GLAutoDrawable;
-import com.jogamp.opengl.GLContext;
-import com.jogamp.opengl.GLDrawable;
 
 import org.junit.Assert;
 
 import com.jogamp.common.ExceptionUtils;
 import com.jogamp.common.util.awt.AWTEDTExecutor;
-import com.jogamp.newt.event.WindowEvent;
 
-public class AWTRobotUtil {
+public class AWTRobotUtil extends TestUtil {
 
     static final boolean DEBUG = false;
 
-    public static final int RETRY_NUMBER  =   5;
     public static final int ROBOT_DELAY   = 100; // ms
-    public static final int TIME_OUT     = 2000; // 2s
-    public static final int POLL_DIVIDER   = 20; // TO/20
-    public static final int TIME_SLICE   = TIME_OUT / POLL_DIVIDER ;
     public static Integer AWT_CLICK_TO = null;
 
     static class OurUncaughtExceptionHandler implements UncaughtExceptionHandler {
@@ -94,7 +86,11 @@ public class AWTRobotUtil {
             return awtEDTAliveFlag;
         }
     }
-    private static Runnable aliveRun = new Runnable() { public void run() { awtEDTAliveFlag = true; } };
+    private static Runnable aliveRun = new Runnable() {
+        @Override
+        public void run() {
+            awtEDTAliveFlag = true;
+        } };
     private static Object awtEDTAliveSync = new Object();
     private static volatile boolean awtEDTAliveFlag = false;
 
@@ -117,6 +113,7 @@ public class AWTRobotUtil {
             robot.setAutoWaitForIdle(true);
         }
         javax.swing.SwingUtilities.invokeAndWait(new Runnable() {
+            @Override
             public void run() {
                 System.err.println("******** clearAWTFocus.0");
                 java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner();
@@ -125,6 +122,7 @@ public class AWTRobotUtil {
         System.err.println("******** clearAWTFocus.X");
     }
 
+    // FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
     public static int[] getCenterLocation(final Object obj, final boolean onTitleBarIfWindow)
         throws InterruptedException, InvocationTargetException {
         if(obj instanceof com.jogamp.newt.Window) {
@@ -163,6 +161,7 @@ public class AWTRobotUtil {
         return new int[] { x0, y0 };
     }
 
+    // FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
     public static int[] getClientLocation(final Object obj, final int x, final int y)
         throws InterruptedException, InvocationTargetException {
         if(obj instanceof com.jogamp.newt.Window) {
@@ -215,6 +214,7 @@ public class AWTRobotUtil {
         do {
             final int _wait = wait;
             javax.swing.SwingUtilities.invokeAndWait(new Runnable() {
+                @Override
                 public void run() {
                     if(0==_wait) {
                         window.setVisible(true);
@@ -239,6 +239,7 @@ public class AWTRobotUtil {
 
     /**
      * centerMouse
+     * FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
      * @param onTitleBarIfWindow TODO
      */
     public static void centerMouse(Robot robot, final Object obj, final boolean onTitleBarIfWindow)
@@ -254,6 +255,7 @@ public class AWTRobotUtil {
         awtRobotMouseMove(robot, p0[0], p0[1] );
     }
 
+    // FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
     public static void setMouseToClientLocation(Robot robot, final Object obj, final int x, final int y)
         throws AWTException, InterruptedException, InvocationTargetException {
 
@@ -266,24 +268,32 @@ public class AWTRobotUtil {
         awtRobotMouseMove(robot, p0[0], p0[1] );
     }
 
+    private static int getAWTClickTimeout() {
+        if(null == AWT_CLICK_TO) {
+            AWT_CLICK_TO =
+                (Integer) java.awt.Toolkit.getDefaultToolkit().getDesktopProperty("awt.multiClickInterval");
+            if(null == AWT_CLICK_TO) {
+                AWT_CLICK_TO = new Integer(500);
+            }
+        }
+        return AWT_CLICK_TO.intValue();
+    }
+    // FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
     public static int getClickTimeout(final Object obj) {
         if(obj instanceof com.jogamp.newt.Window) {
-            return com.jogamp.newt.event.MouseEvent.getClickTimeout();
+            final int newt_to = com.jogamp.newt.event.MouseEvent.getClickTimeout();
+            final int awt_to = getAWTClickTimeout();
+            return Math.max(awt_to, newt_to);
         } else if(NativeWindowFactory.isAWTAvailable() && obj instanceof java.awt.Component) {
-            if(null == AWT_CLICK_TO) {
-                AWT_CLICK_TO =
-                    (Integer) java.awt.Toolkit.getDefaultToolkit().getDesktopProperty("awt.multiClickInterval");
-                if(null == AWT_CLICK_TO) {
-                    AWT_CLICK_TO = new Integer(500);
-                }
-            }
-            return AWT_CLICK_TO.intValue();
+            return getAWTClickTimeout();
         } else {
             throw new RuntimeException("Neither AWT nor NEWT: "+obj);
         }
     }
 
     /**
+     * FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
+     *
      * requestFocus, if robot is valid, use mouse operation,
      * otherwise programmatic, ie call requestFocus
      */
@@ -293,6 +303,8 @@ public class AWTRobotUtil {
     }
 
     /**
+     * FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
+     *
      * requestFocus, if robot is valid, use mouse operation,
      * otherwise programmatic, ie call requestFocus
      */
@@ -326,12 +338,14 @@ public class AWTRobotUtil {
     private static void requestFocusAWT(final java.awt.Component comp, final boolean onTitleBarIfWindow)
         throws AWTException, InterruptedException, InvocationTargetException {
         javax.swing.SwingUtilities.invokeAndWait(new Runnable() {
+            @Override
             public void run() {
                 comp.requestFocus();
                 System.err.println("requestFocus: AWT Component");
             }});
     }
 
+    // FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
     public static void requestFocus(final Robot robot, final Object obj, final int x, final int y)
         throws AWTException, InterruptedException, InvocationTargetException {
         validateAWTEDTIsAlive();
@@ -350,6 +364,7 @@ public class AWTRobotUtil {
         robot.delay( d );
     }
 
+    // FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
     public static boolean hasFocus(final Object obj) {
         if(obj instanceof com.jogamp.newt.Window) {
             return ((com.jogamp.newt.Window) obj).hasFocus();
@@ -364,55 +379,36 @@ public class AWTRobotUtil {
 
     /**
      *
+     * @param waitAction if not null, Runnable shall wait {@link #TIME_SLICE} ms, if appropriate
      * @return True if the Window became the global focused Window within TIME_OUT
      */
-    public static boolean waitForFocus(final Object obj) throws InterruptedException {
+    public static boolean waitForFocus(final java.awt.Component comp, final Runnable waitAction) throws InterruptedException {
         int wait;
-        if(obj instanceof com.jogamp.newt.Window) {
-            final com.jogamp.newt.Window win = (com.jogamp.newt.Window) obj;
-            for (wait=0; wait<POLL_DIVIDER && !win.hasFocus(); wait++) {
+        final java.awt.KeyboardFocusManager kfm = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager();
+        for (wait=0; wait<POLL_DIVIDER && comp != kfm.getPermanentFocusOwner(); wait++) {
+            if( null != waitAction ) {
+                waitAction.run();
+            } else {
                 Thread.sleep(TIME_SLICE);
             }
-        } else if(NativeWindowFactory.isAWTAvailable() && obj instanceof java.awt.Component) {
-            final java.awt.Component comp = (java.awt.Component) obj;
-            final java.awt.KeyboardFocusManager kfm = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager();
-            for (wait=0; wait<POLL_DIVIDER && comp != kfm.getPermanentFocusOwner(); wait++) {
-                Thread.sleep(TIME_SLICE);
-            }
-        } else {
-            throw new RuntimeException("Neither AWT nor NEWT: "+obj);
         }
         return wait<POLL_DIVIDER;
     }
 
     /**
      *
+     * @param waitAction if not null, Runnable shall wait {@link #TIME_SLICE} ms, if appropriate
      * @return True if the Window became the global focused Window within TIME_OUT
      */
-    public static boolean waitForFocus(final FocusEventCountAdapter gain,
-                                       final FocusEventCountAdapter lost) throws InterruptedException {
-        int wait;
-        for (wait=0; wait<POLL_DIVIDER; wait++) {
-            if( ( null == lost || lost.focusLost() ) && ( null == gain || gain.focusGained() ) ) {
-                return true;
-            }
-            Thread.sleep(TIME_SLICE);
-        }
-        return false;
-    }
-
-    /**
-     *
-     * @return True if the Window became the global focused Window within TIME_OUT
-     */
-    public static boolean waitForFocus(final Object obj, final FocusEventCountAdapter gain,
-                                                   final FocusEventCountAdapter lost) throws InterruptedException {
-        if(!waitForFocus(obj)) {
+    public static boolean waitForFocus(final java.awt.Component comp, final FocusEventCountAdapter gain,
+                                       final FocusEventCountAdapter lost, final Runnable waitAction) throws InterruptedException {
+        if(!waitForFocus(comp, waitAction)) {
             return false;
         }
-        return waitForFocus(gain, lost);
+        return TestUtil.waitForFocus(gain, lost, waitAction);
     }
 
+    // FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
     public static void assertRequestFocusAndWait(final Robot robot, final Object requestFocus, final Object waitForFocus,
                                               final FocusEventCountAdapter gain, final FocusEventCountAdapter lost)
         throws AWTException, InterruptedException, InvocationTargetException {
@@ -422,7 +418,13 @@ public class AWTRobotUtil {
 
         for(i=0; i < RETRY_NUMBER && !hasFocus; i++) {
             requestFocus(robot, requestFocus);
-            hasFocus = waitForFocus(waitForFocus, gain, lost);
+            if(waitForFocus instanceof com.jogamp.newt.Window) {
+                hasFocus = NewtTestUtil.waitForFocus((com.jogamp.newt.Window)waitForFocus, gain, lost, null);
+            } else if(NativeWindowFactory.isAWTAvailable() && waitForFocus instanceof java.awt.Component) {
+                hasFocus = waitForFocus((java.awt.Component)waitForFocus, gain, lost, null);
+            } else {
+                throw new RuntimeException("Neither AWT nor NEWT: "+waitForFocus);
+            }
         }
         if(!hasFocus) {
             System.err.print("*** AWTRobotUtil.assertRequestFocusAndWait() ");
@@ -459,6 +461,7 @@ public class AWTRobotUtil {
         robot.delay(msDelay);
     }
 
+    // FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
     public static int keyType(final int i, final Robot robot, final int keyCode,
                               final Object obj, final KeyEventCountAdapter counter) throws InterruptedException, AWTException, InvocationTargetException
     {
@@ -518,6 +521,8 @@ public class AWTRobotUtil {
     }
 
     /**
+     * FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
+     *
      * @param keyCode TODO
      * @param counter shall return the number of keys typed (press + release)
      */
@@ -550,6 +555,8 @@ public class AWTRobotUtil {
     }
 
     /**
+     * FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
+     *
      * @param keyCode TODO
      * @param counter shall return the number of keys typed (press + release)
      */
@@ -600,6 +607,7 @@ public class AWTRobotUtil {
         robot.delay(actionDelay);
     }
 
+    // FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
     static int mouseClick(final int i, final Robot robot, final int mouseButton,
                           final Object obj, final InputEventCountAdapter counter) throws InterruptedException, AWTException, InvocationTargetException
     {
@@ -631,6 +639,8 @@ public class AWTRobotUtil {
     }
 
     /**
+     * FIXME: AWTRobotUtil Cleanup: Use specific type for argument object
+     *
      * @param mouseButton ie InputEvent.BUTTON1_MASK
      * @param clickCount ie 1, or 2
      */
@@ -668,34 +678,17 @@ public class AWTRobotUtil {
 
     /**
      *
+     * @param waitAction if not null, Runnable shall wait {@link #TIME_SLICE} ms, if appropriate
      * @return True if the Component becomes <code>visible</code> within TIME_OUT
      */
-    public static boolean waitForVisible(final Object obj, final boolean visible) throws InterruptedException {
+    public static boolean waitForVisible(final java.awt.Component comp, final boolean visible, final Runnable waitAction) throws InterruptedException {
         int wait;
-        if(obj instanceof com.jogamp.newt.Window) {
-            final com.jogamp.newt.Window win = (com.jogamp.newt.Window) obj;
-            for (wait=0; wait<POLL_DIVIDER && visible != win.isVisible(); wait++) {
+        for (wait=0; wait<POLL_DIVIDER && visible != comp.isShowing(); wait++) {
+            if( null != waitAction ) {
+                waitAction.run();
+            } else {
                 Thread.sleep(TIME_SLICE);
             }
-        } else if(NativeWindowFactory.isAWTAvailable() && obj instanceof java.awt.Component) {
-            final java.awt.Component comp = (java.awt.Component) obj;
-            for (wait=0; wait<POLL_DIVIDER && visible != comp.isShowing(); wait++) {
-                Thread.sleep(TIME_SLICE);
-            }
-        } else {
-            throw new RuntimeException("Neither AWT nor NEWT: "+obj);
-        }
-        return wait<POLL_DIVIDER;
-    }
-
-    /**
-     *
-     * @return True if the GLDrawable receives the expected size within TIME_OUT
-     */
-    public static boolean waitForSize(final GLDrawable drawable, final int width, final int height) throws InterruptedException {
-        int wait;
-        for (wait=0; wait<POLL_DIVIDER && ( width != drawable.getSurfaceWidth() || height != drawable.getSurfaceHeight() ) ; wait++) {
-            Thread.sleep(TIME_SLICE);
         }
         return wait<POLL_DIVIDER;
     }
@@ -703,26 +696,26 @@ public class AWTRobotUtil {
     /**
      * @param obj the component to wait for
      * @param realized true if waiting for component to become realized, otherwise false
-     * @return True if the Component becomes realized (not displayable, native invalid) within TIME_OUT
-     * @throws InterruptedException
-     */
-    public static boolean waitForRealized(final Object obj, final boolean realized) throws InterruptedException {
-        return waitForRealized(obj, null, realized);
-    }
-
-    /**
-     * @param obj the component to wait for
      * @param waitAction if not null, Runnable shall wait {@link #TIME_SLICE} ms, if appropriate
-     * @param realized true if waiting for component to become realized, otherwise false
      * @return True if the Component becomes realized (not displayable, native invalid) within TIME_OUT
      * @throws InterruptedException
      */
-    public static boolean waitForRealized(final Object obj, final Runnable waitAction, final boolean realized) throws InterruptedException {
+    public static boolean waitForRealized(final java.awt.Component comp, final boolean realized, final Runnable waitAction) throws InterruptedException {
         long t0 = System.currentTimeMillis();
         long t1 = t0;
-        if(obj instanceof com.jogamp.newt.Screen) {
-            final com.jogamp.newt.Screen screen = (com.jogamp.newt.Screen) obj;
-            while( (t1-t0) < TIME_OUT && realized != screen.isNativeValid() ) {
+        while( (t1-t0) < TIME_OUT && realized != comp.isShowing() ) {
+            if( null != waitAction ) {
+                waitAction.run();
+            } else {
+                Thread.sleep(TIME_SLICE);
+            }
+            t1 = System.currentTimeMillis();
+        }
+        // if GLCanvas, ensure it got also painted -> drawable.setRealized(true);
+        if( (t1-t0) < TIME_OUT && comp instanceof GLAutoDrawable) {
+            final GLAutoDrawable glad = (GLAutoDrawable) comp;
+            t0 = System.currentTimeMillis();
+            while( (t1-t0) < TIME_OUT && realized != glad.isRealized() ) {
                 if( null != waitAction ) {
                     waitAction.run();
                 } else {
@@ -730,29 +723,10 @@ public class AWTRobotUtil {
                 }
                 t1 = System.currentTimeMillis();
             }
-        } else if(obj instanceof com.jogamp.newt.Window) {
-            final com.jogamp.newt.Window win = (com.jogamp.newt.Window) obj;
-            while( (t1-t0) < TIME_OUT && realized != win.isNativeValid() ) {
-                if( null != waitAction ) {
-                    waitAction.run();
-                } else {
-                    Thread.sleep(TIME_SLICE);
-                }
-                t1 = System.currentTimeMillis();
-            }
-        } else if (NativeWindowFactory.isAWTAvailable() && obj instanceof java.awt.Component) {
-            final java.awt.Component comp = (java.awt.Component) obj;
-            while( (t1-t0) < TIME_OUT && realized != comp.isShowing() ) {
-                if( null != waitAction ) {
-                    waitAction.run();
-                } else {
-                    Thread.sleep(TIME_SLICE);
-                }
-                t1 = System.currentTimeMillis();
-            }
-            // if GLCanvas, ensure it got also painted -> drawable.setRealized(true);
-            if( (t1-t0) < TIME_OUT && comp instanceof GLAutoDrawable) {
-                final GLAutoDrawable glad = (GLAutoDrawable) comp;
+            if( (t1-t0) >= TIME_OUT ) {
+                // for some reason GLCanvas hasn't been painted yet, force it!
+                System.err.println("XXX: FORCE REPAINT PRE - glad: "+glad);
+                comp.repaint();
                 t0 = System.currentTimeMillis();
                 while( (t1-t0) < TIME_OUT && realized != glad.isRealized() ) {
                     if( null != waitAction ) {
@@ -762,61 +736,10 @@ public class AWTRobotUtil {
                     }
                     t1 = System.currentTimeMillis();
                 }
-                if( (t1-t0) >= TIME_OUT ) {
-                    // for some reason GLCanvas hasn't been painted yet, force it!
-                    System.err.println("XXX: FORCE REPAINT PRE - glad: "+glad);
-                    comp.repaint();
-                    t0 = System.currentTimeMillis();
-                    while( (t1-t0) < TIME_OUT && realized != glad.isRealized() ) {
-                        if( null != waitAction ) {
-                            waitAction.run();
-                        } else {
-                            Thread.sleep(TIME_SLICE);
-                        }
-                        t1 = System.currentTimeMillis();
-                    }
-                    System.err.println("XXX: FORCE REPAINT POST - glad: "+glad);
-                }
+                System.err.println("XXX: FORCE REPAINT POST - glad: "+glad);
             }
-        } else if(obj instanceof GLAutoDrawable) {
-            final GLAutoDrawable glad = (GLAutoDrawable) obj;
-            while( (t1-t0) < TIME_OUT && realized != glad.isRealized() ) {
-                if( null != waitAction ) {
-                    waitAction.run();
-                } else {
-                    Thread.sleep(TIME_SLICE);
-                }
-                t1 = System.currentTimeMillis();
-            }
-        } else {
-            throw new RuntimeException("Neither AWT nor NEWT nor GLAutoDrawable: "+obj);
         }
         return (t1-t0) < TIME_OUT;
-    }
-
-    /**
-     *
-     * @return True if the GLContext becomes created or not within TIME_OUT
-     */
-    public static boolean waitForContextCreated(final GLAutoDrawable autoDrawable, final boolean created) throws InterruptedException {
-        if( null == autoDrawable ) {
-            return !created;
-        }
-        int wait;
-        for (wait=0; wait<POLL_DIVIDER ; wait++) {
-            final GLContext ctx = autoDrawable.getContext();
-            if( created ) {
-                if( null != ctx && ctx.isCreated() ) {
-                    break;
-                }
-            } else {
-                if( null == ctx || !ctx.isCreated() ) {
-                    break;
-                }
-            }
-            Thread.sleep(TIME_SLICE);
-        }
-        return wait<POLL_DIVIDER;
     }
 
     /**
@@ -825,131 +748,74 @@ public class AWTRobotUtil {
      *
      * @param obj either an AWT Window (Frame, JFrame) or NEWT Window
      * @param willClose indicating that the window will close, hence this method waits for the window to be closed
+     * @param waitAction if not null, Runnable shall wait {@link #TIME_SLICE} ms, if appropriate
      * @param wcl the WindowClosingListener to determine whether the AWT or NEWT widget has been closed. It should be attached
      *            to the widget ASAP before any other listener, e.g. via {@link #addClosingListener(Object)}.
      *            The WindowClosingListener will be reset before attempting to close the widget.
      * @return True if the Window is closing and closed (if willClose is true), each within TIME_OUT
      * @throws InterruptedException
      */
-    public static boolean closeWindow(final Object obj, final boolean willClose, final WindowClosingListener closingListener) throws InterruptedException {
+    public static boolean closeWindow(final java.awt.Window win, final boolean willClose, final TestUtil.WindowClosingListener closingListener, final Runnable waitAction) throws InterruptedException {
         closingListener.reset();
-        if(obj instanceof java.awt.Window) {
-            final java.awt.Window win = (java.awt.Window) obj;
-            final java.awt.Toolkit tk = java.awt.Toolkit.getDefaultToolkit();
-            final java.awt.EventQueue evtQ = tk.getSystemEventQueue();
-            AWTEDTExecutor.singleton.invoke(true, new Runnable() {
-                public void run() {
-                    evtQ.postEvent(new java.awt.event.WindowEvent(win, java.awt.event.WindowEvent.WINDOW_CLOSING));
-                } });
-        } else if(obj instanceof com.jogamp.newt.Window) {
-            final com.jogamp.newt.Window win = (com.jogamp.newt.Window) obj;
-            WindowImplAccess.windowDestroyNotify(win);
-        }
-        int wait;
-        for (wait=0; wait<POLL_DIVIDER && !closingListener.isWindowClosing(); wait++) {
-            Thread.sleep(TIME_SLICE);
-        }
-        if(wait<POLL_DIVIDER && willClose) {
-            for (wait=0; wait<POLL_DIVIDER && !closingListener.isWindowClosed(); wait++) {
-                Thread.sleep(TIME_SLICE);
-            }
-        }
-        return wait<POLL_DIVIDER;
+        final java.awt.Toolkit tk = java.awt.Toolkit.getDefaultToolkit();
+        final java.awt.EventQueue evtQ = tk.getSystemEventQueue();
+        AWTEDTExecutor.singleton.invoke(true, new Runnable() {
+            @Override
+            public void run() {
+                evtQ.postEvent(new java.awt.event.WindowEvent(win, java.awt.event.WindowEvent.WINDOW_CLOSING));
+            } });
+        return waitUntilClosed(willClose, closingListener, waitAction);
     }
 
-    public static WindowClosingListener addClosingListener(final Object obj) {
-        WindowClosingListener cl = null;
-        if(obj instanceof java.awt.Window) {
-            final java.awt.Window win = (java.awt.Window) obj;
-            final AWTWindowClosingAdapter acl = new AWTWindowClosingAdapter();
-            AWTEDTExecutor.singleton.invoke(true, new Runnable() {
-                public void run() {
-                    win.addWindowListener(acl);
-                } } );
-            cl = acl;
-        } else if(obj instanceof com.jogamp.newt.Window) {
-            final com.jogamp.newt.Window win = (com.jogamp.newt.Window) obj;
-            final NEWTWindowClosingAdapter ncl = new NEWTWindowClosingAdapter();
-            win.addWindowListener(ncl);
-            cl = ncl;
-        } else {
-            throw new RuntimeException("Neither AWT nor NEWT: "+obj);
-        }
-        return cl;
-    }
-    public static interface WindowClosingListener {
-        void reset();
-        public int getWindowClosingCount();
-        public int getWindowClosedCount();
-        public boolean isWindowClosing();
-        public boolean isWindowClosed();
+    public static TestUtil.WindowClosingListener addClosingListener(final java.awt.Window win) {
+        final AWTWindowClosingAdapter acl = new AWTWindowClosingAdapter();
+        AWTEDTExecutor.singleton.invoke(true, new Runnable() {
+            @Override
+            public void run() {
+                win.addWindowListener(acl);
+            } } );
+        return acl;
     }
     static class AWTWindowClosingAdapter
-            extends java.awt.event.WindowAdapter implements WindowClosingListener
+            extends java.awt.event.WindowAdapter implements TestUtil.WindowClosingListener
     {
         AtomicInteger closing = new AtomicInteger(0);
         AtomicInteger closed = new AtomicInteger(0);
 
+        @Override
         public void reset() {
             closing.set(0);
             closed.set(0);
         }
+        @Override
         public int getWindowClosingCount() {
             return closing.get();
         }
+        @Override
         public int getWindowClosedCount() {
             return closed.get();
         }
+        @Override
         public boolean isWindowClosing() {
             return 0 < closing.get();
         }
+        @Override
         public boolean isWindowClosed() {
             return 0 < closed.get();
         }
+        @Override
         public void windowClosing(final java.awt.event.WindowEvent e) {
             closing.incrementAndGet();
             System.err.println("AWTWindowClosingAdapter.windowClosing: "+this);
         }
+        @Override
         public void windowClosed(final java.awt.event.WindowEvent e) {
             closed.incrementAndGet();
             System.err.println("AWTWindowClosingAdapter.windowClosed: "+this);
         }
+        @Override
         public String toString() {
             return "AWTWindowClosingAdapter[closing "+closing+", closed "+closed+"]";
-        }
-    }
-    static class NEWTWindowClosingAdapter
-            extends com.jogamp.newt.event.WindowAdapter implements WindowClosingListener
-    {
-        AtomicInteger closing = new AtomicInteger(0);
-        AtomicInteger closed = new AtomicInteger(0);
-
-        public void reset() {
-            closing.set(0);
-            closed.set(0);
-        }
-        public int getWindowClosingCount() {
-            return closing.get();
-        }
-        public int getWindowClosedCount() {
-            return closed.get();
-        }
-        public boolean isWindowClosing() {
-            return 0 < closing.get();
-        }
-        public boolean isWindowClosed() {
-            return 0 < closed.get();
-        }
-        public void windowDestroyNotify(final WindowEvent e) {
-            closing.incrementAndGet();
-            System.err.println("NEWTWindowClosingAdapter.windowDestroyNotify: "+this);
-        }
-        public void windowDestroyed(final WindowEvent e) {
-            closed.incrementAndGet();
-            System.err.println("NEWTWindowClosingAdapter.windowDestroyed: "+this);
-        }
-        public String toString() {
-            return "NEWTWindowClosingAdapter[closing "+closing+", closed "+closed+"]";
         }
     }
 

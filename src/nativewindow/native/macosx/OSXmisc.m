@@ -51,6 +51,7 @@
 #endif
 
 // #define VERBOSE2 1
+// #define VERBOSE3 1
 //
 #ifdef VERBOSE2
     #define DBG_PRINT2(...) fprintf(stderr, __VA_ARGS__); fflush(stderr)
@@ -75,47 +76,64 @@ static const char * const ClazzNameInsetsCstrSignature = "(IIII)V";
 static jclass insetsClz = NULL;
 static jmethodID insetsCstr = NULL;
 
+static jclass OSXUtilClazz = NULL;
+static jmethodID getCurrentThreadNameID = NULL;
+static jmethodID dumpStackID = NULL;
+
 JNIEXPORT jboolean JNICALL 
-Java_jogamp_nativewindow_macosx_OSXUtil_initIDs0(JNIEnv *env, jclass _unused) {
+Java_jogamp_nativewindow_macosx_OSXUtil_initIDs0(JNIEnv *env, jclass clazz) {
+
+    OSXUtilClazz = (jclass)(*env)->NewGlobalRef(env, clazz);
+
     if( NativewindowCommon_init(env) ) {
         jclass c;
+
+        getCurrentThreadNameID = (*env)->GetStaticMethodID(env, OSXUtilClazz, "getCurrentThreadName", "()Ljava/lang/String;");
+        if(NULL==getCurrentThreadNameID) {
+            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_nativewindow_x11_X11Lib: can't get method getCurrentThreadName");
+        }
+        dumpStackID = (*env)->GetStaticMethodID(env, OSXUtilClazz, "dumpStack", "()V");
+        if(NULL==dumpStackID) {
+            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_nativewindow_x11_X11Lib: can't get method dumpStack");
+        }
+
         c = (*env)->FindClass(env, ClazzNamePoint);
         if(NULL==c) {
-            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_newt_driver_macosx_MacWindow_initIDs0: can't find %s", ClazzNamePoint);
+            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_nativewindow_macosx_OSXUtil_initIDs0: can't find %s", ClazzNamePoint);
         }
         pointClz = (jclass)(*env)->NewGlobalRef(env, c);
         (*env)->DeleteLocalRef(env, c);
         if(NULL==pointClz) {
-            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_newt_driver_macosx_MacWindow_initIDs0: can't use %s", ClazzNamePoint);
+            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_nativewindow_macosx_OSXUtil_initIDs0: can't use %s", ClazzNamePoint);
         }
         pointCstr = (*env)->GetMethodID(env, pointClz, ClazzAnyCstrName, ClazzNamePointCstrSignature);
         if(NULL==pointCstr) {
-            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_newt_driver_macosx_MacWindow_initIDs0: can't fetch %s.%s %s",
+            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_nativewindow_macosx_OSXUtil_initIDs0: can't fetch %s.%s %s",
                 ClazzNamePoint, ClazzAnyCstrName, ClazzNamePointCstrSignature);
         }
 
         c = (*env)->FindClass(env, ClazzNameInsets);
         if(NULL==c) {
-            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_newt_driver_macosx_MacWindow_initIDs0: can't find %s", ClazzNameInsets);
+            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_nativewindow_macosx_OSXUtil_initIDs0: can't find %s", ClazzNameInsets);
         }
         insetsClz = (jclass)(*env)->NewGlobalRef(env, c);
         (*env)->DeleteLocalRef(env, c);
         if(NULL==insetsClz) {
-            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_newt_driver_macosx_MacWindow_initIDs0: can't use %s", ClazzNameInsets);
+            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_nativewindow_macosx_OSXUtil_initIDs0: can't use %s", ClazzNameInsets);
         }
         insetsCstr = (*env)->GetMethodID(env, insetsClz, ClazzAnyCstrName, ClazzNameInsetsCstrSignature);
         if(NULL==insetsCstr) {
-            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_newt_driver_macosx_MacWindow_initIDs0: can't fetch %s.%s %s",
+            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_nativewindow_macosx_OSXUtil_initIDs0: can't fetch %s.%s %s",
                 ClazzNameInsets, ClazzAnyCstrName, ClazzNameInsetsCstrSignature);
         }
 
         c = (*env)->FindClass(env, ClazzNameRunnable);
         if(NULL==c) {
-            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_newt_driver_macosx_MacWindow_initIDs0: can't find %s", ClazzNameRunnable);
+            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_nativewindow_macosx_OSXUtil_initIDs0: can't find %s", ClazzNameRunnable);
         }
         runnableRunID = (*env)->GetMethodID(env, c, "run", "()V");
         if(NULL==runnableRunID) {
-            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_newt_driver_macosx_MacWindow_initIDs0: can't fetch %s.run()V", ClazzNameRunnable);
+            NativewindowCommon_FatalError(env, "FatalError Java_jogamp_nativewindow_macosx_OSXUtil_initIDs0: can't fetch %s.run()V", ClazzNameRunnable);
         }
     }
     return JNI_TRUE;
@@ -189,13 +207,13 @@ JNIEXPORT jobject JNICALL Java_jogamp_nativewindow_macosx_OSXUtil_GetLocationOnS
     }
     NSRect viewFrame = [view frame];
 
-    NSRect r;
-    r.origin.x = src_x;
-    r.origin.y = viewFrame.size.height - src_y; // y-flip for 0/0 top-left
-    r.size.width = 0;
-    r.size.height = 0;
-    // NSRect rS = [win convertRectToScreen: r]; // 10.7
-    NSPoint oS = [win convertBaseToScreen: r.origin]; // BL-screen
+    NSPoint oS = NSMakePoint(src_x, src_y);
+    if( ![view isFlipped] ) {
+        // y-flip for 0/0 top-left: TL-view -> BL-view
+        oS.y = viewFrame.size.height - oS.y; 
+    }
+    oS = [view convertPoint: oS toView:nil]; // BL-view -> BL-window
+    oS = [win convertBaseToScreen: oS]; // BL-window -> BL-screen
 
     NSScreen* screen = [win screen];
     CGDirectDisplayID display = OSXUtil_getCGDirectDisplayIDByNSScreen(screen);
@@ -266,10 +284,10 @@ JNIEXPORT jobject JNICALL Java_jogamp_nativewindow_macosx_OSXUtil_GetInsets0
 
 /*
  * Class:     Java_jogamp_nativewindow_macosx_OSXUtil
- * Method:    GetPixelScale1
- * Signature: (I)D
+ * Method:    GetScreenPixelScale1
+ * Signature: (I)F
  */
-JNIEXPORT jdouble JNICALL Java_jogamp_nativewindow_macosx_OSXUtil_GetPixelScale1
+JNIEXPORT jfloat JNICALL Java_jogamp_nativewindow_macosx_OSXUtil_GetScreenPixelScale1
   (JNIEnv *env, jclass unused, jint displayID)
 {
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
@@ -285,15 +303,15 @@ NS_ENDHANDLER
     }
     [pool release];
 
-    return (jdouble)pixelScale;
+    return (jfloat)pixelScale;
 }
 
 /*
  * Class:     Java_jogamp_nativewindow_macosx_OSXUtil
- * Method:    GetPixelScale1
- * Signature: (J)D
+ * Method:    GetScreenPixelScale2
+ * Signature: (J)F
  */
-JNIEXPORT jdouble JNICALL Java_jogamp_nativewindow_macosx_OSXUtil_GetPixelScale2
+JNIEXPORT jfloat JNICALL Java_jogamp_nativewindow_macosx_OSXUtil_GetScreenPixelScale2
   (JNIEnv *env, jclass unused, jlong winOrView)
 {
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
@@ -324,7 +342,84 @@ NS_ENDHANDLER
 
     [pool release];
 
-    return (jdouble)pixelScale;
+    return (jfloat)pixelScale;
+}
+
+/*
+ * Class:     Java_jogamp_nativewindow_macosx_OSXUtil
+ * Method:    GetWindowPixelScale1
+ * Signature: (J)F
+ */
+JNIEXPORT jfloat JNICALL Java_jogamp_nativewindow_macosx_OSXUtil_GetWindowPixelScale1
+  (JNIEnv *env, jclass unused, jlong winOrView)
+{
+    NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+
+    NSObject *nsObj = (NSObject*) (intptr_t) winOrView;
+    NSWindow* win = NULL;
+    NSView* view = NULL;
+
+    if( [nsObj isKindOfClass:[NSWindow class]] ) {
+        win = (NSWindow*) nsObj;
+        view = [win contentView];
+    } else if( nsObj != NULL && [nsObj isKindOfClass:[NSView class]] ) {
+        view = (NSView*) nsObj;
+        win = [view window];
+    } else {
+        NativewindowCommon_throwNewRuntimeException(env, "neither win nor view %p\n", nsObj);
+    }
+
+    BOOL useHiDPI = false;
+    CGFloat pixelScale = 1.0; // default
+NS_DURING
+    // Available >= 10.7
+    useHiDPI = [view wantsBestResolutionOpenGLSurface];
+    if( useHiDPI ) { 
+        pixelScale = [win backingScaleFactor]; // HiDPI scaling
+    }
+NS_HANDLER
+NS_ENDHANDLER
+
+    [pool release];
+
+    return (jfloat)pixelScale;
+}
+
+/*
+ * Class:     Java_jogamp_nativewindow_macosx_OSXUtil
+ * Method:    SetWindowPixelScale1
+ * Signature: (JF)V
+ */
+JNIEXPORT void JNICALL Java_jogamp_nativewindow_macosx_OSXUtil_SetWindowPixelScale1
+  (JNIEnv *env, jclass unused, jlong winOrView, jfloat reqPixelScale)
+{
+    NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+
+    NSObject *nsObj = (NSObject*) (intptr_t) winOrView;
+    NSWindow* win = NULL;
+    NSView* view = NULL;
+
+    if( [nsObj isKindOfClass:[NSWindow class]] ) {
+        win = (NSWindow*) nsObj;
+        view = [win contentView];
+    } else if( nsObj != NULL && [nsObj isKindOfClass:[NSView class]] ) {
+        view = (NSView*) nsObj;
+        win = [view window];
+    } else {
+        NativewindowCommon_throwNewRuntimeException(env, "neither win nor view %p\n", nsObj);
+    }
+
+NS_DURING
+    // HiDPI scaling: Setup - Available >= 10.7
+    if( 1.0 == reqPixelScale ) {
+        [view setWantsBestResolutionOpenGLSurface: NO];
+    } else {
+        [view setWantsBestResolutionOpenGLSurface: YES];
+    }
+NS_HANDLER
+NS_ENDHANDLER
+
+    [pool release];
 }
 
 /*
@@ -336,6 +431,7 @@ JNIEXPORT jlong JNICALL Java_jogamp_nativewindow_macosx_OSXUtil_CreateNSWindow0
   (JNIEnv *env, jclass unused, jint x, jint y, jint width, jint height)
 {
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+    [CATransaction begin];
     NSRect rect = NSMakeRect(x, y, width, height);
 
     // Allocate the window
@@ -365,6 +461,7 @@ NS_ENDHANDLER
     // [myView lockFocus];
     // [myView unlockFocus];
 
+    [CATransaction commit];
     [pool release];
 
     return (jlong) ((intptr_t) myWindow);
@@ -379,9 +476,17 @@ JNIEXPORT void JNICALL Java_jogamp_nativewindow_macosx_OSXUtil_DestroyNSWindow0
   (JNIEnv *env, jclass unused, jlong nsWindow)
 {
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
-    NSWindow* mWin = (NSWindow*) ((intptr_t) nsWindow);
+    [CATransaction begin];
 
+NS_DURING
+    NSWindow* mWin = (NSWindow*) ((intptr_t) nsWindow);
     [mWin close]; // performs release!
+NS_HANDLER
+    // On killing or terminating the process [NSWindow _close], rarely
+    // throws an NSRangeException while ordering out menu items
+NS_ENDHANDLER
+
+    [CATransaction commit];
     [pool release];
 }
 
@@ -797,16 +902,14 @@ NS_ENDHANDLER
 /*
  * Class:     Java_jogamp_nativewindow_macosx_OSXUtil
  * Method:    RemoveCASublayer0
- * Signature: (JJ)V
+ * Signature: (JJZ)V
  */
 JNIEXPORT void JNICALL Java_jogamp_nativewindow_macosx_OSXUtil_RemoveCASublayer0
-  (JNIEnv *env, jclass unused, jlong rootCALayer, jlong subCALayer)
+  (JNIEnv *env, jclass unused, jlong rootCALayer, jlong subCALayer, jboolean subCALayerRelease)
 {
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
     MyCALayer* rootLayer = (MyCALayer*) ((intptr_t) rootCALayer);
     CALayer* subLayer = (CALayer*) ((intptr_t) subCALayer);
-
-    (void)rootLayer; // no warnings
 
     DBG_PRINT("CALayer::RemoveCASublayer0.0: root %p (refcnt %d) .sub %p (refcnt %d)\n", 
         rootLayer, (int)[rootLayer retainCount], subLayer, (int)[subLayer retainCount]);
@@ -816,11 +919,15 @@ JNIEXPORT void JNICALL Java_jogamp_nativewindow_macosx_OSXUtil_RemoveCASublayer0
 
     [subLayer removeFromSuperlayer];
     [subLayer release]; // Pairs w/ AddCASublayer
+    if( subCALayerRelease ) {
+        [subLayer release];
+    }
     [rootLayer release]; // Pairs w/ AddCASublayer
 
     [CATransaction commit];
-
+            
     [pool release];
+    
     DBG_PRINT("CALayer::RemoveCASublayer0.X: root %p (refcnt %d) .sub %p (refcnt %d)\n", 
         rootLayer, (int)[rootLayer retainCount], subLayer, (int)[subLayer retainCount]);
 }
@@ -875,7 +982,7 @@ JNIEXPORT jlong JNICALL Java_jogamp_nativewindow_jawt_macosx_MacOSXJAWTWindow_Ge
  * Signature: (JJ)V
  */
 JNIEXPORT void JNICALL Java_jogamp_nativewindow_jawt_macosx_MacOSXJAWTWindow_SetJAWTRootSurfaceLayer0
-  (JNIEnv *env, jclass unused, jlong jawtSurfaceLayersHandle, jlong caLayer)
+  (JNIEnv *env, jclass unused, jlong jawtSurfaceLayersHandle, jlong rootCALayer)
 {
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
 
@@ -884,15 +991,15 @@ JNIEXPORT void JNICALL Java_jogamp_nativewindow_jawt_macosx_MacOSXJAWTWindow_Set
 
     NSObject *surfaceLayersObj = (NSObject*) (intptr_t) jawtSurfaceLayersHandle;
     id <JAWT_SurfaceLayers> surfaceLayers = (id <JAWT_SurfaceLayers>)surfaceLayersObj;
-    MyCALayer* layer = (MyCALayer*) (intptr_t) caLayer;
-    DBG_PRINT("CALayer::SetJAWTRootSurfaceLayer.0: pre %p -> root %p (refcnt %d)\n", [surfaceLayers layer], layer, (int)[layer retainCount]);
+    MyCALayer* rootLayer = (MyCALayer*) (intptr_t) rootCALayer;
+    DBG_PRINT("CALayer::SetJAWTRootSurfaceLayer.0: pre %p -> root %p (refcnt %d)\n", [surfaceLayers layer], rootLayer, (int)[rootLayer retainCount]);
 
-    [surfaceLayers setLayer: [layer retain]]; // Pairs w/ Unset
+    [surfaceLayers setLayer: [rootLayer retain]]; // Pairs w/ Unset
 
     [CATransaction commit];
 
     [pool release];
-    DBG_PRINT("CALayer::SetJAWTRootSurfaceLayer.X: root %p (refcnt %d)\n", layer, (int)[layer retainCount]);
+    DBG_PRINT("CALayer::SetJAWTRootSurfaceLayer.X: root %p (refcnt %d)\n", rootLayer, (int)[rootLayer retainCount]);
 }
 
 /*
@@ -901,7 +1008,7 @@ JNIEXPORT void JNICALL Java_jogamp_nativewindow_jawt_macosx_MacOSXJAWTWindow_Set
  * Signature: (JJ)V
  */
 JNIEXPORT void JNICALL Java_jogamp_nativewindow_jawt_macosx_MacOSXJAWTWindow_UnsetJAWTRootSurfaceLayer0
-  (JNIEnv *env, jclass unused, jlong jawtSurfaceLayersHandle, jlong caLayer)
+  (JNIEnv *env, jclass unused, jlong jawtSurfaceLayersHandle, jlong rootCALayer)
 {
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
 
@@ -912,14 +1019,14 @@ JNIEXPORT void JNICALL Java_jogamp_nativewindow_jawt_macosx_MacOSXJAWTWindow_Uns
     id <JAWT_SurfaceLayers> surfaceLayers = (id <JAWT_SurfaceLayers>)surfaceLayersObj;
     DBG_PRINT("CALayer::UnsetJAWTRootSurfaceLayer.0: surfaceLayers %p (refcnt %d)\n", surfaceLayersObj, (int)[surfaceLayersObj retainCount]);
 
-    MyCALayer* layer = (MyCALayer*) (intptr_t) caLayer;
-    if(NULL != layer) {
-        if(layer != [surfaceLayers layer]) {
-            NativewindowCommon_throwNewRuntimeException(env, "Attached layer %p doesn't match given layer %p\n", surfaceLayers.layer, layer);
+    MyCALayer* rootLayer = (MyCALayer*) (intptr_t) rootCALayer;
+    if(NULL != rootLayer) {
+        if(rootLayer != [surfaceLayers layer]) {
+            NativewindowCommon_throwNewRuntimeException(env, "Attached layer %p doesn't match given layer %p\n", surfaceLayers.layer, rootLayer);
             return;
         }
-        DBG_PRINT("CALayer::UnsetJAWTRootSurfaceLayer.1: root %p (refcnt %d) -> nil\n", layer, (int)[layer retainCount]);
-        [layer release]; // Pairs w/ Set
+        DBG_PRINT("CALayer::UnsetJAWTRootSurfaceLayer.1: root %p (refcnt %d) -> nil\n", rootLayer, (int)[rootLayer retainCount]);
+        [rootLayer release]; // Pairs w/ Set
         [surfaceLayers setLayer: NULL]; // Pairs w/ Set
     }
     [surfaceLayersObj release]; // Pairs w/ Get
@@ -931,12 +1038,12 @@ JNIEXPORT void JNICALL Java_jogamp_nativewindow_jawt_macosx_MacOSXJAWTWindow_Uns
 }
 
 @interface MainRunnable : NSObject
-
 {
-    jobject runnableObj;
+@private
+    int name;
+    jobject runnable;
 }
-
-- (id) initWithRunnable: (jobject)runnable;
+- (id) initWithRunnable: (jobject)aRunnable name:(int)aName;
 - (void) jRun;
 
 #ifdef DBG_LIFECYCLE
@@ -945,33 +1052,36 @@ JNIEXPORT void JNICALL Java_jogamp_nativewindow_jawt_macosx_MacOSXJAWTWindow_Uns
 - (void)dealloc;
 #endif
 
-
 @end
 
 @implementation MainRunnable
 
-- (id) initWithRunnable: (jobject)runnable
+- (id) initWithRunnable: (jobject)aRunnable name:(int)aName
 {
-    runnableObj = runnable;
-    return [super init];
+    MainRunnable * o = [super init];
+    if( NULL != o ) {
+        o->name = aName;
+        o->runnable = aRunnable;
+    }
+    return o;
 }
 
 - (void) jRun
 {
     int shallBeDetached = 0;
     JNIEnv* env = NativewindowCommon_GetJNIEnv(1 /* asDaemon */, &shallBeDetached);
-    DBG_PRINT2("MainRunnable.1 env: %d\n", (int)(NULL!=env));
+    DBG_PRINT2("MainRunnable.%d.1 env: %d, shallBeDetached %d\n", name, (int)(NULL!=env), shallBeDetached);
     if(NULL!=env) {
-        DBG_PRINT2("MainRunnable.1.0\n");
-        (*env)->CallVoidMethod(env, runnableObj, runnableRunID);
-        DBG_PRINT2("MainRunnable.1.1\n");
-        (*env)->DeleteGlobalRef(env, runnableObj);
+        DBG_PRINT2("MainRunnable.%d.1.0\n", name);
+        (*env)->CallVoidMethod(env, runnable, runnableRunID);
+        DBG_PRINT2("MainRunnable.%d.1.1\n", name);
+        (*env)->DeleteGlobalRef(env, runnable);
 
-        DBG_PRINT2("MainRunnable.1.3\n");
+        DBG_PRINT2("MainRunnable.%d.1.3\n", name);
         // detaching thread not required - daemon
         // NativewindowCommon_ReleaseJNIEnv(shallBeDetached);
     }
-    DBG_PRINT2("MainRunnable.X\n");
+    DBG_PRINT2("MainRunnable.%d.X\n", name);
 }
 
 #ifdef DBG_LIFECYCLE
@@ -1002,19 +1112,25 @@ JNIEXPORT void JNICALL Java_jogamp_nativewindow_jawt_macosx_MacOSXJAWTWindow_Uns
 
 @end
 
+static int nextRunnableName = 1;
 static void RunOnThread (JNIEnv *env, jobject runnable, BOOL onMain, jint delayInMS)
 {
     BOOL isMainThread = [NSThread isMainThread];
     BOOL forkOnMain = onMain && ( NO == isMainThread || 0 < delayInMS );
+    int _nextRunnableName = nextRunnableName++;
 
-    DBG_PRINT2( "RunOnThread0: forkOnMain %d [onMain %d, delay %dms, isMainThread %d], NSApp %d, NSApp-isRunning %d\n", 
-        (int)forkOnMain, (int)onMain, (int)delayInMS, (int)isMainThread, (int)(NULL!=NSApp), (int)([NSApp isRunning]));
+    DBG_PRINT2( "RunOnThread0.%d: forkOnMain %d [onMain %d, delay %dms, isMainThread %d], NSApp %d, NSApp-isRunning %d\n", 
+        _nextRunnableName, (int)forkOnMain, (int)onMain, (int)delayInMS, (int)isMainThread, 
+        (int)(NULL!=NSApp), (int)([NSApp isRunning]));
 
     if ( forkOnMain ) {
         jobject runnableObj = (*env)->NewGlobalRef(env, runnable);
 
-        DBG_PRINT2( "RunOnThread.1.0\n");
-        MainRunnable * mr = [[MainRunnable alloc] initWithRunnable: runnableObj];
+        DBG_PRINT2( "RunOnThread.%d.1.0\n", _nextRunnableName);
+        MainRunnable * mr = [[MainRunnable alloc] initWithRunnable: runnableObj name: _nextRunnableName];
+#ifdef VERBOSE3
+        (*env)->CallStaticVoidMethod(env, OSXUtilClazz, dumpStackID);
+#endif
 
         if( onMain ) {
             [mr performSelectorOnMainThread:@selector(jRun) withObject:nil waitUntilDone:NO];
@@ -1022,16 +1138,16 @@ static void RunOnThread (JNIEnv *env, jobject runnable, BOOL onMain, jint delayI
             NSTimeInterval delay = (double)delayInMS/1000.0;
             [mr performSelector:@selector(jRun) withObject:nil afterDelay:delay];
         }
-        DBG_PRINT2( "RunOnThread.1.1\n");
+        DBG_PRINT2( "RunOnThread.%d.1.1\n", _nextRunnableName);
 
         [mr release];
-        DBG_PRINT2( "RunOnThread.1.2\n");
+        DBG_PRINT2( "RunOnThread.%d.1.2\n", _nextRunnableName);
 
     } else {
-        DBG_PRINT2( "RunOnThread.2\n");
+        DBG_PRINT2( "RunOnThread.%d.2\n", _nextRunnableName);
         (*env)->CallVoidMethod(env, runnable, runnableRunID);
     }
-    DBG_PRINT2( "RunOnThread.X\n");
+    DBG_PRINT2( "RunOnThread.%d.X\n", _nextRunnableName);
 }
 
 static void OSXUtil_KickNSApp() {
@@ -1041,7 +1157,7 @@ static void OSXUtil_KickNSApp() {
                                        timestamp: 0.0
                                     windowNumber: 0
                                          context: nil
-                                         subtype: 0
+                                         subtype: 8888 /* Bug 1389: Avoid JDK impl sendEvent types, utilizing data1 or data2 */
                                            data1: 0
                                            data2: 0];
     [NSApp postEvent: event atStart: true];

@@ -1,5 +1,5 @@
 /**
- * Copyright 2012 JogAmp Community. All rights reserved.
+ * Copyright 2012-2023 JogAmp Community. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
  * permitted provided that the following conditions are met:
@@ -38,12 +38,15 @@ import com.jogamp.nativewindow.ToolkitLock;
 import com.jogamp.opengl.GLException;
 
 import jogamp.opengl.Debug;
+import jogamp.opengl.GLVersionNumber;
 
 import com.jogamp.common.ExceptionUtils;
 import com.jogamp.common.nio.Buffers;
 import com.jogamp.common.util.LongObjectHashMap;
+import com.jogamp.common.util.VersionNumber;
 import com.jogamp.nativewindow.egl.EGLGraphicsDevice;
 import com.jogamp.opengl.egl.EGL;
+import com.jogamp.opengl.egl.EGLExt;
 
 /**
  * This implementation provides recursive calls to
@@ -187,6 +190,48 @@ public class EGLDisplayUtil {
 
     /* pp */ static synchronized void setSingletonEGLDisplayOnly(final boolean v) { useSingletonEGLDisplay = v; }
 
+    /**
+     * @param useCustom see {@link NativeWindowFactory#getNativeWindowType(boolean)}
+     * @return the EGL platform type, e.g. {@link EGLExt#EGL_PLATFORM_X11_KHR} or {@link EGLExt#EGL_PLATFORM_GBM_KHR}
+     * @see NativeWindowFactory#getNativeWindowType(boolean)
+     * @see #getEGLPlatformType(String)
+     */
+    public static int getEGLPlatformType(final boolean useCustom) {
+        return getEGLPlatformType( NativeWindowFactory.getNativeWindowType(useCustom) );
+    }
+
+    /**
+     * @param nativeWindowType return value of {@link NativeWindowFactory#getNativeWindowType(boolean)}
+     * @return the EGL platform type, e.g. {@link EGLExt#EGL_PLATFORM_X11_KHR} or {@link EGLExt#EGL_PLATFORM_GBM_KHR}
+     * @see NativeWindowFactory#getNativeWindowType(boolean)
+     * @see #getEGLPlatformType(boolean)
+     */
+    public static int getEGLPlatformType(final String nativeWindowType) {
+        final int eglPlatform;
+        switch( nativeWindowType ) {
+            case NativeWindowFactory.TYPE_X11:
+                eglPlatform = EGLExt.EGL_PLATFORM_X11_KHR;
+                break;
+            case NativeWindowFactory.TYPE_ANDROID:
+                eglPlatform = EGLExt.EGL_PLATFORM_ANDROID_KHR;
+                break;
+            case NativeWindowFactory.TYPE_DRM_GBM:
+                eglPlatform = EGLExt.EGL_PLATFORM_GBM_KHR; // same EGLExt.EGL_PLATFORM_GBM_MESA;
+                break;
+            case NativeWindowFactory.TYPE_WAYLAND:
+                // TODO
+                eglPlatform = EGLExt.EGL_PLATFORM_WAYLAND_KHR;
+                break;
+            default:
+                eglPlatform = 0;
+        }
+        return eglPlatform;
+    }
+
+    private static boolean eglGetPlatformDisplayProbed = false;
+    private static boolean eglGetPlatformDisplayAvail = false;
+    private static VersionNumber eglGetPlatformDisplayMinVersion = new VersionNumber(1, 5, 0);
+
     private static synchronized long eglGetDisplay(final long nativeDisplay_id)  {
         if( useSingletonEGLDisplay && null != singletonEGLDisplay ) {
             if(DEBUG) {
@@ -196,9 +241,48 @@ public class EGLDisplayUtil {
             }
             return singletonEGLDisplay.eglDisplay;
         }
-        final long eglDisplay = EGL.eglGetDisplay(nativeDisplay_id);
+
+        if( !eglGetPlatformDisplayProbed ) {
+            boolean viaVersion = false;
+            boolean viaExtension = false;
+            // A display of EGL_NO_DISPLAY is supported only if the EGL version is 1.5 or greater.
+            final GLVersionNumber eglVersion = GLVersionNumber.create( EGL.eglQueryString(EGL.EGL_NO_DISPLAY, EGL.EGL_VERSION) );
+            final int eglVersionErr = EGL.eglGetError();
+            eglGetPlatformDisplayAvail = EGL.EGL_SUCCESS == eglVersionErr &&
+                                         eglVersion.isValid() &&
+                                         eglVersion.compareTo(eglGetPlatformDisplayMinVersion) >= 0;
+            viaVersion = eglGetPlatformDisplayAvail;
+            final int eglExtsErr;
+            if( !eglGetPlatformDisplayAvail ) {
+                final String eglExts = EGL.eglQueryString(EGL.EGL_NO_DISPLAY, EGL.EGL_EXTENSIONS);
+                eglExtsErr = EGL.eglGetError();
+                if( EGL.EGL_SUCCESS == eglExtsErr && null != eglExts && eglExts.length() > 0 ) {
+                    if( eglExts.indexOf("EGL_EXT_platform_base") >= 0 ) {
+                        eglGetPlatformDisplayAvail = true;
+                        viaExtension = true;
+                    }
+                }
+            } else {
+                eglExtsErr = EGL.EGL_SUCCESS;
+            }
+            eglGetPlatformDisplayProbed = true;
+            if(DEBUG) {
+                System.err.println("EGLDisplayUtil.eglGetDisplay.p: eglGetPlatformDisplay available: "+eglGetPlatformDisplayAvail+
+                                   ", eglClientVersion '"+eglVersion+"' via[Version "+viaVersion+", err 0x"+Integer.toHexString(eglVersionErr)+
+                                                                              " / Extension "+viaExtension+", err 0x"+Integer.toHexString(eglExtsErr)+"]");
+            }
+        }
+        final int eglPlatform = getEGLPlatformType(true);
+        final long eglDisplay;
+        if( eglGetPlatformDisplayAvail && 0 != eglPlatform ) {
+            eglDisplay = EGL.eglGetPlatformDisplay(eglPlatform, nativeDisplay_id, null);
+        } else {
+            eglDisplay = EGL.eglGetDisplay(nativeDisplay_id);
+        }
+
         if(DEBUG) {
-            System.err.println("EGLDisplayUtil.eglGetDisplay.X: eglDisplay("+EGLContext.toHexString(nativeDisplay_id)+"): "+
+            System.err.println("EGLDisplayUtil.eglGetDisplay.X: eglDisplay("+EGLContext.toHexString(nativeDisplay_id)+") @ "+
+                               eglPlatform+"/"+NativeWindowFactory.getNativeWindowType(true)+": "+
                                EGLContext.toHexString(eglDisplay)+
                                ", "+((EGL.EGL_NO_DISPLAY != eglDisplay)?"OK":"Failed")+", singletonEGLDisplay "+singletonEGLDisplay+" (use "+useSingletonEGLDisplay+")");
         }
@@ -332,15 +416,15 @@ public class EGLDisplayUtil {
      * and {@link #eglTerminate(long)} for {@link EGLGraphicsDevice#close()}.
      * </p>
      * <p>
-     * Using the default {@link ToolkitLock}, via {@link NativeWindowFactory#getDefaultToolkitLock(String, long)}.
+     * Using the default {@link ToolkitLock}, via {@link NativeWindowFactory#getDefaultToolkitLock(String)}.
      * </p>
-     * @param nativeDisplayID
-     * @param connection
-     * @param unitID
+     * @param nativeDisplayID the existing native display ID
+     * @param connection the existing underlying native connection name
+     * @param unitID the unit ID
      * @return an uninitialized {@link EGLGraphicsDevice}
      */
     public static EGLGraphicsDevice eglCreateEGLGraphicsDevice(final long nativeDisplayID, final String connection, final int unitID)  {
-        return new EGLGraphicsDevice(nativeDisplayID, EGL.EGL_NO_DISPLAY, connection, unitID, eglLifecycleCallback);
+        return new EGLGraphicsDevice(nativeDisplayID, connection, unitID, eglLifecycleCallback);
     }
 
     /**
@@ -350,13 +434,13 @@ public class EGLDisplayUtil {
      * and {@link #eglTerminate(long)} for {@link EGLGraphicsDevice#close()}.
      * </p>
      * <p>
-     * Using the default {@link ToolkitLock}, via {@link NativeWindowFactory#getDefaultToolkitLock(String, long)}.
+     * Using the default {@link ToolkitLock}, via {@link NativeWindowFactory#getDefaultToolkitLock(String)}.
      * </p>
-     * @param adevice
+     * @param aDevice valid {@link AbstractGraphicsDevice}'s native display ID, connection and unitID
      * @return an uninitialized {@link EGLGraphicsDevice}
      */
     public static EGLGraphicsDevice eglCreateEGLGraphicsDevice(final AbstractGraphicsDevice aDevice)  {
-        return new EGLGraphicsDevice(aDevice, EGL.EGL_NO_DISPLAY, eglLifecycleCallback);
+        return new EGLGraphicsDevice(aDevice, eglLifecycleCallback);
     }
 
     /**
@@ -366,7 +450,7 @@ public class EGLDisplayUtil {
      * and {@link #eglTerminate(long)} for {@link EGLGraphicsDevice#close()}.
      * </p>
      * <p>
-     * Using the default {@link ToolkitLock}, via {@link NativeWindowFactory#getDefaultToolkitLock(String, long)}.
+     * Using the default {@link ToolkitLock}, via {@link NativeWindowFactory#getDefaultToolkitLock(String)}.
      * </p>
      * @param surface
      * @return an uninitialized EGLGraphicsDevice
@@ -379,6 +463,6 @@ public class EGLDisplayUtil {
             nativeDisplayID = surface.getDisplayHandle(); // 0 == EGL.EGL_DEFAULT_DISPLAY
         }
         final AbstractGraphicsDevice adevice = surface.getGraphicsConfiguration().getScreen().getDevice();
-        return new EGLGraphicsDevice(nativeDisplayID, EGL.EGL_NO_DISPLAY, adevice.getConnection(), adevice.getUnitID(), eglLifecycleCallback);
+        return new EGLGraphicsDevice(nativeDisplayID, adevice.getConnection(), adevice.getUnitID(), eglLifecycleCallback);
     }
 }

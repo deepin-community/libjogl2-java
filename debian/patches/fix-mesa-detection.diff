@@ -2,14 +2,3 @@ Description: Mesa 17.2.x dropped "Gallium" from the renderer string, so look for
 
 https://jogamp.org/bugzilla/show_bug.cgi?id=1357
 
---- a/src/jogl/classes/jogamp/opengl/GLContextImpl.java
-+++ b/src/jogl/classes/jogamp/opengl/GLContextImpl.java
-@@ -2113,7 +2113,7 @@ public abstract class GLContextImpl exte
-     final boolean isES = 0 != ( ctp & GLContext.CTX_PROFILE_ES );
-     final boolean isX11 = NativeWindowFactory.TYPE_X11 == NativeWindowFactory.getNativeWindowType(true);
-     final boolean isWindows = Platform.getOSType() == Platform.OSType.WINDOWS;
--    final boolean isDriverMesa = glRenderer.contains(MesaSP) || glRenderer.contains("Gallium ");
-+    final boolean isDriverMesa = glRenderer.contains(MesaSP) || glRenderer.contains("Gallium ") || glVersion.contains(MesaSP);
- 
-     final boolean isDriverATICatalyst;
-     final boolean isDriverNVIDIAGeForce;

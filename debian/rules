@@ -1,40 +1,72 @@
 #!/usr/bin/make -f
 
-include /usr/share/cdbs/1/rules/debhelper.mk
-include /usr/share/cdbs/1/class/ant.mk
+export LC_ALL=C.UTF-8
+
+include /usr/share/dpkg/architecture.mk
+include /usr/share/dpkg/pkg-info.mk
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/buildflags.mk
 
 JAVA_HOME            := /usr/lib/jvm/default-java/
-DEB_JARS             := ant-contrib ant-contrib-cpptasks ant-nodeps antlr ant-antlr swt4
-DEB_ANT_ARGS         := -Dsetup.noCDC=true -verbose -Dcommon.gluegen.build.done=true
-DEB_ANT_CLEAN_TARGET := clean
-DEB_ANT_BUILD_TARGET := all
-DEB_ANT_BUILDFILE    := make/build.xml
 ENABLE_BUILD_HELP_ARCHS := amd64 i386
-DEB_HOST_ARCH ?= $(shell dpkg-architecture -qDEB_HOST_ARCH)
-VERSION = $(shell dpkg-parsechangelog --show-field Version | sed 's/\+dfsg.*//')
+DEB_STRIPPED_UPSTREAM_VERSION = $(shell echo $(DEB_UPSTREAM_VERSION) | sed -n -e 's/+dfsg.*$$//p')
 
-ifeq ($(DEB_HOST_ARCH),armhf)
-DEB_ANT_ARGS         += -DisAbiEabiGnuArmhf=true
-endif
+# Providing the hardening CPPFLAGS to the ant cc task.
+ARGS_FOR_COMPILER=$(shell COMPILERARGS=""; \
+    for arg in $(CPPFLAGS) $(CFLAGS); do\
+        COMPILERARGS="$${COMPILERARGS}<compilerarg value=\\\"$$arg\\\" \/> " ;\
+    done; \
+    echo "$${COMPILERARGS}")
 
-# Disable the build of the help on slow archs. It takes forever (a few hours) 
-build-indep:
+# Providing the hardening LDFLAGS to the ant cc task.
+ARGS_FOR_LINKER=$(shell LINKERARGS=""; \
+    for arg in $(LDFLAGS); do\
+        LINKERARGS="$${LINKERARGS}<linkerarg value=\\\"$$arg\\\" \/> " ;\
+    done; \
+    echo "$${LINKERARGS}")
+
+
+%:
+	dh $@ --with maven_repo_helper
+
+override_dh_auto_configure:
+	# Customizing headers provided by the JDK, to make them fit Gluegen
+	debian/customizeJdkHeaders
+	mv src/nativewindow/classes/com/jogamp/nativewindow/javafx debian/
+	dh_auto_configure
+	# Providing the hardening CPPFLAGS and LDFLAGS to the ant cc tasks.
+	for sub in jogl nativewindow newt; do\
+	    mv make/build-$$sub.xml make/build-$$sub.xml.old;\
+	    sed 's!#COMPILER_ARGS#!$(ARGS_FOR_COMPILER)!; s!#LINKER_ARGS#!$(ARGS_FOR_LINKER)!' make/build-$$sub.xml.old > make/build-$$sub.xml;\
+	done
+
+# Disable the build of the help on slow archs. It takes forever (a few hours)
+execute_before_dh_auto_build-indep:
 ifneq (,$(findstring $(DEB_HOST_ARCH),$(ENABLE_BUILD_HELP_ARCHS)))
-	$(DEB_ANT_INVOKE) javadoc.all
+	ant -Duser.name debian -propertyfile debian/ant.properties -buildfile make/build.xml javadoc.all
 else
 # Exclude binary doc package from the build. See debhelper manpage.
 export DH_OPTIONS += -Nlibjogl2-java-doc
 endif
 
-install/libjogl2-java::
+override_dh_auto_build:
+	ant -Duser.name debian -propertyfile debian/ant.properties -buildfile make/build.xml
+
+override_mh_install:
 	mh_install -plibjogl2-java
 
-clean::
-	$(RM) -r gluegen/build
-	mh_clean
+override_dh_clean:
+	$(RM) -r build build-temp gluegen-build jdkHeaders
+	# Restoring the make/build-*.xml files
+	for sub in jogl nativewindow newt; do \
+	    if [ -e "make/build-$$sub.xml.old" ]; then \
+	        mv make/build-$$sub.xml.old make/build-$$sub.xml; \
+	    fi; \
+	done
+	-mv debian/javafx src/nativewindow/classes/com/jogamp/nativewindow/
+	dh_clean
 
 get-orig-pom:
-	wget https://repo1.maven.org/maven2/org/jogamp/jogl/jogl-all/$(VERSION)/jogl-all-$(VERSION).pom -O debian/pom.xml
-
-get-orig-source::
-	-uscan --verbose --upstream-version 0 --no-symlink
+	wget https://repo1.maven.org/maven2/org/jogamp/jogl/jogl-all/$(DEB_STRIPPED_UPSTREAM_VERSION)/jogl-all-$(DEB_STRIPPED_UPSTREAM_VERSION).pom -O debian/pom.xml

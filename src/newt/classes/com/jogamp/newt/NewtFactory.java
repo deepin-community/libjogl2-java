@@ -34,7 +34,6 @@
 
 package com.jogamp.newt;
 
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 
@@ -43,10 +42,12 @@ import com.jogamp.nativewindow.AbstractGraphicsDevice;
 import com.jogamp.nativewindow.AbstractGraphicsScreen;
 import com.jogamp.nativewindow.CapabilitiesImmutable;
 import com.jogamp.nativewindow.NativeWindow;
+import com.jogamp.nativewindow.NativeWindowException;
 import com.jogamp.nativewindow.NativeWindowFactory;
 
 import com.jogamp.common.util.IOUtil;
 import com.jogamp.common.util.PropertyAccess;
+import com.jogamp.common.util.SecurityUtil;
 
 import jogamp.newt.Debug;
 import jogamp.newt.DisplayImpl;
@@ -59,10 +60,10 @@ public class NewtFactory {
     public static final String DRIVER_DEFAULT_ROOT_PACKAGE = "jogamp.newt.driver";
 
     private static IOUtil.ClassResources defaultWindowIcons;
-    private static String sysPaths = "newt/data/jogamp-16x16.png newt/data/jogamp-32x32.png";
+    private static String sysPaths = "jogamp/newt/assets/jogamp-16x16.png jogamp/newt/assets/jogamp-32x32.png";
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+        SecurityUtil.doPrivileged(new PrivilegedAction<Object>() {
             @Override
             public Object run() {
                 NativeWindowFactory.initSingleton(); // last resort ..
@@ -100,8 +101,8 @@ public class NewtFactory {
 
     public static Class<?> getCustomClass(final String packageName, final String classBaseName) {
         Class<?> clazz = null;
+        final String clazzName;
         if(packageName!=null && classBaseName!=null) {
-            final String clazzName;
             if( packageName.startsWith(".") ) {
                 clazzName = DRIVER_DEFAULT_ROOT_PACKAGE + packageName + "." + classBaseName ;
             } else {
@@ -110,11 +111,13 @@ public class NewtFactory {
             try {
                 clazz = Class.forName(clazzName);
             } catch (final Throwable t) {
-                if(DEBUG_IMPLEMENTATION) {
-                    System.err.println("Warning: Failed to find class <"+clazzName+">: "+t.getMessage());
-                    t.printStackTrace();
-                }
+                throw new NativeWindowException("Failed to find or initialize class <"+packageName+"."+classBaseName+"> -> <"+clazzName+">: "+t.getMessage(), t);
             }
+        } else {
+            clazzName = null;
+        }
+        if( null == clazz ) {
+            throw new NativeWindowException("Failed to determine class <"+packageName+"."+classBaseName+"> -> <"+clazzName+">");
         }
         return clazz;
     }
