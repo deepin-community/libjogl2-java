@@ -28,6 +28,7 @@
 package com.jogamp.opengl.test.junit.jogl.acore;
 
 import java.io.File;
+import java.util.Locale;
 
 import com.jogamp.nativewindow.util.Dimension;
 import com.jogamp.nativewindow.util.DimensionImmutable;
@@ -75,7 +76,7 @@ public class TestGLReadBuffer01GLWindowNEWT extends GLReadBuffer00Base {
         }
         final GLReadBufferUtil glReadBufferUtil = new GLReadBufferUtil(false, false);
         final GLWindow glad= GLWindow.create(caps);
-        final TextRendererGLEL textRendererGLEL = new TextRendererGLEL();
+        final TextRendererGLEL textRendererGLEL = new TextRendererGLEL(caps.getGLProfile());
         final SnapshotGLEL snapshotGLEL = doSnapshot ? new SnapshotGLEL(textRendererGLEL, glReadBufferUtil) : null;
         try {
             glad.setPosition(64, 64);
@@ -184,7 +185,7 @@ public class TestGLReadBuffer01GLWindowNEWT extends GLReadBuffer00Base {
         }
         public void snapshot(final int sn, final GLAutoDrawable drawable, final String fileSuffix, final String destPath) {
             final GL gl = drawable.getGL();
-            final String postSNDetail = String.format("jgl-usr%03d", textRendererGLEL.userCounter);
+            final String postSNDetail = String.format((Locale)null, "jgl-usr%03d", textRendererGLEL.userCounter);
             final String filenameJGL = getSnapshotFilename(sn, postSNDetail,
                                                            drawable.getChosenGLCapabilities(), drawable.getSurfaceWidth(), drawable.getSurfaceHeight(),
                                                            glReadBufferUtil.hasAlpha(), fileSuffix, destPath);

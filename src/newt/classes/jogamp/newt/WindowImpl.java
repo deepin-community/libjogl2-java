@@ -1,6 +1,7 @@
 /*
+ * Copyright (c) 2010-2023 Gothel Software e.K. All rights reserved.
+ * Copyright (c) 2010-2023 JogAmp Community. All rights reserved.
  * Copyright (c) 2008 Sun Microsystems, Inc. All Rights Reserved.
-   Copyright (c) 2010 JogAmp Community. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -60,12 +61,15 @@ import com.jogamp.nativewindow.util.PointImmutable;
 import com.jogamp.nativewindow.util.Rectangle;
 import com.jogamp.nativewindow.util.RectangleImmutable;
 
+import jogamp.common.os.PlatformPropsImpl;
 import jogamp.nativewindow.SurfaceScaleUtils;
 import jogamp.nativewindow.SurfaceUpdatedHelper;
 
 import com.jogamp.common.ExceptionUtils;
+import com.jogamp.common.os.Clock;
 import com.jogamp.common.util.ArrayHashSet;
 import com.jogamp.common.util.Bitfield;
+import com.jogamp.common.util.InterruptSource;
 import com.jogamp.common.util.PropertyAccess;
 import com.jogamp.common.util.ReflectionUtil;
 import com.jogamp.common.util.locks.LockFactory;
@@ -86,6 +90,7 @@ import com.jogamp.newt.event.MonitorEvent;
 import com.jogamp.newt.event.MonitorModeListener;
 import com.jogamp.newt.event.MouseEvent;
 import com.jogamp.newt.event.MouseEvent.PointerType;
+import com.jogamp.opengl.math.FloatUtil;
 import com.jogamp.newt.event.MouseListener;
 import com.jogamp.newt.event.NEWTEvent;
 import com.jogamp.newt.event.NEWTEventConsumer;
@@ -146,21 +151,25 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
     /** Timeout of queued events (repaint and resize) */
     static final long QUEUED_EVENT_TO = 1200; // ms
 
+    private static final String COMMA = ", ";
+
     private static final PointerType[] constMousePointerTypes = new PointerType[] { PointerType.Mouse };
 
     //
     // Volatile: Multithreaded Mutable Access
     //
     private volatile long windowHandle = 0; // lifecycle critical
-    private volatile int pixWidth = 128, pixHeight = 128; // client-area size w/o insets in pixel units, default: may be overwritten by user
-    private volatile int winWidth = 128, winHeight = 128; // client-area size w/o insets in window units, default: may be overwritten by user
     protected final float[] minPixelScale = new float[] { ScalableSurface.IDENTITY_PIXELSCALE, ScalableSurface.IDENTITY_PIXELSCALE };
     protected final float[] maxPixelScale = new float[] { ScalableSurface.IDENTITY_PIXELSCALE, ScalableSurface.IDENTITY_PIXELSCALE };
     protected final float[] hasPixelScale = new float[] { ScalableSurface.IDENTITY_PIXELSCALE, ScalableSurface.IDENTITY_PIXELSCALE };
     protected final float[] reqPixelScale = new float[] { ScalableSurface.AUTOMAX_PIXELSCALE, ScalableSurface.AUTOMAX_PIXELSCALE };
+    private boolean hasSetPixelScale = false;
+    private volatile int[] pixelPos = new int[] { 64, 64 }; // client-area pos w/o insets in pixel units
+    private volatile int[] pixelSize = new int[] { 128, 128 }; // client-area size w/o insets in pixel units, default: may be overwritten by user
+    private volatile int[] windowPos = new int[] { 64, 64 }; // client-area pos w/o insets in window units
+    private volatile int[] windowSize = new int[] { 128, 128 }; // client-area size w/o insets in window units, default: may be overwritten by user
 
-    private volatile int x = 64, y = 64; // client-area pos w/o insets in window units
-    private volatile Insets insets = new Insets(); // insets of decoration (if top-level && decorated)
+    private volatile Insets insets = new Insets(); // insets of decoration in window units (if top-level && decorated)
     private boolean blockInsetsChange = false; // block insets change (from same thread)
 
     private final RecursiveLock windowLock = LockFactory.createRecursiveLock();  // Window instance wide lock
@@ -210,7 +219,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
      * @see #getStateMask()
      * @since 2.3.2
      */
-    protected static final int STATE_BIT_COUNT_ALL_PUBLIC = STATE_BIT_POINTERCONFINED + 1;
+    protected static final int STATE_BIT_COUNT_ALL_PUBLIC = STATE_BIT_REPOSITIONABLE + 1;
     /** Bitmask for {@link #STATE_BIT_COUNT_ALL_PUBLIC} */
     protected static final int STATE_MASK_ALL_PUBLIC = ( 1 << STATE_BIT_COUNT_ALL_PUBLIC ) - 1;
 
@@ -279,27 +288,30 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
     protected static final int CHANGE_MASK_FULLSCREEN      = 1 << 21;
 
     /** Regular state mask */
-    /* pp */ final Bitfield stateMask = Bitfield.Factory.synchronize(Bitfield.Factory.create(32));
+    private final Bitfield stateMask = Bitfield.Factory.synchronize(Bitfield.Factory.create(32));
     /** Non fullscreen state mask */
     private final Bitfield stateMaskNFS = Bitfield.Factory.synchronize(Bitfield.Factory.create(32));
 
     /** Default is all but {@link #STATE_MASK_FULLSCREEN_SPAN}. */
     protected int supportedReconfigStateMask = 0;
-    /** See {@link #getSupportedStateMask()}, i.e. {@link #STATE_MASK_VISIBLE} | {@link #STATE_MASK_FOCUSED} | {@link STATE_MASK_FULLSCREEN}. */
-    protected static final int minimumReconfigStateMask = STATE_MASK_VISIBLE | STATE_MASK_FOCUSED | STATE_MASK_FULLSCREEN;
+    /** See {@link #getSupportedStateMask()}, i.e. {@link #STATE_MASK_VISIBLE} | {@link #STATE_MASK_FOCUSED}. */
+    protected static final int minimumReconfigStateMask = STATE_MASK_VISIBLE | STATE_MASK_FOCUSED;
+    /** See {@link #getSupportedStateMask()}, i.e. {@link #STATE_MASK_VISIBLE} | {@link #STATE_MASK_FOCUSED} | {@link STATE_MASK_FULLSCREEN} | {@link STATE_MASK_RESIZABLE} | {@link STATE_MASK_REPOSITIONABLE}. */
+    protected static final int mutableSizePosReconfigStateMask = minimumReconfigStateMask |
+                                                          STATE_MASK_FULLSCREEN | STATE_MASK_RESIZABLE | STATE_MASK_REPOSITIONABLE;
 
     /* pp */ final void resetStateMask() {
         stateMask.clearField(false);
         stateMask.put32(0, 32,
                 STATE_MASK_AUTOPOSITION |
                 ( null != parentWindow ? STATE_MASK_CHILDWIN : 0 ) |
-                STATE_MASK_RESIZABLE |
+                ( isReconfigureMaskSupported(STATE_MASK_RESIZABLE) ? STATE_MASK_RESIZABLE : 0 ) |
+                ( isReconfigureMaskSupported(STATE_MASK_REPOSITIONABLE) ? STATE_MASK_REPOSITIONABLE : 0 ) |
                 STATE_MASK_POINTERVISIBLE |
                 PSTATE_MASK_FULLSCREEN_MAINMONITOR);
         stateMaskNFS.clearField(false);
         normPosSizeStored[0] = false;
         normPosSizeStored[1] = false;
-        supportedReconfigStateMask = STATE_MASK_ALL_RECONFIG;
     }
 
     @Override
@@ -332,6 +344,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
     }
 
     protected static StringBuilder appendStateBits(final StringBuilder sb, final int mask, final boolean showChangeFlags) {
+
         sb.append("[");
 
         if( showChangeFlags ) {
@@ -343,79 +356,95 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
             }
         }
         sb.append((0 != ( STATE_MASK_VISIBLE & mask))?"visible":"invisible");
-        sb.append(", ");
 
-        sb.append((0 != ( STATE_MASK_AUTOPOSITION & mask))?"autopos, ":"");
+        if( 0 != ( STATE_MASK_AUTOPOSITION & mask) ) {
+            sb.append(COMMA);
+            sb.append("autopos");
+        }
 
         if( showChangeFlags ) {
+            sb.append(COMMA);
             if( 0 != ( CHANGE_MASK_PARENTING & mask) ) {
                 sb.append("*");
             }
             sb.append((0 != ( STATE_MASK_CHILDWIN & mask))?"child":"toplevel");
-            sb.append(", ");
         } else if( 0 != ( STATE_MASK_CHILDWIN & mask) ) {
+            sb.append(COMMA);
             sb.append("child");
-            sb.append(", ");
         }
 
-        sb.append((0 != ( STATE_MASK_FOCUSED & mask))?"focused, ":"");
+        if( 0 != ( STATE_MASK_FOCUSED & mask) ) {
+            sb.append(COMMA);
+            sb.append("focused");
+        }
 
         if( showChangeFlags ) {
+            sb.append(COMMA);
             if( 0 != ( CHANGE_MASK_DECORATION & mask) ) {
                 sb.append("*");
             }
             sb.append((0 != ( STATE_MASK_UNDECORATED & mask))?"undecor":"decor");
-            sb.append(", ");
         } else if( 0 != ( STATE_MASK_UNDECORATED & mask) ) {
+            sb.append(COMMA);
             sb.append("undecor");
-            sb.append(", ");
         }
 
         if( showChangeFlags ) {
+            sb.append(COMMA);
             if( 0 != ( CHANGE_MASK_ALWAYSONTOP & mask) ) {
                 sb.append("*");
             }
-            sb.append((0 != ( STATE_MASK_ALWAYSONTOP & mask))?"aontop":"!aontop");
-            sb.append(", ");
-        } else if( 0 != ( STATE_MASK_ALWAYSONTOP & mask) ) {
+            if( 0 == ( STATE_MASK_ALWAYSONTOP & mask) ) {
+                sb.append("!");
+            }
             sb.append("aontop");
-            sb.append(", ");
+        } else if( 0 != ( STATE_MASK_ALWAYSONTOP & mask) ) {
+            sb.append(COMMA);
+            sb.append("aontop");
         }
 
         if( showChangeFlags ) {
+            sb.append(COMMA);
             if( 0 != ( CHANGE_MASK_ALWAYSONBOTTOM & mask) ) {
                 sb.append("*");
             }
             sb.append((0 != ( STATE_MASK_ALWAYSONBOTTOM & mask))?"aonbottom":"!aonbottom");
-            sb.append(", ");
         } else if( 0 != ( STATE_MASK_ALWAYSONBOTTOM & mask) ) {
+            sb.append(COMMA);
             sb.append("aonbottom");
-            sb.append(", ");
         }
 
         if( showChangeFlags ) {
+            sb.append(COMMA);
             if( 0 != ( CHANGE_MASK_STICKY & mask) ) {
                 sb.append("*");
             }
             sb.append((0 != ( STATE_MASK_STICKY & mask))?"sticky":"unsticky");
-            sb.append(", ");
         } else if( 0 != ( STATE_MASK_STICKY & mask) ) {
+            sb.append(COMMA);
             sb.append("sticky");
-            sb.append(", ");
         }
 
         if( showChangeFlags ) {
+            sb.append(COMMA);
+            sb.append((0 != ( STATE_MASK_REPOSITIONABLE & mask))?"repositionable":"fixed-position");
+        } else if( 0 != ( STATE_MASK_REPOSITIONABLE & mask) ) {
+            sb.append(COMMA);
+            sb.append("repositionable");
+        }
+        if( showChangeFlags ) {
+            sb.append(COMMA);
             if( 0 != ( CHANGE_MASK_RESIZABLE & mask) ) {
                 sb.append("*");
             }
-            sb.append((0 != ( STATE_MASK_RESIZABLE & mask))?"resizable":"unresizable");
-            sb.append(", ");
-        } else if( 0 == ( STATE_MASK_RESIZABLE & mask) ) {
-            sb.append("unresizable");
-            sb.append(", ");
+            sb.append((0 != ( STATE_MASK_RESIZABLE & mask))?"resizable":"fixed-size");
+        } else if( 0 != ( STATE_MASK_RESIZABLE & mask) ) {
+            sb.append(COMMA);
+            sb.append("resizable");
         }
 
         if( showChangeFlags ) {
+            sb.append(COMMA);
             sb.append("max[");
             if( 0 != ( CHANGE_MASK_MAXIMIZED_HORZ & mask) ) {
                 sb.append("*");
@@ -432,8 +461,9 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                 sb.append("!");
             }
             sb.append("v");
-            sb.append("], ");
+            sb.append("]");
         } else if( 0 != ( ( STATE_MASK_MAXIMIZED_HORZ | STATE_MASK_MAXIMIZED_VERT ) & mask) ) {
+            sb.append(COMMA);
             sb.append("max[");
             if( 0 != ( STATE_MASK_MAXIMIZED_HORZ & mask) ) {
                 sb.append("h");
@@ -441,50 +471,51 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
             if( 0 != ( STATE_MASK_MAXIMIZED_VERT & mask) ) {
                 sb.append("v");
             }
-            sb.append("], ");
+            sb.append("]");
         }
 
         if( showChangeFlags ) {
+            sb.append(COMMA);
             if( 0 != ( CHANGE_MASK_FULLSCREEN & mask) ) {
                 sb.append("*");
             }
             sb.append("fullscreen[");
             sb.append(0 != ( STATE_MASK_FULLSCREEN & mask));
             sb.append((0 != ( STATE_MASK_FULLSCREEN_SPAN & mask))?", span":"");
-            sb.append("], ");
+            sb.append("]");
         } else if( 0 != ( STATE_MASK_FULLSCREEN & mask) ) {
+            sb.append(COMMA);
             sb.append("fullscreen");
-            sb.append(", ");
         }
 
         if( showChangeFlags ) {
-                sb.append("pointer[");
-                if( 0 == ( STATE_MASK_POINTERVISIBLE & mask) ) {
-                    sb.append("invisible");
-                } else {
-                    sb.append("visible");
-                }
-                sb.append(", ");
-                if( 0 != ( STATE_MASK_POINTERCONFINED & mask) ) {
-                    sb.append("confined");
-                } else {
-                    sb.append("free");
-                }
-                sb.append("]");
-        } else {
-            if( 0 == ( STATE_MASK_POINTERVISIBLE & mask) ||
-                0 != ( STATE_MASK_POINTERCONFINED & mask) )
-            {
-                sb.append("pointer[");
-                if( 0 == ( STATE_MASK_POINTERVISIBLE & mask) ) {
-                    sb.append("invisible");
-                    sb.append(", ");
-                }
-                if( 0 != ( STATE_MASK_POINTERCONFINED & mask) ) {
-                    sb.append("confined");
-                }
-                sb.append("]");
+            sb.append(COMMA);
+            sb.append("pointer[");
+            if( 0 == ( STATE_MASK_POINTERVISIBLE & mask) ) {
+                sb.append("invisible");
+            } else {
+                sb.append("visible");
             }
+            sb.append(COMMA);
+            if( 0 != ( STATE_MASK_POINTERCONFINED & mask) ) {
+                sb.append("confined");
+            } else {
+                sb.append("free");
+            }
+            sb.append("]");
+        } else if( 0 == ( STATE_MASK_POINTERVISIBLE & mask) ||
+                   0 != ( STATE_MASK_POINTERCONFINED & mask) )
+        {
+            sb.append(COMMA);
+            sb.append("pointer[");
+            if( 0 == ( STATE_MASK_POINTERVISIBLE & mask) ) {
+                sb.append("invisible");
+            }
+            if( 0 != ( STATE_MASK_POINTERCONFINED & mask) ) {
+                sb.append(COMMA);
+                sb.append("confined");
+            }
+            sb.append("]");
         }
         sb.append("]");
         return sb;
@@ -518,6 +549,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
         void clearButton() {
             lastButtonPressTime = 0;
         }
+        @Override
         public String toString() { return "PState0[inside "+insideSurface+", exitSent "+exitSent+", lastPress "+lastButtonPressTime+", dragging "+dragging+"]"; }
     }
     private final PointerState0 pState0 = new PointerState0();
@@ -552,13 +584,14 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
             }
             return null;
         }
+        @Override
         public final String toString() { return "PState1[inside "+insideSurface+", exitSent "+exitSent+", lastPress "+lastButtonPressTime+
                             ", pressed [button "+buttonPressed+", mask "+buttonPressedMask+", dragging "+dragging+", clickCount "+lastButtonClickCount+"]"; }
     }
     private final PointerState1 pState1 = new PointerState1();
 
     /** Pointer names -> pointer ID (consecutive index, starting w/ 0) */
-    private final ArrayHashSet<Integer> pName2pID = new ArrayHashSet<Integer>(false, ArrayHashSet.DEFAULT_INITIAL_CAPACITY, ArrayHashSet.DEFAULT_LOAD_FACTOR);
+    private final ArrayHashSet<Short> pName2pID = new ArrayHashSet<Short>(false, ArrayHashSet.DEFAULT_INITIAL_CAPACITY, ArrayHashSet.DEFAULT_LOAD_FACTOR);
 
     private boolean defaultGestureHandlerEnabled = true;
     private DoubleTapScrollGesture gesture2PtrTouchScroll = null;
@@ -578,11 +611,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
     private static Class<?> getWindowClass(final String type)
         throws ClassNotFoundException
     {
-        final Class<?> windowClass = NewtFactory.getCustomClass(type, "WindowDriver");
-        if(null==windowClass) {
-            throw new ClassNotFoundException("Failed to find NEWT Window Class <"+type+".WindowDriver>");
-        }
-        return windowClass;
+        return NewtFactory.getCustomClass(type, "WindowDriver");
     }
 
     public static WindowImpl create(final NativeWindow parentWindow, final long parentWindowHandle, final Screen screen, final CapabilitiesImmutable caps) {
@@ -711,7 +740,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
     private boolean createNative() {
         long tStart;
         if(DEBUG_IMPLEMENTATION) {
-            tStart = System.nanoTime();
+            tStart = Clock.currentNanos();
             System.err.println("Window.createNative() START ("+getThreadName()+", "+this+")");
         } else {
             tStart = 0;
@@ -726,7 +755,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
 
         // child window: position defaults to 0/0, no auto position, no negative position
         if( hasParent && ( stateMask.get(STATE_BIT_AUTOPOSITION) || 0>getX() || 0>getY() ) ) {
-            definePosition(0, 0);
+            defineWindowPosition(0, 0);
         }
         boolean postParentlockFocus = false;
         try {
@@ -737,7 +766,8 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                 }
                 if(canCreateNativeImpl()) {
                     final int wX, wY;
-                    final boolean usePosition;
+                    boolean usePosition;
+                    final boolean[] positionModified = new boolean[] { false };
                     if( stateMask.get(STATE_BIT_AUTOPOSITION) ) {
                         wX = 0;
                         wY = 0;
@@ -748,11 +778,12 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                         usePosition = true;
                     }
                     final long t0 = System.currentTimeMillis();
-                    createNativeImpl();
+                    createNativeImpl( positionModified );
+                    usePosition = usePosition && !positionModified[0];
                     supportedReconfigStateMask = getSupportedReconfigMaskImpl() & STATE_MASK_ALL_RECONFIG;
                     if( DEBUG_IMPLEMENTATION) {
                         final boolean minimumOK = minimumReconfigStateMask == ( minimumReconfigStateMask & supportedReconfigStateMask );
-                        System.err.println("Supported Reconfig (minimum-ok "+minimumOK+"): "+appendStateBits(new StringBuilder(), supportedReconfigStateMask, true).toString());
+                        System.err.println("Supported Reconfig.1 (minimum-ok "+minimumOK+"): "+appendStateBits(new StringBuilder(), supportedReconfigStateMask, true).toString());
                     }
                     screen.addMonitorModeListener(monitorModeListenerImpl);
                     setTitleImpl(title);
@@ -792,7 +823,8 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                             }
                         }
                         if (DEBUG_IMPLEMENTATION) {
-                            System.err.println("Window.createNative(): elapsed "+(System.currentTimeMillis()-t0)+" ms");
+                            System.err.println("Window.createNative(): position[modified "+positionModified[0]+", use "+usePosition+
+                                               "], elapsed "+(System.currentTimeMillis()-t0)+" ms");
                         }
                         postParentlockFocus = true;
                     }
@@ -809,7 +841,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
             ((DisplayImpl) screen.getDisplay()).dispatchMessagesNative(); // status up2date
         }
         if(DEBUG_IMPLEMENTATION) {
-            System.err.println("Window.createNative() END ("+getThreadName()+", "+this+") total "+ (System.nanoTime()-tStart)/1e6 +"ms");
+            System.err.println("Window.createNative() END ("+getThreadName()+", "+this+") total "+ (Clock.currentNanos()-tStart)/1e6 +"ms");
         }
         return isNativeValid() ;
     }
@@ -899,6 +931,11 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
      * ie. instance created and all fields set.
      */
     private final void instantiationFinished() {
+        supportedReconfigStateMask = getSupportedReconfigMaskImpl() & STATE_MASK_ALL_RECONFIG;
+        if( DEBUG_IMPLEMENTATION) {
+            final boolean minimumOK = minimumReconfigStateMask == ( minimumReconfigStateMask & supportedReconfigStateMask );
+            System.err.println("Supported Reconfig.0 (minimum-ok "+minimumOK+"): "+appendStateBits(new StringBuilder(), supportedReconfigStateMask, true).toString());
+        }
         resetStateMask();
         instantiationFinishedImpl();
     }
@@ -922,14 +959,16 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
      * The implementation should invoke the referenced java state callbacks
      * to notify this Java object of state changes.</p>
      *
+     * @param positionModified returns indication that the position has been modified and shall not be waited upon.
+     *
      * @see #windowDestroyNotify(boolean)
      * @see #focusChanged(boolean, boolean)
-     * @see #visibleChanged(boolean, boolean)
+     * @see #visibleChanged(boolean)
      * @see #sizeChanged(int,int)
-     * @see #positionChanged(boolean,int, int)
+     * @see #positionChanged(boolean,boolean, int, int)
      * @see #windowDestroyNotify(boolean)
      */
-    protected abstract void createNativeImpl();
+    protected abstract void createNativeImpl(boolean[] positionModified);
 
     protected abstract void closeNativeImpl();
 
@@ -953,8 +992,14 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
      * Default value is {@link #STATE_MASK_VISIBLE} | {@link #STATE_MASK_FOCUSED},
      * i.e. the <b>minimum requirement</b> for all implementations.
      * </p>
+     * <p>
+     * Will be called twice. Once after simple {@link #instantiationFinished()}
+     * pre native window creation and once right after {@link #createNativeImpl(boolean[]) native creation}.
+     * </p>
      * @see #getSupportedStateMask()
      * @see #reconfigureWindowImpl(int, int, int, int, int)
+     * @see #instantiationFinished()
+     * @see #createNativeImpl(boolean[])
      */
     protected abstract int getSupportedReconfigMaskImpl();
 
@@ -975,7 +1020,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
      *
      * @see #getSupportedReconfigMaskImpl()
      * @see #sizeChanged(int,int)
-     * @see #positionChanged(boolean,int, int)
+     * @see #positionChanged(boolean,boolean, int, int)
      */
     protected abstract boolean reconfigureWindowImpl(int x, int y, int width, int height, int flags);
 
@@ -1019,6 +1064,12 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
 
     protected boolean setPointerVisibleImpl(final boolean pointerVisible) { return false; }
     protected boolean confinePointerImpl(final boolean confine) { return false; }
+
+    /**
+     * See {@link #warpPointer(int, int)
+     * @param x pixel units
+     * @param y pixel units
+     */
     protected void warpPointerImpl(final int x, final int y) { }
     protected void setPointerIconImpl(final PointerIconImpl pi) { }
 
@@ -1083,6 +1134,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
         return windowLock.getOwner();
     }
 
+    @Override
     public final RecursiveLock getLock() {
         return windowLock;
     }
@@ -1336,12 +1388,19 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
     }
 
     private class SetSizeAction implements Runnable {
+        int x, y;
+        boolean set_pos;
         int width, height;
+        boolean waitForSz;
         boolean force;
 
-        private SetSizeAction(final int w, final int h, final boolean disregardFS) {
+        private SetSizeAction(final int x, final int y, final boolean set_pos, final int w, final int h, final boolean waitForSz, final boolean disregardFS) {
+            this.x = x;
+            this.y = y;
+            this.set_pos = set_pos;
             this.width = w;
             this.height = h;
+            this.waitForSz = waitForSz;
             this.force = disregardFS;
         }
 
@@ -1350,27 +1409,48 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
             final RecursiveLock _lock = windowLock;
             _lock.lock();
             try {
-                if ( force || ( !isFullscreen() && ( getWidth() != width || getHeight() != height ) ) ) {
+                if ( force ||
+                     ( ( isReconfigureMaskSupported(STATE_MASK_RESIZABLE) || !isNativeValid() ) &&
+                       !isFullscreen() &&
+                       ( getWidth() != width || getHeight() != height )
+                     )
+                   )
+                {
                     if(DEBUG_IMPLEMENTATION) {
                         System.err.println("Window setSize: START force "+force+", "+getWidth()+"x"+getHeight()+" -> "+width+"x"+height+", windowHandle "+toHexString(windowHandle)+", state "+getStateMaskString());
                     }
-                    final boolean _visible = stateMask.get(STATE_BIT_VISIBLE);
+                    final boolean _visible = isVisible();
                     int visibleAction; // 0 nop, 1 invisible, 2 visible (create)
                     if ( _visible && isNativeValid() && ( 0 >= width || 0 >= height ) ) {
                         visibleAction=1; // invisible
-                        defineSize(0, 0);
+                        if( set_pos ) {
+                            defineWindowPosition(x, y);
+                        }
+                        defineWindowSize(0, 0);
                     } else if ( _visible && !isNativeValid() && 0 < width && 0 < height ) {
                         visibleAction = 2; // visible (create)
-                        defineSize(width, height);
+                        if( set_pos ) {
+                            defineWindowPosition(x, y);
+                        }
+                        defineWindowSize(width, height);
                     } else if ( _visible && isNativeValid() ) {
                         visibleAction = 0;
                         // this width/height will be set by windowChanged, called by the native implementation
-                        reconfigureWindowImpl(getX(), getY(), width, height, getReconfigureMask(0, isVisible()));
-                        WindowImpl.this.waitForSize(width, height, false, TIMEOUT_NATIVEWINDOW);
+                        if( set_pos ) {
+                            reconfigureWindowImpl(x, y, width, height, getReconfigureMask(0, _visible));
+                        } else {
+                            reconfigureWindowImpl(getX(), getY(), width, height, getReconfigureMask(0, _visible));
+                        }
+                        if( waitForSz ) {
+                            WindowImpl.this.waitForSize(width, height, false, TIMEOUT_NATIVEWINDOW);
+                        }
                     } else {
                         // invisible or invalid w/ 0 size
                         visibleAction = 0;
-                        defineSize(width, height);
+                        if( set_pos ) {
+                            defineWindowPosition(x, y);
+                        }
+                        defineWindowSize(width, height);
                     }
                     if(DEBUG_IMPLEMENTATION) {
                         System.err.println("Window setSize: END "+getWidth()+"x"+getHeight()+", visibleAction "+visibleAction);
@@ -1386,12 +1466,15 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
         }
     }
 
-    private void setSize(final int width, final int height, final boolean force) {
-        runOnEDTIfAvail(true, new SetSizeAction(width, height, force));
+    protected void setPosSizeImpl(final int x, final int y, final int width, final int height, final boolean waitForSz, final boolean force) {
+        runOnEDTIfAvail(true, new SetSizeAction(x, y, true, width, height, waitForSz, force));
+    }
+    protected void setSizeImpl(final int width, final int height, final boolean waitForSz, final boolean force) {
+        runOnEDTIfAvail(true, new SetSizeAction(0, 0, false, width, height, waitForSz, force));
     }
     @Override
     public final void setSize(final int width, final int height) {
-        runOnEDTIfAvail(true, new SetSizeAction(width, height, false));
+        setSizeImpl(width, height, true /* waitForSz */, false /* force */);
     }
     @Override
     public final void setSurfaceSize(final int pixelWidth, final int pixelHeight) {
@@ -1799,7 +1882,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                             parentWindowLocked.unlockSurface();
                         }
                     }
-                    definePosition(x, y); // position might not get updated by WM events (SWT parent apparently)
+                    defineWindowPosition(x, y); // position might not get updated by WM events (SWT parent apparently)
 
                     // set visible again
                     if(ok) {
@@ -1829,8 +1912,8 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                     if(!ok || !wasVisible) {
                         // make size and position persistent manual,
                         // since we don't have a WM feedback (invisible or recreation)
-                        definePosition(x, y);
-                        defineSize(width, height);
+                        defineWindowPosition(x, y);
+                        defineWindowSize(width, height);
                     }
 
                     if(!ok) {
@@ -1853,8 +1936,8 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                     //   ACTION_NATIVE_CREATION_PENDING;
 
                     // make size and position persistent for proper [re]creation
-                    definePosition(x, y);
-                    defineSize(width, height);
+                    defineWindowPosition(x, y);
+                    defineWindowSize(width, height);
                 }
 
                 if(DEBUG_IMPLEMENTATION) {
@@ -2449,6 +2532,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
         if( this.pointerIcon != piImpl ) {
             if( isNativeValid() ) {
                 runOnEDTIfAvail(true, new Runnable() {
+                    @Override
                     public void run() {
                         setPointerIconIntern(piImpl);
                     } } );
@@ -2544,37 +2628,42 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
 
     @Override
     public final int getX() {
-        return x;
+        return windowPos[0];
     }
 
     @Override
     public final int getY() {
-        return y;
+        return windowPos[1];
     }
 
     @Override
     public final int getWidth() {
-        return winWidth;
+        return windowSize[0];
     }
 
     @Override
     public final int getHeight() {
-        return winHeight;
+        return windowSize[1];
     }
 
     @Override
     public final Rectangle getBounds() {
-        return new Rectangle(x, y, winWidth, winHeight);
+        return new Rectangle(windowPos[0], windowPos[1], windowSize[0], windowSize[1]);
     }
 
     @Override
     public final int getSurfaceWidth() {
-        return pixWidth;
+        return pixelSize[0];
     }
 
     @Override
     public final int getSurfaceHeight() {
-        return pixHeight;
+        return pixelSize[1];
+    }
+
+    @Override
+    public final Rectangle getSurfaceBounds() {
+        return new Rectangle(pixelPos[0], pixelPos[1], pixelSize[0], pixelSize[1]);
     }
 
     @Override
@@ -2605,11 +2694,31 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
         return hasPixelScale[1];
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This implementation returns true, i.e. supporting manual change of pixel-scale.
+     * </p>
+     */
+    @Override
+    public final boolean canSetSurfaceScale() { return true; }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean setSurfaceScale(final float[] pixelScale) {
+        final boolean isAuto = SurfaceScaleUtils.isEqual(pixelScale, ScalableSurface.AUTOMAX_PIXELSCALE);
+        if( DEBUG_IMPLEMENTATION ) {
+            System.err.println("WindowImpl.setPixelScale.0: has["+hasPixelScale[0]+", "+hasPixelScale[1]+"], req["+
+                                reqPixelScale[0]+", "+reqPixelScale[1]+"] -> req["+
+                                pixelScale[0]+", "+pixelScale[1]+"], isAuto "+isAuto+", realized "+isNativeValid());
+        }
         System.arraycopy(pixelScale, 0, reqPixelScale, 0, 2);
+        hasSetPixelScale = !isAuto;
         return false;
     }
+    protected boolean hasSetPixelScale() { return hasSetPixelScale; }
 
     @Override
     public final float[] getRequestedSurfaceScale(final float[] result) {
@@ -2645,33 +2754,248 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
 
     protected final boolean autoPosition() { return stateMask.get(STATE_BIT_AUTOPOSITION); }
 
-    /** Sets the position fields {@link #x} and {@link #y} in window units to the given values and {@link #autoPosition} to false. */
-    protected final void definePosition(final int x, final int y) {
+    protected final int[] getWindowPosI() { return windowPos; }
+    protected final int[] getPixelPosI() { return pixelPos; }
+    protected final int[] getWindowSizeI() { return windowSize; }
+    protected final int[] getPixelSizeI() { return pixelSize; }
+
+    /**
+     * Sets the position in window units to the given values while computing the size in pixel units according to {@link #convertToPixelUnits(int[])}.
+     * Also sets {@link #autoPosition} to false.
+     */
+    protected final void defineWindowPosition(final int newWinX, final int newWinY) {
+        final int[] newWindowPos = new int[] { newWinX, newWinY };
+        final int[] newPixelPos = SurfaceScaleUtils.scale(new int[2], newWindowPos, hasPixelScale);
         if(DEBUG_IMPLEMENTATION) {
-            System.err.println("definePosition: "+this.x+"/"+this.y+" -> "+x+"/"+y);
+            System.err.println("defineWinPosition: win["+this.windowPos[0]+"/"+this.windowPos[1]+" -> "+newWindowPos[0]+"/"+newWindowPos[1]+
+                               "], pixel["+this.pixelSize[0]+"x"+this.pixelSize[1]+" -> "+newPixelPos[0]+"x"+newPixelPos[1]+"]");
             // ExceptionUtils.dumpStackTrace(System.err);
         }
         stateMask.clear(STATE_BIT_AUTOPOSITION);
-        this.x = x; this.y = y;
+        this.windowPos = newWindowPos;
+        this.pixelPos = newPixelPos;
     }
 
     /**
-     * Sets the size fields {@link #winWidth} and {@link #winHeight} in window units to the given values
-     * and {@link #pixWidth} and {@link #pixHeight} in pixel units according to {@link #convertToPixelUnits(int[])}.
+     * Sets the position in pixel units to the given values while computing the size in window units according to {@link #convertToWindowUnits(int[])}.
+     * Also sets {@link #autoPosition} to false.
      */
-    protected final void defineSize(final int winWidth, final int winHeight) {
-        // FIXME HiDPI: Shortcut, may need to adjust if we change scaling methodology
-        final int pixWidth = SurfaceScaleUtils.scale(winWidth, getPixelScaleX());
-        final int pixHeight = SurfaceScaleUtils.scale(winHeight, getPixelScaleY());
-
+    protected final void definePixelPosition(final int newPixX, final int newPixY) {
+        final int[] newPixelPos = new int[] { newPixX, newPixY };
+        final int[] newWindowPos = SurfaceScaleUtils.scaleInv(new int[2], newPixelPos, hasPixelScale);
         if(DEBUG_IMPLEMENTATION) {
-            System.err.println("defineSize: win["+this.winWidth+"x"+this.winHeight+" -> "+winWidth+"x"+winHeight+
-                               "], pixel["+this.pixWidth+"x"+this.pixHeight+" -> "+pixWidth+"x"+pixHeight+"]");
+            System.err.println("definePixelPosition: win["+this.windowPos[0]+"/"+this.windowPos[1]+" -> "+newWindowPos[0]+"/"+newWindowPos[1]+
+                               "], pixel["+this.pixelPos[0]+"x"+this.pixelPos[1]+" -> "+newPixelPos[0]+"x"+newPixelPos[1]+"]");
             // ExceptionUtils.dumpStackTrace(System.err);
         }
-        this.winWidth = winWidth; this.winHeight = winHeight;
-        this.pixWidth = pixWidth; this.pixHeight = pixHeight;
+        stateMask.clear(STATE_BIT_AUTOPOSITION);
+        this.windowPos = newWindowPos;
+        this.pixelPos = newPixelPos;
     }
+
+    /**
+     * Sets the size in window units to the given values while computing the size in pixel units according to {@link #convertToPixelUnits(int[])}.
+     */
+    protected final void defineWindowSize(final int newWinWidth, final int newWinHeight) {
+        final int[] newWindowSize = new int[] { newWinWidth, newWinHeight };
+        final int[] newPixelSize = SurfaceScaleUtils.scale(new int[2], newWindowSize, hasPixelScale);
+
+        if(DEBUG_IMPLEMENTATION) {
+            System.err.println("defineWinSize: win["+this.windowSize[0]+"x"+this.windowSize[1]+" -> "+newWindowSize[0]+"x"+newWindowSize[1]+
+                               "], pixel["+this.pixelSize[0]+"x"+this.pixelSize[1]+" -> "+newPixelSize[0]+"x"+newPixelSize[1]+"]");
+            // ExceptionUtils.dumpStackTrace(System.err);
+        }
+        this.windowSize = newWindowSize;
+        this.pixelSize = newPixelSize;
+    }
+
+    /**
+     * Sets the size in pixel units to the given values while computing the size in window units according to {@link #convertToWindowUnits(int[])}.
+     */
+    protected final void definePixelSize(final int newPixWidth, final int newPixHeight) {
+        final int[] newPixelSize = new int[] { newPixWidth, newPixHeight };
+        final int[] newWindowSize = SurfaceScaleUtils.scaleInv(new int[2], newPixelSize, hasPixelScale);
+
+        if(DEBUG_IMPLEMENTATION) {
+            System.err.println("definePixelSize: win["+this.windowSize[0]+"x"+this.windowSize[1]+" -> "+newWindowSize[0]+"x"+newWindowSize[1]+
+                               "], pixel["+this.pixelSize[0]+"x"+this.pixelSize[1]+" -> "+newPixelSize[0]+"x"+newPixelSize[1]+"]");
+            // ExceptionUtils.dumpStackTrace(System.err);
+        }
+        this.windowSize = newWindowSize;
+        this.pixelSize = newPixelSize;
+    }
+
+    /**
+     * Updates position and size in pixel units according to {@link #convertToPixelUnits(int[])}.
+     */
+    protected void updatePixelPosSize(final boolean sendEvent, final boolean defer) {
+        final int[] newPixelPos = SurfaceScaleUtils.scale(new int[2], windowPos, hasPixelScale);
+        final int[] newPixelSize = SurfaceScaleUtils.scale(new int[2], windowSize, hasPixelScale);
+        final boolean posChanged = pixelPos[0] != newPixelPos[0]  ||  pixelPos[1] != newPixelPos[1];
+        final boolean sizeChanged = pixelSize[0] != newPixelSize[0] || pixelSize[1] != newPixelSize[1];
+        if( posChanged || sizeChanged ) {
+            if(DEBUG_IMPLEMENTATION) {
+                System.err.println("updatePixelPosSize: ("+getThreadName()+"): (event: "+sendEvent+", defer: "+defer+"), state "+getStateMaskString()+
+                                   " - windowHandle "+toHexString(windowHandle)+" parentWindowHandle "+toHexString(parentWindowHandle));
+                System.err.println("updatePixelPos: win["+this.windowPos[0]+"/"+this.windowPos[1]+
+                                   "], pixel["+this.pixelSize[0]+"x"+this.pixelSize[1]+" -> "+newPixelPos[0]+"x"+newPixelPos[1]+"]");
+                System.err.println("updatePixelSize: win["+this.windowSize[0]+"x"+this.windowSize[1]+
+                                   "], pixel["+this.pixelSize[0]+"x"+this.pixelSize[1]+" -> "+newPixelSize[0]+"x"+newPixelSize[1]+"]");
+            }
+            if( posChanged ) {
+                pixelPos = newPixelPos;
+            }
+            if( sizeChanged ) {
+                pixelSize = newPixelSize;
+                if( sendEvent && isNativeValid() ) {
+                    if(!defer) {
+                        sendWindowEvent(WindowEvent.EVENT_WINDOW_RESIZED);
+                    } else {
+                        enqueueWindowEvent(false, WindowEvent.EVENT_WINDOW_RESIZED);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Updates position and size in window units according to {@link #convertToWindowUnits(int[])}.
+     */
+    protected void updateWindowPosSize(final boolean sendEvent, final boolean defer) {
+        final int[] newWindowPos = SurfaceScaleUtils.scaleInv(new int[2], pixelPos, hasPixelScale);
+        final int[] newWindowSize = SurfaceScaleUtils.scaleInv(new int[2], pixelSize, hasPixelScale);
+        final boolean posChanged = windowPos[0] != newWindowPos[0]  ||  windowPos[1] != newWindowPos[1];
+        final boolean sizeChanged = windowSize[0] != newWindowSize[0] || windowSize[1] != newWindowSize[1];
+        if( posChanged || sizeChanged ) {
+            if(DEBUG_IMPLEMENTATION) {
+                System.err.println("updateWindowPosSize: ("+getThreadName()+"): (event: "+sendEvent+", defer: "+defer+"), state "+getStateMaskString()+
+                                   " - windowHandle "+toHexString(windowHandle)+" parentWindowHandle "+toHexString(parentWindowHandle));
+                System.err.println("updateWindowPos: win["+this.windowPos[0]+"/"+this.windowPos[1]+" -> "+newWindowPos[0]+"/"+newWindowPos[1]+
+                                   "], pixel["+this.pixelSize[0]+"x"+this.pixelSize[1]+"]");
+                System.err.println("updateWindowSize: win["+this.windowSize[0]+"x"+this.windowSize[1]+" -> "+newWindowSize[0]+"x"+newWindowSize[1]+
+                                   "], pixel["+this.pixelSize[0]+"x"+this.pixelSize[1]+"]");
+            }
+            if( posChanged ) {
+                windowPos = newWindowPos;
+            }
+            if( sizeChanged ) {
+                windowSize = newWindowSize;
+                if( sendEvent && isNativeValid() ) {
+                    if(!defer) {
+                        sendWindowEvent(WindowEvent.EVENT_WINDOW_RESIZED);
+                    } else {
+                        enqueueWindowEvent(false, WindowEvent.EVENT_WINDOW_RESIZED);
+                    }
+                }
+            }
+        }
+    }
+
+    private static int sign(final int v) {
+        if( 0 == v ) {
+            return 0;
+        } else if( 0 < v ) {
+            return 1;
+        } else {
+            return -1;
+        }
+    }
+
+    private boolean applySoftPixelScaleImpl(final int[] move_diff, final boolean sendEvent, final boolean defer, final float[] newPixelScaleRaw) {
+        boolean res = false;
+        final float[] newPixelScale = new float[2];
+        final float[] maxPixelScale = new float[2];
+        {
+            if( FloatUtil.isZero(newPixelScaleRaw[0], FloatUtil.EPSILON) || FloatUtil.isZero(newPixelScaleRaw[1], FloatUtil.EPSILON) ) {
+                newPixelScale[0]= ScalableSurface.IDENTITY_PIXELSCALE;
+                newPixelScale[1]= ScalableSurface.IDENTITY_PIXELSCALE;
+            } else {
+                System.arraycopy(newPixelScaleRaw, 0, newPixelScale, 0, 2);
+            }
+            System.arraycopy(newPixelScale, 0, maxPixelScale, 0, 2);
+        }
+        // We keep minPixelScale at [1f, 1f]!
+        if( SurfaceScaleUtils.setNewPixelScale(hasPixelScale, hasPixelScale, newPixelScale, minPixelScale, maxPixelScale, DEBUG_IMPLEMENTATION ? getClass().getName() : null) ) {
+            final int[] windowSize = getWindowSizeI();
+            final int[] pixelPos = getPixelPosI();
+            final int[] oldWindowPos = getWindowPosI();
+            final int[] newWindowPos = SurfaceScaleUtils.scaleInv(new int[2], pixelPos, hasPixelScale);
+            final int[] oldPixelSize = getPixelSizeI();
+            final int[] newPixelSize = SurfaceScaleUtils.scale(new int[2], windowSize, hasPixelScale);
+
+            if( DEBUG_IMPLEMENTATION ) {
+                System.err.println("Window.SoftPixelScale.1: "+getThreadName());
+                System.err.println("Window.SoftPixelScale.1: windowSize: "+windowSize[0]+"x"+windowSize[1]+" const");
+                System.err.println("Window.SoftPixelScale.1: pixelPos: "+pixelPos[0]+"/"+pixelPos[1]+" const");
+                System.err.println("Window.SoftPixelScale.1: oldWindowPos: "+oldWindowPos[0]+"/"+oldWindowPos[1]);
+                System.err.println("Window.SoftPixelScale.1: newWindowPos: "+newWindowPos[0]+"/"+newWindowPos[1]);
+                System.err.println("Window.SoftPixelScale.1: oldPixelSize: "+oldPixelSize[0]+"x"+oldPixelSize[1]);
+                System.err.println("Window.SoftPixelScale.1: newPixelSize: "+newPixelSize[0]+"x"+newPixelSize[1]);
+                if( null != move_diff ) {
+                    System.err.println("Window.SoftPixelScale.1: move_diff: "+move_diff[0]+"/"+move_diff[1]+" [pixels]");
+                } else {
+                    System.err.println("Window.SoftPixelScale.1: move_diff: null");
+                }
+            }
+            // this width/height will be set by windowChanged, called by the native implementation
+
+            final int newX, newY;
+            if( null != move_diff ) {
+                final int[] move_dir = new int[] { sign(move_diff[0]), sign(move_diff[1]) };
+                final int[] d_winpos = new int[] { (int)( Math.abs( newPixelSize[0] - oldPixelSize[0] ) * 0.5f + 0.5f ),
+                                                   (int)( Math.abs( newPixelSize[1] - oldPixelSize[1] ) * 0.5f + 0.5f ) };
+                SurfaceScaleUtils.scaleInv(d_winpos, d_winpos, hasPixelScale);
+                SurfaceScaleUtils.scaleInv(move_diff, move_diff, hasPixelScale);
+                newX = newWindowPos[0] + move_dir[0] * d_winpos[0] + move_diff[0];
+                newY = newWindowPos[1] + move_dir[1] * d_winpos[1] + move_diff[1];
+            } else {
+                newX = newWindowPos[0];
+                newY = newWindowPos[1];
+            }
+            if( DEBUG_IMPLEMENTATION ) {
+                System.err.println("Window.SoftPixelScale.2: Position: "+oldWindowPos[0]+"/"+oldWindowPos[1]+" -> "+newX+"/"+newY);
+            }
+            setPosSizeImpl(newX, newY, windowSize[0], windowSize[1], false /* waitForSz */, true /* force */); // updates both, position and size according to new scale
+
+            res = true;
+        }
+        return res;
+    }
+
+    /**
+     * Apply software pixel-scale by multiplying the underlying surface pixel-size with the scale-factor
+     * and dividing the window position and size by same scale-factor.
+     *
+     * Hence the window position and size space is kept virtually steady at virtually assumed DPI 96 at higher actual screen DPI
+     * and the surface size is adjusted.
+     *
+     * @param move_diff null if not called when moving to e.g. a new monitor, otherwise int[2] denoting the pixel-unit delta for both axis towards e.g. an entered monitor,
+     * > 0 for left to right or top to down, < 0 for right to left and down to top and == 0 for no change.
+     * See {@link MonitorDevice#getOrientationTo(MonitorDevice, int[])} to produce a proper move_diff pair.
+     *
+     * @param sendEvent true to send a resize event
+     * @param defer to defer a resize event
+     * @param newPixelScale the new pixel scale
+     * @return true if a pixel scale change occured, otherwise false.
+     */
+    protected boolean applySoftPixelScale(final int[] move_diff, final boolean sendEvent, final boolean defer, final float[] newPixelScale) {
+        boolean res = false;
+        if( DEBUG_IMPLEMENTATION ) {
+            System.err.println("Window.SoftPixelScale.0a: req "+reqPixelScale[0]+", has "+hasPixelScale[0]+", new "+newPixelScale[0]+" - "+getThreadName());
+            // Thread.dumpStack();
+        }
+        synchronized( scaleLock ) {
+            try {
+                res = applySoftPixelScaleImpl(move_diff, sendEvent, defer, newPixelScale);
+            } finally {
+                if( DEBUG_IMPLEMENTATION ) {
+                    System.err.println("Window.SoftPixelScale.X: res "+res+", has "+hasPixelScale[0]+" - "+getThreadName());
+                }
+            }
+        }
+        return res;
+    }
+    private final Object scaleLock = new Object();
 
     @Override
     public final boolean isVisible() {
@@ -2732,42 +3056,71 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
     }
 
     @Override
-    public final String toString() {
-        final StringBuilder sb = new StringBuilder();
+    public final StringBuilder toSimpleString(final StringBuilder sb) {
+        sb.append(getClass().getSimpleName()).append("[").append("State ").append(getStateMaskString())
+                    .append("; ").append("Window").append("[").append(getX()).append("/").append(getY())
+                    .append(" ").append(getWidth()).append("x").append(getHeight()).append(" wu").append(COMMA)
+                    .append(getSurfaceWidth()).append("x").append(getSurfaceHeight()).append(" pixel").append("]")
+                    .append(" handle ").append(toHexString(getWindowHandle())).append(COMMA).append("surfaceHandle ")
+                    .append(toHexString(getSurfaceHandle())).append(COMMA).append("children ").append(childWindows.size())
+                    .append("; ").append("ParentWindow ").append(parentWindow).append(" (handle ")
+                    .append(toHexString(parentWindowHandle)).append(")")
+        .append("]");
+        return sb;
+    }
+    @Override
+    public final String toSimpleString() {
+        return toSimpleString(new StringBuilder()).toString();
+    }
+    @Override
+    public final StringBuilder toString(final StringBuilder sb) {
+        sb.append(getClass().getName()).append("[").append("State ").append(getStateMaskString())
+                    .append(COMMA).append("supported ").append(getSupportedStateMaskString())
+                    .append("; ").append("Window").append("[").append(getX()).append("/").append(getY())
+                    .append(" ").append(getWidth()).append("x").append(getHeight()).append(" wu").append(COMMA)
+                    .append(getSurfaceWidth()).append("x").append(getSurfaceHeight()).append(" pixel").append("]")
+                    .append(" handle ").append(toHexString(getWindowHandle())).append(COMMA).append("surfaceHandle ")
+                    .append(toHexString(getSurfaceHandle())).append(COMMA).append("children ").append(childWindows.size())
+                    .append("; ").append("ParentWindow ").append(parentWindow).append(" (handle ")
+                    .append(toHexString(parentWindowHandle)).append(")")
+        .append(COMMA).append(PlatformPropsImpl.NEWLINE).append("  ").append(screen)
+        .append(COMMA).append(PlatformPropsImpl.NEWLINE).append("  Config ").append(config)
+        .append(COMMA).append(PlatformPropsImpl.NEWLINE).append("  WrappedSurface ").append(getWrappedSurface())
+        .append(COMMA).append(PlatformPropsImpl.NEWLINE);
 
-        sb.append(getClass().getName()+"[State "+getStateMaskString()+
-                    ",\n "+screen+
-                    ",\n window["+getX()+"/"+getY()+" "+getWidth()+"x"+getHeight()+" wu, "+getSurfaceWidth()+"x"+getSurfaceHeight()+" pixel]"+
-                    ",\n Config "+config+
-                    ",\n ParentWindow "+parentWindow+
-                    ",\n ParentWindowHandle "+toHexString(parentWindowHandle)+" ("+(0!=getParentWindowHandle())+")"+
-                    ",\n WindowHandle "+toHexString(getWindowHandle())+
-                    ",\n SurfaceHandle "+toHexString(getSurfaceHandle())+ " (lockedExt window "+windowLock.isLockedByOtherThread()+", surface "+isSurfaceLockedByOtherThread()+")"+
-                    ",\n WrappedSurface "+getWrappedSurface()+
-                    ",\n ChildWindows "+childWindows.size());
-
-        sb.append(", SurfaceUpdatedListeners num "+surfaceUpdatedHelper.size()+" [");
+        sb.append("  SurfaceUpdatedListeners num ").append(surfaceUpdatedHelper.size()).append(" [");
         for (int i = 0; i < surfaceUpdatedHelper.size(); i++ ) {
           sb.append(surfaceUpdatedHelper.get(i)+", ");
         }
-        sb.append("], WindowListeners num "+windowListeners.size()+" [");
+        sb.append("]").append(COMMA).append(PlatformPropsImpl.NEWLINE)
+        .append("  WindowListeners num ").append(windowListeners.size()).append(" [");
         for (int i = 0; i < windowListeners.size(); i++ ) {
           sb.append(windowListeners.get(i)+", ");
         }
-        sb.append("], MouseListeners num "+mouseListeners.size()+" [");
+        sb.append("]").append(COMMA).append(PlatformPropsImpl.NEWLINE)
+        .append("  MouseListeners num ").append(mouseListeners.size()).append(" [");
         for (int i = 0; i < mouseListeners.size(); i++ ) {
           sb.append(mouseListeners.get(i)+", ");
         }
-        sb.append("], PointerGestures default "+defaultGestureHandlerEnabled+", custom "+pointerGestureHandler.size()+" [");
+        sb.append("]").append(COMMA).append(PlatformPropsImpl.NEWLINE)
+        .append("  PointerGestures default ").append(defaultGestureHandlerEnabled).append(COMMA)
+        .append("custom ").append(pointerGestureHandler.size()).append(" [");
         for (int i = 0; i < pointerGestureHandler.size(); i++ ) {
           sb.append(pointerGestureHandler.get(i)+", ");
         }
-        sb.append("], KeyListeners num "+keyListeners.size()+" [");
+        sb.append("]").append(COMMA).append(PlatformPropsImpl.NEWLINE)
+        .append("  KeyListeners num ").append(keyListeners.size()).append(" [");
         for (int i = 0; i < keyListeners.size(); i++ ) {
           sb.append(keyListeners.get(i)+", ");
         }
-        sb.append("], windowLock "+windowLock+", surfaceLockCount "+surfaceLockCount+"]");
-        return sb.toString();
+        sb.append("]").append(COMMA).append(PlatformPropsImpl.NEWLINE)
+        .append("  windowLock ").append(windowLock).append(COMMA).append("surfaceLockCount ").append(surfaceLockCount)
+        .append("]");
+        return sb;
+    }
+    @Override
+    public final String toString() {
+        return toString(new StringBuilder()).toString();
     }
 
     protected final void setWindowHandle(final long handle) {
@@ -2872,10 +3225,14 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
 
     private class SetPositionAction implements Runnable {
         int x, y;
+        boolean waitForPos;
+        boolean force;
 
-        private SetPositionAction(final int x, final int y) {
+        private SetPositionAction(final int x, final int y, final boolean waitForPos, final boolean force) {
             this.x = x;
             this.y = y;
+            this.waitForPos = waitForPos;
+            this.force = force;
         }
 
         @Override
@@ -2887,16 +3244,19 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                     System.err.println("Window setPosition: "+getX()+"/"+getY()+" -> "+x+"/"+y+", fs "+stateMask.get(STATE_BIT_FULLSCREEN)+", windowHandle "+toHexString(windowHandle));
                 }
                 // Let the window be positioned if !fullscreen and position changed or being a child window.
-                if ( !isFullscreen() && ( getX() != x || getY() != y || null != getParent()) ) {
+                if ( ( isReconfigureMaskSupported(STATE_MASK_REPOSITIONABLE) || !isNativeValid() ) &&
+                       !isFullscreen() && ( force || getX() != x || getY() != y )
+                   )
+                {
                     if(isNativeValid()) {
                         // this.x/this.y will be set by sizeChanged, triggered by windowing event system
                         reconfigureWindowImpl(x, y, getWidth(), getHeight(), getReconfigureMask(0, isVisible()));
-                        if( null == parentWindow ) {
+                        if( null == parentWindow && waitForPos ) {
                             // Wait until custom position is reached within tolerances
                             waitForPosition(true, x, y, Window.TIMEOUT_NATIVEWINDOW);
                         }
                     } else {
-                        definePosition(x, y); // set pos for createNative(..)
+                        defineWindowPosition(x, y); // set pos for createNative(..)
                     }
                 }
             } finally {
@@ -2904,11 +3264,14 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
             }
         }
     }
+    protected void setPositionImpl(final int x, final int y, final boolean waitForPos, final boolean force) {
+        stateMask.clear(STATE_BIT_AUTOPOSITION);
+        runOnEDTIfAvail(true, new SetPositionAction(x, y, waitForPos, force));
+    }
 
     @Override
     public void setPosition(final int x, final int y) {
-        stateMask.clear(STATE_BIT_AUTOPOSITION);
-        runOnEDTIfAvail(true, new SetPositionAction(x, y));
+        setPositionImpl(x, y, true /* waitForPos */, false /* force */);
     }
 
     @Override
@@ -3029,7 +3392,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                 final boolean tempInvisible = !_fullscreen && wasVisible && NativeWindowFactory.TYPE_X11 == NativeWindowFactory.getNativeWindowType(true);
 
                 if(DEBUG_IMPLEMENTATION) {
-                    System.err.println("Window "+x+"/"+y+" "+w+"x"+h+
+                    System.err.println("FullScreen.run.0: Window "+x+"/"+y+" "+w+"x"+h+
                                        ", virtl-screenSize: "+sviewport+" [wu], monitorsViewport "+viewport+" [wu]"+
                                        ", wasVisible "+wasVisible+", tempInvisible "+tempInvisible+
                                        ", hasParent "+(null!=parentWindow)+
@@ -3121,7 +3484,11 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                         display.dispatchMessagesNative(); // status up2date
                     }
                     if(DEBUG_IMPLEMENTATION) {
-                        System.err.println("Window fs done: ok " + ok + ", " + WindowImpl.this);
+                        System.err.println("FullScreen.run.X1: wasVisible, ok "+ok+", Window " + WindowImpl.this);
+                    }
+                } else {
+                    if(DEBUG_IMPLEMENTATION) {
+                        System.err.println("FullScreen.run.X2: !wasVisible, Window " + WindowImpl.this);
                     }
                 }
             } finally {
@@ -3242,8 +3609,8 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                             System.err.println("Window.monitorModeChanged.1: Non-FS - Fit window "+rect+" into screen viewport "+viewport+
                                                ", due to minimal intersection "+isect);
                         }
-                        definePosition(viewport.getX(), viewport.getY()); // set pos for setVisible(..) or createNative(..) - reduce EDT roundtrip
-                        setSize(viewport.getWidth(), viewport.getHeight(), true /* force */);
+                        defineWindowPosition(viewport.getX(), viewport.getY()); // set pos for setVisible(..) or createNative(..) - reduce EDT roundtrip
+                        setSizeImpl(viewport.getWidth(), viewport.getHeight(), true /* waitForSz */, true /* force */);
                     }
                 }
             } else if( fullscreenPaused ) {
@@ -3264,8 +3631,8 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                         final RectangleImmutable winBounds = WindowImpl.this.getBounds();
                         System.err.println("Window.monitorModeChanged.3: FS Monitor Match: Fit window "+winBounds+" into new viewport union "+viewportInWindowUnits+" [window], provoked by "+md);
                     }
-                    definePosition(viewportInWindowUnits.getX(), viewportInWindowUnits.getY()); // set pos for setVisible(..) or createNative(..) - reduce EDT roundtrip
-                    setSize(viewportInWindowUnits.getWidth(), viewportInWindowUnits.getHeight(), true /* force */);
+                    defineWindowPosition(viewportInWindowUnits.getX(), viewportInWindowUnits.getY()); // set pos for setVisible(..) or createNative(..) - reduce EDT roundtrip
+                    setSizeImpl(viewportInWindowUnits.getWidth(), viewportInWindowUnits.getHeight(), true /* waitForSz */, true /* force */);
                 }
             }
             if( hidden ) {
@@ -3275,6 +3642,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
             sendWindowEvent(WindowEvent.EVENT_WINDOW_RESIZED); // trigger a resize/relayout and repaint to listener
             if(animatorPaused) {
                 lifecycleHook.resumeRenderingAction();
+                animatorPaused = false;
             }
             if( hadFocus ) {
                 requestFocus(true);
@@ -3463,36 +3831,33 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
      */
     public final void doPointerEvent(final boolean enqueue, final boolean wait,
                                      final PointerType[] pTypes, final short eventType, final int modifiers,
-                                     final int actionIdx, final boolean normalPNames, final int[] pNames,
+                                     final int actionIdx, final boolean normalPNames, final short[] pNames,
                                      final int[] pX, final int[] pY, final float[] pPressure,
                                      final float maxPressure, final float[] rotationXYZ, final float rotationScale) {
         final int pCount = pNames.length;
-        final short[] pIDs = new short[pCount];
-        for(int i=0; i<pCount; i++) {
-            if( !normalPNames ) {
+        final short[] pIDs = normalPNames ? pNames : new short[pCount];
+        if( !normalPNames ) {
+            for(int i=0; i<pCount; i++) {
                 // hash map int name -> short idx
                 final int sz0 = pName2pID.size();
-                final Integer pNameI1 = pName2pID.getOrAdd(Integer.valueOf(pNames[i]));
-                final short pID = (short)pName2pID.indexOf(pNameI1);
+                final Short pNameS1 = pName2pID.getOrAdd(Short.valueOf(pNames[i]));
+                final short pID = (short)pName2pID.indexOf(pNameS1);
                 pIDs[i] = pID;
                 if(DEBUG_MOUSE_EVENT) {
                     final int sz1 = pName2pID.size();
                     if( sz0 != sz1 ) {
-                        System.err.println("PointerName2ID[sz "+sz1+"]: Map "+pNameI1+" == "+pID);
+                        System.err.println("PointerName2ID[sz "+sz1+"]: Map "+pNameS1+" == "+pID);
                     }
                 }
                 if( MouseEvent.EVENT_MOUSE_RELEASED == eventType ) {
-                    pName2pID.remove(pNameI1);
+                    pName2pID.remove(pNameS1);
                     if(DEBUG_MOUSE_EVENT) {
-                        System.err.println("PointerName2ID[sz "+pName2pID.size()+"]: Unmap "+pNameI1+" == "+pID);
+                        System.err.println("PointerName2ID[sz "+pName2pID.size()+"]: Unmap "+pNameS1+" == "+pID);
                     }
                 }
-            } else {
-                // simple type cast
-                pIDs[i] = (short)pNames[i];
             }
         }
-        final short button = 0 < pCount ? (short) ( pIDs[0] + 1 ) : (short)0;
+        final short button = 0 < pCount ? (short) ( pIDs[actionIdx] + 1 ) : (short)0;
         doPointerEvent(enqueue, wait, pTypes, eventType, modifiers, actionIdx, pIDs, button,
                        pX, pY, pPressure, maxPressure, rotationXYZ, rotationScale);
     }
@@ -3544,7 +3909,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
         final int pCount = pTypes.length;
 
         if( 0 > pActionIdx || pActionIdx >= pCount) {
-            throw new IllegalArgumentException("actionIdx out of bounds [0.."+(pCount-1)+"]");
+            throw new IllegalArgumentException("actionIdx "+pActionIdx+" out of bounds [0.."+(pCount-1)+"]");
         }
         if( 0 < pActionIdx ) {
             // swap values to make idx 0 the triggering pointer
@@ -4312,6 +4677,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
     //
     // WindowListener/Event Support
     //
+
     @Override
     public final void sendWindowEvent(final int eventType) {
         consumeWindowEvent( new WindowEvent((short)eventType, this, System.currentTimeMillis()) );
@@ -4408,6 +4774,10 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
         }
     }
 
+    //
+    // Native callbacks for WM events
+    //
+
     /** Triggered by implementation's WM events to update the focus state. */
     protected void focusChanged(final boolean defer, final boolean focusGained) {
         if( stateMask.get(PSTATE_BIT_FOCUS_CHANGE_BROKEN) ||
@@ -4430,91 +4800,39 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
     }
 
     /** Triggered by implementation's WM events to update the visibility state. */
-    protected final void visibleChanged(final boolean defer, final boolean visible) {
+    protected final void visibleChanged(final boolean visible) {
         if( stateMask.put(STATE_BIT_VISIBLE, visible) != visible ) {
             if(DEBUG_IMPLEMENTATION) {
-                System.err.println("Window.visibleChanged ("+getThreadName()+"): (defer: "+defer+") visible "+(!visible)+" -> state "+getStateMaskString()+" - windowHandle "+toHexString(windowHandle)+" parentWindowHandle "+toHexString(parentWindowHandle));
+                System.err.println("Window.visibleChanged ("+getThreadName()+"): visible "+(!visible)+" -> state "+getStateMaskString()+" - windowHandle "+toHexString(windowHandle)+" parentWindowHandle "+toHexString(parentWindowHandle));
             }
-        }
-    }
-
-    /** Returns -1 if failed, otherwise remaining time until {@link #TIMEOUT_NATIVEWINDOW}, maybe zero. */
-    private long waitForVisible(final boolean visible, final boolean failFast) {
-        return waitForVisible(visible, failFast, TIMEOUT_NATIVEWINDOW);
-    }
-
-    /** Returns -1 if failed, otherwise remaining time until <code>timeOut</code>, maybe zero. */
-    private long waitForVisible(final boolean visible, final boolean failFast, final long timeOut) {
-        final DisplayImpl display = (DisplayImpl) screen.getDisplay();
-        display.dispatchMessagesNative(); // status up2date
-        long remaining;
-        boolean _visible = stateMask.get(STATE_BIT_VISIBLE);
-        for(remaining = timeOut; 0 < remaining && _visible != visible; remaining-=10 ) {
-            try { Thread.sleep(10); } catch (final InterruptedException ie) {}
-            display.dispatchMessagesNative(); // status up2date
-            _visible = stateMask.get(STATE_BIT_VISIBLE);
-        }
-        if( visible != _visible ) {
-            final String msg = "Visibility not reached as requested within "+timeOut+"ms : requested "+visible+", is "+_visible;
-            if(DEBUG_FREEZE_AT_VISIBILITY_FAILURE) {
-                System.err.println("XXXX: "+msg);
-                System.err.println("XXXX: FREEZE");
-                try {
-                    while(true) {
-                        Thread.sleep(100);
-                        display.dispatchMessagesNative(); // status up2date
-                    }
-                } catch (final InterruptedException e) {
-                    ExceptionUtils.dumpThrowable("", e);
-                    Thread.currentThread().interrupt(); // keep state
-                }
-                throw new NativeWindowException(msg);
-            } else {
-                if(failFast) {
-                    throw new NativeWindowException(msg);
-                } else {
-                    if (DEBUG_IMPLEMENTATION) {
-                        System.err.println(msg);
-                        ExceptionUtils.dumpStack(System.err);
-                    }
-                    return -1;
-                }
-            }
-        } else if( 0 < remaining ) {
-            return remaining;
-        } else {
-            return 0;
-        }
-    }
-
-    /**
-     * Notify to update the pixel-scale values.
-     * @param minPixelScale
-     * @param maxPixelScale
-     * @param reset if {@code true} {@link #setSurfaceScale(float[]) reset pixel-scale} w/ {@link #getRequestedSurfaceScale(float[]) requested values}
-     *        value to reflect the new minimum and maximum values.
-     */
-    public final void pixelScaleChangeNotify(final float[] minPixelScale, final float[] maxPixelScale, final boolean reset) {
-        System.arraycopy(minPixelScale, 0, this.minPixelScale, 0, 2);
-        System.arraycopy(maxPixelScale, 0, this.maxPixelScale, 0, 2);
-        if( reset ) {
-            setSurfaceScale(reqPixelScale);
         }
     }
 
     /** Triggered by implementation's WM events to update the client-area size in window units w/o insets/decorations. */
-    protected void sizeChanged(final boolean defer, final int newWidth, final int newHeight, final boolean force) {
-        if(force || getWidth() != newWidth || getHeight() != newHeight) {
+    protected boolean sizeChanged(final boolean defer, final boolean windowUnits, final int newWidth, final int newHeight, final boolean force) {
+        if ( force ||
+             (  windowUnits && ( windowSize[0] != newWidth || windowSize[1] != newHeight ) ) ||
+             ( !windowUnits && ( pixelSize[0] != newWidth || pixelSize[1] != newHeight ) ) )
+        {
             if(DEBUG_IMPLEMENTATION) {
-                System.err.println("Window.sizeChanged: ("+getThreadName()+"): (defer: "+defer+") force "+force+", "+
-                                   getWidth()+"x"+getHeight()+" -> "+newWidth+"x"+newHeight+
+                final String change;
+                if( windowUnits ) {
+                    change = "win["+this.windowSize[0]+"x"+this.windowSize[1]+" -> "+newWidth+"x"+newHeight+"]";
+                } else {
+                    change = "pixel["+this.pixelSize[0]+"x"+this.pixelSize[1]+" -> "+newWidth+"x"+newHeight+"]";
+                }
+                System.err.println("Window.sizeChanged: ("+getThreadName()+"): (defer: "+defer+") force "+force+", "+change+
                                    ", state "+getStateMaskString()+
                                    " - windowHandle "+toHexString(windowHandle)+" parentWindowHandle "+toHexString(parentWindowHandle));
             }
             if(0>newWidth || 0>newHeight) {
                 throw new NativeWindowException("Illegal width or height "+newWidth+"x"+newHeight+" (must be >= 0)");
             }
-            defineSize(newWidth, newHeight);
+            if( windowUnits ) {
+                defineWindowSize(newWidth, newHeight);
+            } else {
+                definePixelSize(newWidth, newHeight);
+            }
             if(isNativeValid()) {
                 if(!defer) {
                     sendWindowEvent(WindowEvent.EVENT_WINDOW_RESIZED);
@@ -4522,120 +4840,102 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                     enqueueWindowEvent(false, WindowEvent.EVENT_WINDOW_RESIZED);
                 }
             }
-        }
-    }
-
-    private boolean waitForSize(final int w, final int h, final boolean failFast, final long timeOut) {
-        final DisplayImpl display = (DisplayImpl) screen.getDisplay();
-        display.dispatchMessagesNative(); // status up2date
-        long sleep;
-        for(sleep = timeOut; 0<sleep && w!=getWidth() && h!=getHeight(); sleep-=10 ) {
-            try { Thread.sleep(10); } catch (final InterruptedException ie) {}
-            display.dispatchMessagesNative(); // status up2date
-        }
-        if(0 >= sleep) {
-            final String msg = "Size/Pos not reached as requested within "+timeOut+"ms : requested "+w+"x"+h+", is "+getWidth()+"x"+getHeight();
-            if(failFast) {
-                throw new NativeWindowException(msg);
-            } else if (DEBUG_IMPLEMENTATION) {
-                System.err.println(msg);
-                ExceptionUtils.dumpStack(System.err);
-            }
-            return false;
-        } else {
             return true;
+        } else {
+            return false;
         }
     }
 
     /** Triggered by implementation's WM events to update the position. */
-    protected final void positionChanged(final boolean defer, final int newX, final int newY) {
-        if ( getX() != newX || getY() != newY ) {
+    protected boolean positionChanged(final boolean defer, final boolean windowUnits, final int newX, final int newY) {
+        if ( (  windowUnits && ( windowPos[0] != newX || windowPos[1] != newY ) ) ||
+             ( !windowUnits && ( pixelPos[0] != newX || pixelPos[1] != newY ) ) )
+        {
             if(DEBUG_IMPLEMENTATION) {
-                System.err.println("Window.positionChanged: ("+getThreadName()+"): (defer: "+defer+") "+getX()+"/"+getY()+" -> "+newX+"/"+newY+" - windowHandle "+toHexString(windowHandle)+" parentWindowHandle "+toHexString(parentWindowHandle));
+                final String change;
+                if( windowUnits ) {
+                    change = "win["+this.windowPos[0]+"x"+this.windowPos[1]+" -> "+newX+"x"+newY+"]";
+                } else {
+                    change = "pixel["+this.pixelPos[0]+"x"+this.pixelPos[1]+" -> "+newX+"x"+newY+"]";
+                }
+                System.err.println("Window.positionChanged: ("+getThreadName()+"): (defer: "+defer+") "+change+
+                                   " - windowHandle "+toHexString(windowHandle)+" parentWindowHandle "+toHexString(parentWindowHandle));
             }
-            definePosition(newX, newY);
+            if( windowUnits ) {
+                defineWindowPosition(newX, newY);
+            } else {
+                definePixelPosition(newX, newY);
+            }
             if(!defer) {
                 sendWindowEvent(WindowEvent.EVENT_WINDOW_MOVED);
             } else {
                 enqueueWindowEvent(false, WindowEvent.EVENT_WINDOW_MOVED);
             }
+            return true;
         } else {
             stateMask.clear(STATE_BIT_AUTOPOSITION); // ensure it's off even w/ same position
+            return false;
         }
-    }
-
-    /**
-     * Wait until position is reached within tolerances, either auto-position or custom position.
-     * <p>
-     * Since WM may not obey our positional request exactly, we allow a tolerance of 2 times insets[left/top], or 64 pixels, whatever is greater.
-     * </p>
-     */
-    private boolean waitForPosition(final boolean useCustomPosition, final int x, final int y, final long timeOut) {
-        final DisplayImpl display = (DisplayImpl) screen.getDisplay();
-        final int maxDX, maxDY;
-        {
-            final InsetsImmutable insets = getInsets();
-            maxDX = Math.max(64, insets.getLeftWidth() * 2);
-            maxDY = Math.max(64, insets.getTopHeight() * 2);
-        }
-        long remaining = timeOut;
-        boolean _autopos = false;
-        boolean ok;
-        do {
-            if( useCustomPosition ) {
-                ok = Math.abs(x - getX()) <= maxDX && Math.abs(y - getY()) <= maxDY ;
-            } else {
-                _autopos = stateMask.get(STATE_BIT_AUTOPOSITION);
-                ok = !_autopos;
-            }
-            if( !ok ) {
-                try { Thread.sleep(10); } catch (final InterruptedException ie) {}
-                display.dispatchMessagesNative(); // status up2date
-                remaining-=10;
-            }
-        } while ( 0<remaining && !ok );
-        if (DEBUG_IMPLEMENTATION) {
-            if( !ok ) {
-                if( useCustomPosition ) {
-                    System.err.println("Custom position "+x+"/"+y+" not reached within timeout, has "+getX()+"/"+getY()+", remaining "+remaining);
-                } else {
-                    System.err.println("Auto position not reached within timeout, has "+getX()+"/"+getY()+", autoPosition "+_autopos+", remaining "+remaining);
-                }
-                ExceptionUtils.dumpStack(System.err);
-            }
-        }
-        return ok;
     }
 
     /**
      * Triggered by implementation's WM events to update the insets.
-     *
-     * @param defer
+     * @param windowUnits if true, values are given in window units, otherwise in pixel units.
      * @param left insets, -1 ignored
      * @param right insets, -1 ignored
      * @param top insets, -1 ignored
      * @param bottom insets, -1 ignored
-     *
      * @see #getInsets()
      * @see #updateInsetsImpl(Insets)
      */
-    protected void insetsChanged(final boolean defer, final int left, final int right, final int top, final int bottom) {
-        if ( left >= 0 && right >= 0 && top >= 0 && bottom >= 0 ) {
-            final boolean changed = left != insets.getLeftWidth() ||  right != insets.getRightWidth() ||
-                                     top != insets.getTopHeight() || bottom != insets.getBottomHeight();
+    protected final void insetsChanged(final boolean windowUnits, final int leftU, final int rightU, final int topU, final int bottomU) {
+        if ( leftU >= 0 && rightU >= 0 && topU >= 0 && bottomU >= 0 ) {
+            final int[] tl_win;
+            final int[] br_win;
+            if( windowUnits ) {
+                tl_win = new int[] { leftU, topU };
+                br_win = new int[] { rightU, bottomU };
+            } else {
+                tl_win = SurfaceScaleUtils.scaleInv(new int[2], leftU, topU, hasPixelScale);
+                br_win = SurfaceScaleUtils.scaleInv(new int[2], rightU, bottomU, hasPixelScale);
+            }
+            final boolean changed = tl_win[0] != insets.getLeftWidth() || br_win[0] != insets.getRightWidth() ||
+                                    tl_win[1] != insets.getTopHeight() || br_win[1] != insets.getBottomHeight();
 
             if( blockInsetsChange || isUndecorated() ) {
                 if(DEBUG_IMPLEMENTATION) {
                     if( changed ) {
-                        System.err.println("Window.insetsChanged (defer: "+defer+"): Skip insets change "+insets+" -> "+new Insets(left, right, top, bottom)+" (blocked "+blockInsetsChange+", undecoration "+isUndecorated()+")");
+                        System.err.println("Window.insetsChanged: Skip insets change "+insets+" -> "+new Insets(tl_win[0], br_win[0], tl_win[1], br_win[1])+" (blocked "+blockInsetsChange+", undecoration "+isUndecorated()+")");
                     }
                 }
             } else if ( changed ) {
                 if(DEBUG_IMPLEMENTATION) {
-                    System.err.println("Window.insetsChanged (defer: "+defer+"): Changed "+insets+" -> "+new Insets(left, right, top, bottom));
+                    System.err.println("Window.insetsChanged: Changed "+insets+" -> "+new Insets(tl_win[0], br_win[0], tl_win[1], br_win[1]));
                 }
-                insets.set(left, right, top, bottom);
+                insets.set(tl_win[0], br_win[0], tl_win[1], br_win[1]);
             }
+        }
+    }
+
+    /**
+     * Triggered by implementation's WM events to update the content
+     * @param defer if true sent event later, otherwise wait until processed.
+     * @param x dirty-region y-pos in pixel units
+     * @param y dirty-region x-pos in pixel units
+     * @param width dirty-region width in pixel units
+     * @param height dirty-region height in pixel units
+     */
+    protected final void windowRepaint(final boolean defer, final int x, final int y, int width, int height) {
+        width = ( 0 >= width ) ? getSurfaceWidth() : width;
+        height = ( 0 >= height ) ? getSurfaceHeight() : height;
+        if(DEBUG_IMPLEMENTATION) {
+            System.err.println("Window.windowRepaint "+getThreadName()+" (defer: "+defer+") "+x+"/"+y+" "+width+"x"+height);
+        }
+
+        if(isNativeValid()) {
+            final NEWTEvent e = new WindowUpdateEvent(WindowEvent.EVENT_WINDOW_REPAINT, this, System.currentTimeMillis(),
+                                                      new Rectangle(x, y, width, height));
+            doEvent(defer, false, e);
         }
     }
 
@@ -4689,43 +4989,6 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
         return destroyed;
     }
 
-    @Override
-    public final void windowRepaint(final int x, final int y, final int width, final int height) {
-        windowRepaint(false, x, y, width, height);
-    }
-
-    /**
-     * Triggered by implementation's WM events to update the content
-     * @param defer if true sent event later, otherwise wait until processed.
-     * @param x dirty-region y-pos in pixel units
-     * @param y dirty-region x-pos in pixel units
-     * @param width dirty-region width in pixel units
-     * @param height dirty-region height in pixel units
-     */
-    protected final void windowRepaint(final boolean defer, final int x, final int y, int width, int height) {
-        width = ( 0 >= width ) ? getSurfaceWidth() : width;
-        height = ( 0 >= height ) ? getSurfaceHeight() : height;
-        if(DEBUG_IMPLEMENTATION) {
-            System.err.println("Window.windowRepaint "+getThreadName()+" (defer: "+defer+") "+x+"/"+y+" "+width+"x"+height);
-        }
-
-        if(isNativeValid()) {
-            final NEWTEvent e = new WindowUpdateEvent(WindowEvent.EVENT_WINDOW_REPAINT, this, System.currentTimeMillis(),
-                                                new Rectangle(x, y, width, height));
-            doEvent(defer, false, e);
-        }
-    }
-
-    //
-    // Accumulated actions
-    //
-
-    /** Triggered by implementation. */
-    protected final void sendMouseEventRequestFocus(final short eventType, final int modifiers,
-                                                    final int x, final int y, final short button, final float rotation) {
-        sendMouseEvent(eventType, modifiers, x, y, button, rotation);
-        requestFocus(false /* wait */);
-    }
     /**
      * Triggered by implementation's WM events to update the visibility state and send- or enqueue one mouse event
      *
@@ -4743,7 +5006,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
                                                       final short eventType, final int modifiers,
                                                       final int x, final int y, final short button, final float rotation) {
         if( 0 <= visibleChange ) { // ignore visible < 0
-            visibleChanged(defer, 0 < visibleChange);
+            visibleChanged(0 < visibleChange);
         }
         if( 0 < eventType ) {
             if( defer ) {
@@ -4753,6 +5016,7 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
             }
         }
     }
+
     /**
      * Triggered by implementation's WM events to update the content
      * @param defer if true sent event later, otherwise wait until processed.
@@ -4765,10 +5029,11 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
     protected final void visibleChangedWindowRepaint(final boolean defer, final int visibleChange,
                                                      final int x, final int y, final int width, final int height) {
         if( 0 <= visibleChange ) { // ignore visible < 0
-            visibleChanged(defer, 0 < visibleChange);
+            visibleChanged(0 < visibleChange);
         }
         windowRepaint(defer, x, y, width, height);
     }
+
     /**
      * Triggered by implementation's WM events to update the focus and visibility state
      *
@@ -4783,31 +5048,32 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
             focusChanged(defer, 0 < focusChange);
         }
         if( 0 <= visibleChange ) { // ignore visible < 0
-            visibleChanged(defer, 0 < visibleChange);
+            visibleChanged(0 < visibleChange);
         }
     }
+
     /**
-     * Triggered by implementation's WM events to update the client-area position, size, insets and maximized flags.
-     *
-     * @param defer
+     * Triggered by implementation's WM events to update the client-area position and size in window units, as well as maximized flags.
+     * @param windowUnits if true, values are given in window units, otherwise in pixel units.
      * @param left insets, -1 ignored
      * @param right insets, -1 ignored
      * @param top insets, -1 ignored
      * @param bottom insets, -1 ignored
      * @param visibleChange -1 ignored, 0 invisible, > 0 visible
      */
-    protected final void insetsVisibleChanged(final boolean defer,
-                                              final int left, final int right, final int top, final int bottom,
-                                              final int visibleChange) {
-        insetsChanged(defer, left, right, top, bottom);
+    protected final void insetsVisibleChanged(final boolean windowUnits,
+                                              final int left, final int right, final int top, final int bottom, final int visibleChange) {
+        insetsChanged(windowUnits, left, right, top, bottom);
         if( 0 <= visibleChange ) { // ignore visible < 0
-            visibleChanged(defer, 0 < visibleChange);
+            visibleChanged(0 < visibleChange);
         }
     }
+
     /**
      * Triggered by implementation's WM events to update the client-area position, size, insets and maximized flags.
      *
      * @param defer
+     * @param windowUnits if true, values are given in window units, otherwise in pixel units.
      * @param newX
      * @param newY
      * @param newWidth
@@ -4821,26 +5087,27 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
      * @param force
      */
     protected final void sizePosInsetsFocusVisibleChanged(final boolean defer,
-                                                          final int newX, final int newY,
-                                                          final int newWidth, final int newHeight,
+                                                          final boolean windowUnits,
+                                                          final int newX, final int newY, final int newWidth, final int newHeight,
                                                           final int left, final int right, final int top, final int bottom,
                                                           final int focusChange,
-                                                          final int visibleChange,
-                                                          final boolean force) {
-        sizeChanged(defer, newWidth, newHeight, force);
-        positionChanged(defer, newX, newY);
-        insetsChanged(defer, left, right, top, bottom);
+                                                          final int visibleChange, final boolean force) {
+        sizeChanged(defer, windowUnits, newWidth, newHeight, force);
+        positionChanged(defer, windowUnits, newX, newY);
+        insetsChanged(windowUnits, left, right, top, bottom);
         if( 0 <= focusChange ) { // ignore focus < 0
             focusChanged(defer, 0 < focusChange);
         }
         if( 0 <= visibleChange ) { // ignore visible < 0
-            visibleChanged(defer, 0 < visibleChange);
+            visibleChanged(0 < visibleChange);
         }
     }
+
     /**
      * Triggered by implementation's WM events to update the client-area position, size, insets and maximized flags.
      *
      * @param defer
+     * @param windowUnits if true, values are given in window units, otherwise in pixel units.
      * @param newX
      * @param newY
      * @param newWidth
@@ -4853,23 +5120,160 @@ public abstract class WindowImpl implements Window, NEWTEventConsumer
      * @param bottom insets, -1 ignored
      * @param visibleChange -1 ignored, 0 invisible, > 0 visible
      * @param force
+     * @param windowUnits if true, values are given in window units, otherwise in pixel units.
      */
-    protected final void sizePosMaxInsetsVisibleChanged(final boolean defer,
-                                                        final int newX, final int newY,
-                                                        final int newWidth, final int newHeight,
+    protected final void sizePosMaxInsetsVisibleChanged(final boolean defer, final boolean windowUnits,
+                                                        final int newX, final int newY, final int newWidth, final int newHeight,
                                                         final int maxHorzChange, final int maxVertChange,
                                                         final int left, final int right, final int top, final int bottom,
-                                                        final int visibleChange,
-                                                        final boolean force) {
-        sizeChanged(defer, newWidth, newHeight, force);
-        positionChanged(defer, newX, newY);
+                                                        final int visibleChange, final boolean force) {
+        sizeChanged(defer, windowUnits, newWidth, newHeight, force);
+        positionChanged(defer, windowUnits, newX, newY);
         if( 0 <= maxHorzChange && 0 <= maxVertChange ) {
             maximizedChanged(0 < maxHorzChange, 0 < maxVertChange);
         }
-        insetsChanged(defer, left, right, top, bottom);
+        insetsChanged(false, left, right, top, bottom);
         if( 0 <= visibleChange ) { // ignore visible < 0
-            visibleChanged(defer, 0 < visibleChange);
+            visibleChanged(0 < visibleChange);
         }
+    }
+
+    //
+    // Implementation enforced constraints
+    //
+
+    /** Returns -1 if failed, otherwise remaining time until {@link #TIMEOUT_NATIVEWINDOW}, maybe zero. */
+    private long waitForVisible(final boolean visible, final boolean failFast) {
+        return waitForVisible(visible, failFast, TIMEOUT_NATIVEWINDOW);
+    }
+
+    /** Returns -1 if failed, otherwise remaining time until <code>timeOut</code>, maybe zero. */
+    private long waitForVisible(final boolean visible, final boolean failFast, final long timeOut) {
+        final DisplayImpl display = (DisplayImpl) screen.getDisplay();
+        display.dispatchMessagesNative(); // status up2date
+        long remaining;
+        boolean _visible = stateMask.get(STATE_BIT_VISIBLE);
+        for(remaining = timeOut; 0 < remaining && _visible != visible; remaining-=10 ) {
+            try { Thread.sleep(10); } catch (final InterruptedException ie) {}
+            display.dispatchMessagesNative(); // status up2date
+            _visible = stateMask.get(STATE_BIT_VISIBLE);
+        }
+        if( visible != _visible ) {
+            final String msg = "Visibility not reached as requested within "+timeOut+"ms : requested "+visible+", is "+_visible;
+            if(DEBUG_FREEZE_AT_VISIBILITY_FAILURE) {
+                System.err.println("XXXX: "+msg);
+                System.err.println("XXXX: FREEZE");
+                try {
+                    while(true) {
+                        Thread.sleep(100);
+                        display.dispatchMessagesNative(); // status up2date
+                    }
+                } catch (final InterruptedException e) {
+                    ExceptionUtils.dumpThrowable("", e);
+                    Thread.currentThread().interrupt(); // keep state
+                }
+                throw new NativeWindowException(msg);
+            } else {
+                if(failFast) {
+                    throw new NativeWindowException(msg);
+                } else {
+                    if (DEBUG_IMPLEMENTATION) {
+                        System.err.println(msg);
+                        ExceptionUtils.dumpStack(System.err);
+                    }
+                    return -1;
+                }
+            }
+        } else if( 0 < remaining ) {
+            return remaining;
+        } else {
+            return 0;
+        }
+    }
+
+    private boolean waitForSize(final int w, final int h, final boolean failFast, final long timeOut) {
+        final DisplayImpl display = (DisplayImpl) screen.getDisplay();
+        display.dispatchMessagesNative(); // status up2date
+        long sleep;
+        for(sleep = timeOut; 0<sleep && w!=getWidth() && h!=getHeight(); sleep-=10 ) {
+            try { Thread.sleep(10); } catch (final InterruptedException ie) {}
+            display.dispatchMessagesNative(); // status up2date
+        }
+        if(0 >= sleep) {
+            final String msg = "Size/Pos not reached as requested within "+timeOut+"ms : requested "+w+"x"+h+", is "+getWidth()+"x"+getHeight();
+            if(failFast) {
+                throw new NativeWindowException(msg);
+            } else if (DEBUG_IMPLEMENTATION) {
+                System.err.println(msg);
+                ExceptionUtils.dumpStack(System.err);
+            }
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * Wait until position is reached within tolerances, either auto-position or custom position.
+     * <p>
+     * Since WM may not obey our positional request exactly, we allow a tolerance of 2 times insets[left/top], or 64 pixels, whichever is greater.
+     * </p>
+     */
+    private boolean waitForPosition(final boolean useCustomPosition, final int x, final int y, final long timeOut) {
+        final DisplayImpl display = (DisplayImpl) screen.getDisplay();
+        final int maxDX, maxDY;
+        {
+            final InsetsImmutable insets = getInsets();
+            maxDX = Math.max(64, insets.getLeftWidth() * 2);
+            maxDY = Math.max(64, insets.getTopHeight() * 2);
+        }
+        long remaining = timeOut;
+        boolean _autopos = false;
+        boolean ok;
+        do {
+            if( useCustomPosition && isReconfigureMaskSupported(STATE_MASK_REPOSITIONABLE) ) {
+                ok = Math.abs(x - getX()) <= maxDX && Math.abs(y - getY()) <= maxDY ;
+            } else {
+                _autopos = stateMask.get(STATE_BIT_AUTOPOSITION);
+                ok = !_autopos;
+            }
+            if( !ok ) {
+                try { Thread.sleep(10); } catch (final InterruptedException ie) {}
+                display.dispatchMessagesNative(); // status up2date
+                remaining-=10;
+            }
+        } while ( 0<remaining && !ok );
+        if (DEBUG_IMPLEMENTATION) {
+            if( !ok ) {
+                if( useCustomPosition ) {
+                    System.err.println("Custom position "+x+"/"+y+" not reached within timeout, has "+getX()+"/"+getY()+", remaining "+remaining);
+                } else {
+                    System.err.println("Auto position not reached within timeout, has "+getX()+"/"+getY()+", autoPosition "+_autopos+", remaining "+remaining);
+                }
+                ExceptionUtils.dumpStack(System.err);
+            }
+        }
+        return ok;
+    }
+
+    //
+    // Misc
+    //
+
+    @Override
+    public final void windowRepaint(final int x, final int y, final int width, final int height) {
+        windowRepaint(false, x, y, width, height);
+    }
+
+    //
+    // Accumulated actions
+    //
+
+    /** Triggered by implementation. */
+    protected final void sendMouseEventRequestFocus(final short eventType, final int modifiers,
+                                                    final int x, final int y, final short button, final float rotation) {
+        sendMouseEvent(eventType, modifiers, x, y, button, rotation);
+        requestFocus(false /* wait */);
     }
 
     //

@@ -42,6 +42,8 @@ import java.awt.Frame;
 import com.jogamp.opengl.*;
 import javax.swing.SwingUtilities;
 
+import com.jogamp.common.os.Platform;
+import com.jogamp.junit.util.JunitTracer;
 import com.jogamp.newt.Window;
 import com.jogamp.newt.opengl.*;
 import com.jogamp.newt.awt.NewtCanvasAWT;
@@ -64,9 +66,15 @@ public class TestParenting01dAWT extends UITestCase {
     static int width, height;
     static long durationPerTest = 800;
     static GLCapabilities glCaps;
+    static boolean manual_test = false;
 
     @BeforeClass
     public static void initClass() throws InterruptedException {
+        if( !manual_test ) {
+            if( Platform.OSType.LINUX == Platform.getOSType() ) {
+                JunitTracer.setTestSupported(false);
+            }
+        }
         width  = 640;
         height = 480;
         glCaps = new GLCapabilities(null);
@@ -138,21 +146,22 @@ public class TestParenting01dAWT extends UITestCase {
 
         // visible test
         SwingUtilities.invokeAndWait(new Runnable() {
-           public void run() {
-               frame1.setSize(width, height);
-               frame1.setVisible(true);
-           }
+            @Override
+            public void run() {
+                frame1.setSize(width, height);
+                frame1.setVisible(true);
+            }
         });
         Assert.assertEquals(newtCanvasAWT.getNativeWindow(),glWindow1.getParent());
 
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(glWindow1, true));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(glWindow1, true));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(glWindow1, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(glWindow1, true, null));
         glWindow1.display();
         Assert.assertEquals("Init Counter Invalid "+glelCounter, 1, glelCounter.initCount);
         Assert.assertEquals("Dispose Counter Invalid "+glelCounter, 0, glelCounter.disposeCount);
 
         final int reparentingHints = Window.REPARENT_HINT_FORCE_RECREATION |
-                                     ( triggerPreserveGLState ? Window.REPARENT_HINT_BECOMES_VISIBLE : 0 );
+                ( triggerPreserveGLState ? Window.REPARENT_HINT_BECOMES_VISIBLE : 0 );
 
         //
         // Even though the hint REPARENT_HINT_BECOMES_VISIBLE is not set (triggerPrerveGLState == false),
@@ -172,14 +181,14 @@ public class TestParenting01dAWT extends UITestCase {
         // GL state shall be preserved!
         //
         glWindow1.setVisible(false);
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(glWindow1, false));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(glWindow1, false, null));
         System.err.println(getSimpleTestName(".")+": Start Reparent #2");
         final Window.ReparentOperation rop2 = glWindow1.reparentWindow(newtCanvasAWT.getNativeWindow(), -1, -1, reparentingHints);
         System.err.println(getSimpleTestName(".")+": Result Reparent #2: "+rop2);
         Assert.assertEquals(Window.ReparentOperation.ACTION_NATIVE_CREATION, rop2);
         glWindow1.setVisible(true);
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(glWindow1, true));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(glWindow1, true));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(glWindow1, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(glWindow1, true, null));
         glWindow1.display();
         if( triggerPreserveGLState ) {
             Assert.assertEquals("Init Counter Invalid (Preserve Failed 2) "+glelCounter, 1, glelCounter.initCount);
@@ -197,32 +206,36 @@ public class TestParenting01dAWT extends UITestCase {
         }
 
         SwingUtilities.invokeAndWait(new Runnable() {
-           public void run() {
-               frame1.setVisible(false);
-           } } );
+            @Override
+            public void run() {
+                frame1.setVisible(false);
+            } } );
         Assert.assertEquals(true, glWindow1.isNativeValid());
 
         SwingUtilities.invokeAndWait(new Runnable() {
-           public void run() {
-               frame1.setVisible(true);
-           } } );
+            @Override
+            public void run() {
+                frame1.setVisible(true);
+            } } );
         Assert.assertEquals(true, glWindow1.isNativeValid());
 
         final boolean wasOnscreen = glWindow1.getChosenCapabilities().isOnscreen();
 
         SwingUtilities.invokeAndWait(new Runnable() {
-           public void run() {
-               frame1.remove(newtCanvasAWT);
-           } } );
+            @Override
+            public void run() {
+                frame1.remove(newtCanvasAWT);
+            } } );
         // Assert.assertNull(glWindow1.getParent());
         if( wasOnscreen ) {
             Assert.assertEquals(true, glWindow1.isNativeValid());
         } // else OK to be destroyed - due to offscreen/onscreen transition
 
         SwingUtilities.invokeAndWait(new Runnable() {
-           public void run() {
-               frame1.dispose();
-           } } );
+            @Override
+            public void run() {
+                frame1.dispose();
+            } } );
         if( wasOnscreen ) {
             Assert.assertEquals(true, glWindow1.isNativeValid());
         } // else OK to be destroyed - due to offscreen/onscreen transition
@@ -239,6 +252,7 @@ public class TestParenting01dAWT extends UITestCase {
     }
 
     public static void main(final String args[]) throws IOException {
+        manual_test = true;
         for(int i=0; i<args.length; i++) {
             if(args[i].equals("-time")) {
                 durationPerTest = MiscUtils.atol(args[++i], durationPerTest);

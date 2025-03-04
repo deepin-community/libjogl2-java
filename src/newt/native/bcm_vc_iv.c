@@ -299,10 +299,6 @@ JNIEXPORT void JNICALL Java_jogamp_newt_driver_bcm_vc_iv_DisplayDriver_MovePoint
 JNIEXPORT jboolean JNICALL Java_jogamp_newt_driver_bcm_vc_iv_ScreenDriver_initIDs
   (JNIEnv *env, jclass clazz)
 {
-    uint32_t screen_width;
-    uint32_t screen_height;
-    int32_t success = 0;
-
     setScreenSizeID = (*env)->GetMethodID(env, clazz, "setScreenSize", "(II)V");
     if (setScreenSizeID == NULL) {
         DBG_PRINT( "BCM.Screen initIDs FALSE\n" );
@@ -334,9 +330,9 @@ JNIEXPORT void JNICALL Java_jogamp_newt_driver_bcm_vc_iv_ScreenDriver_initNative
 JNIEXPORT jboolean JNICALL Java_jogamp_newt_driver_bcm_vc_iv_WindowDriver_initIDs
   (JNIEnv *env, jclass clazz)
 {
-    sizeChangedID = (*env)->GetMethodID(env, clazz, "sizeChanged", "(ZIIZ)V");
-    positionChangedID = (*env)->GetMethodID(env, clazz, "positionChanged", "(ZII)V");
-    visibleChangedID = (*env)->GetMethodID(env, clazz, "visibleChanged", "(ZZ)V");
+    sizeChangedID = (*env)->GetMethodID(env, clazz, "sizeChanged", "(ZZIIZ)Z");
+    positionChangedID = (*env)->GetMethodID(env, clazz, "positionChanged", "(ZZII)Z");
+    visibleChangedID = (*env)->GetMethodID(env, clazz, "visibleChanged", "(Z)V");
     windowDestroyNotifyID = (*env)->GetMethodID(env, clazz, "windowDestroyNotify", "(Z)Z");
     if (sizeChangedID == NULL ||
         positionChangedID == NULL ||
@@ -401,7 +397,7 @@ JNIEXPORT jlong JNICALL Java_jogamp_newt_driver_bcm_vc_iv_WindowDriver_CreateWin
 
    vc_dispmanx_update_submit_sync( dispman_update );
 
-   (*env)->CallVoidMethod(env, obj, visibleChangedID, JNI_FALSE, JNI_TRUE); // FIXME: or defer=true ?
+   (*env)->CallVoidMethod(env, obj, visibleChangedID, JNI_TRUE);
 
    DBG_PRINT( "BCM.Display Window.Create.X %p, element %p\n", 
     (void*)(intptr_t)dispman_display, (void*)(intptr_t)p->handle);
@@ -454,10 +450,10 @@ JNIEXPORT void JNICALL Java_jogamp_newt_driver_bcm_vc_iv_WindowDriver_reconfigur
 
     bcm_moveTo( p->handle, p->layer, p->x, p->y, p->width, p->height);
     if( posChanged ) {
-        (*env)->CallVoidMethod(env, obj, positionChangedID, JNI_FALSE, x, y);
+        (*env)->CallBooleanMethod(env, obj, positionChangedID, JNI_FALSE, JNI_FALSE, x, y);
     }
     if( sizeChanged ) {
-        (*env)->CallVoidMethod(env, obj, sizeChangedID, JNI_FALSE, width, height, JNI_FALSE);
+        (*env)->CallBooleanMethod(env, obj, sizeChangedID, JNI_FALSE, JNI_FALSE, width, height, JNI_FALSE);
     }
 }
 

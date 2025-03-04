@@ -34,7 +34,6 @@
 
 package com.jogamp.newt.opengl;
 
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.List;
 
@@ -67,12 +66,15 @@ import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.GLRunnable;
 import com.jogamp.opengl.GLSharedContextSetter;
 
+import jogamp.common.os.PlatformPropsImpl;
 import jogamp.newt.WindowImpl;
 import jogamp.opengl.GLAutoDrawableBase;
 import jogamp.opengl.GLContextImpl;
 import jogamp.opengl.GLDrawableImpl;
 
 import com.jogamp.common.GlueGenVersion;
+import com.jogamp.common.os.Clock;
+import com.jogamp.common.util.SecurityUtil;
 import com.jogamp.common.util.VersionUtil;
 import com.jogamp.common.util.locks.RecursiveLock;
 import com.jogamp.newt.MonitorDevice;
@@ -466,6 +468,11 @@ public class GLWindow extends GLAutoDrawableBase implements GLAutoDrawable, Wind
     }
 
     @Override
+    public final Rectangle getSurfaceBounds() {
+        return window.getSurfaceBounds();
+    }
+
+    @Override
     public final int[] convertToWindowUnits(final int[] pixelUnitsAndResult) {
         return window.convertToWindowUnits(pixelUnitsAndResult);
     }
@@ -474,6 +481,15 @@ public class GLWindow extends GLAutoDrawableBase implements GLAutoDrawable, Wind
     public final int[] convertToPixelUnits(final int[] windowUnitsAndResult) {
         return window.convertToPixelUnits(windowUnitsAndResult);
     }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This implementation returns true, i.e. supporting manual change of pixel-scale.
+     * </p>
+     */
+    @Override
+    public final boolean canSetSurfaceScale() { return true; }
 
     @Override
     public final boolean setSurfaceScale(final float[] pixelScale) {
@@ -535,9 +551,31 @@ public class GLWindow extends GLAutoDrawableBase implements GLAutoDrawable, Wind
     }
 
     @Override
+    public final StringBuilder toSimpleString(final StringBuilder sb) {
+        sb.append("GLWindow[");
+        window.toSimpleString(sb).append("]");
+        return sb;
+    }
+    @Override
+    public final String toSimpleString() {
+        return toSimpleString(new StringBuilder()).toString();
+    }
+    @Override
+    public final StringBuilder toString(final StringBuilder sb) {
+        sb.append("GLWindow").append("[")
+        .append(PlatformPropsImpl.NEWLINE).append("\t").append("Helper: ").append(helper)
+        .append(", ").append(PlatformPropsImpl.NEWLINE).append("\t").append("Drawable: ").append(drawable)
+        .append(", ").append(PlatformPropsImpl.NEWLINE).append("\t").append("Context: ").append(context)
+        .append(", ").append(PlatformPropsImpl.NEWLINE).append("\t").append("Window: ");
+        window.toString(sb)
+        // .append(", ").append(Platform.NEWLINE).append("\t").append("Factory: ").append(factory)
+        .append("]");
+        return sb;
+    }
+
+    @Override
     public final String toString() {
-        return "NEWT-GLWindow[ \n\tHelper: " + helper + ", \n\tDrawable: " + drawable +
-               ", \n\tContext: " + context + ", \n\tWindow: "+window+ /** ", \n\tFactory: "+factory+ */ "]";
+        return toString(new StringBuilder()).toString();
     }
 
     @Override
@@ -651,7 +689,7 @@ public class GLWindow extends GLAutoDrawableBase implements GLAutoDrawable, Wind
         public synchronized void setVisibleActionPost(final boolean visible, final boolean nativeWindowCreated) {
             long t0;
             if(Window.DEBUG_IMPLEMENTATION) {
-                t0 = System.nanoTime();
+                t0 = Clock.currentNanos();
                 System.err.println("GLWindow.setVisibleActionPost("+visible+", "+nativeWindowCreated+") "+WindowImpl.getThreadName()+", start");
             } else {
                 t0 = 0;
@@ -682,7 +720,7 @@ public class GLWindow extends GLAutoDrawableBase implements GLAutoDrawable, Wind
                 }
             }
             if(Window.DEBUG_IMPLEMENTATION) {
-                System.err.println("GLWindow.setVisibleActionPost("+visible+", "+nativeWindowCreated+") "+WindowImpl.getThreadName()+", fin: dt "+ (System.nanoTime()-t0)/1e6 +"ms");
+                System.err.println("GLWindow.setVisibleActionPost("+visible+", "+nativeWindowCreated+") "+WindowImpl.getThreadName()+", fin: dt "+ (Clock.currentNanos()-t0)/1e6 +"ms");
             }
         }
 
@@ -716,7 +754,7 @@ public class GLWindow extends GLAutoDrawableBase implements GLAutoDrawable, Wind
                 if( animThread == Thread.currentThread() ) {
                     anim.stop(); // on anim thread, non-blocking
                 } else {
-                    AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                    SecurityUtil.doPrivileged(new PrivilegedAction<Object>() {
                         @Override
                         public Object run() {
                             if( anim.isAnimating() && null != animThread ) {
@@ -946,6 +984,11 @@ public class GLWindow extends GLAutoDrawableBase implements GLAutoDrawable, Wind
     //----------------------------------------------------------------------
     // NativeWindow completion
     //
+
+    @Override
+    public RecursiveLock getLock() {
+        return window.getLock();
+    }
 
     @Override
     public final int lockSurface() throws NativeWindowException, RuntimeException {

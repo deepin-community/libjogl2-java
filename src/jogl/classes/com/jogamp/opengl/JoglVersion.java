@@ -36,7 +36,11 @@ import com.jogamp.common.util.JogampVersion;
 
 import java.util.List;
 import java.util.jar.Manifest;
+
+import com.jogamp.nativewindow.AbstractGraphicsConfiguration;
 import com.jogamp.nativewindow.AbstractGraphicsDevice;
+import com.jogamp.nativewindow.AbstractGraphicsScreen;
+import com.jogamp.nativewindow.NativeSurface;
 
 public class JoglVersion extends JogampVersion {
 
@@ -69,11 +73,12 @@ public class JoglVersion extends JogampVersion {
         return toString(gl, null).toString();
     }
 
-    public static StringBuilder getAvailableCapabilitiesInfo(final GLDrawableFactory factory, final AbstractGraphicsDevice device, StringBuilder sb) {
+    public static StringBuilder getAvailableCapabilitiesInfo(final AbstractGraphicsDevice device, StringBuilder sb) {
         if(null==sb) {
             sb = new StringBuilder();
         }
         boolean done = false;
+        final GLDrawableFactory factory = GLDrawableFactory.getFactory(device);
         if(null!=factory) {
             try {
                 final List<GLCapabilitiesImmutable> availCaps = factory.getAvailableCapabilities(device);
@@ -100,10 +105,12 @@ public class JoglVersion extends JogampVersion {
             device = GLProfile.getDefaultDevice();
         }
         sb.append(Platform.getNewline()).append(Platform.getNewline());
-        sb.append("Desktop Capabilities: ").append(Platform.getNewline());
-        getAvailableCapabilitiesInfo(GLDrawableFactory.getDesktopFactory(), device, sb);
-        sb.append("EGL Capabilities: ").append(Platform.getNewline());
-        getAvailableCapabilitiesInfo(GLDrawableFactory.getEGLFactory(), device, sb);
+        try {
+            sb.append("Capabilities for ").append(device.toString()).append(Platform.getNewline());
+            getAvailableCapabilitiesInfo(device, sb);
+        } catch (final GLException gle) {
+            System.err.println(gle.getMessage());
+        }
         return sb;
     }
 
@@ -137,15 +144,19 @@ public class JoglVersion extends JogampVersion {
                                           final boolean withAvailabilityInfo,
                                           final boolean withCapabilitiesInfo,
                                           final boolean withExtensionInfo) {
-        final AbstractGraphicsDevice device = gl.getContext().getGLDrawable().getNativeSurface()
-                                            .getGraphicsConfiguration().getScreen().getDevice();
         if(null==sb) {
             sb = new StringBuilder();
         }
-
         sb.append(VersionUtil.SEPERATOR).append(Platform.getNewline());
-        sb.append(device.getClass().getSimpleName()).append("[type ")
-                .append(device.getType()).append(", connection ").append(device.getConnection()).append("]: ").append(Platform.getNewline());
+        if( null == gl ) {
+            sb.append("Null GL instance").append(Platform.getNewline());
+            sb.append(VersionUtil.SEPERATOR).append(Platform.getNewline());
+            return sb;
+        }
+        final AbstractGraphicsDevice device = gl.getContext().getGLDrawable().getNativeSurface()
+                                            .getGraphicsConfiguration().getScreen().getDevice();
+
+        sb.append(device.toString()).append(':').append(Platform.getNewline());
         if( withAvailabilityInfo ) {
             GLProfile.glAvailabilityToString(device, sb, "\t", 1);
         }

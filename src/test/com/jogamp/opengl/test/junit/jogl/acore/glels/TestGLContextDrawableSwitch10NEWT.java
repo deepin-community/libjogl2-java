@@ -50,8 +50,8 @@ import com.jogamp.opengl.GLEventListenerState;
 import com.jogamp.opengl.util.Animator;
 
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
-import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
 import com.jogamp.opengl.test.junit.util.GLEventListenerCounter;
+import com.jogamp.opengl.test.junit.util.NewtTestUtil;
 import com.jogamp.opengl.test.junit.util.QuitAdapter;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 
@@ -104,8 +104,9 @@ public class TestGLContextDrawableSwitch10NEWT extends UITestCase {
         window.setPosition(x, y);
         window.setSize(width, height);
         window.setVisible(true);
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(window, true));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(window, true));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(window, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(window, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForSize(window, width, height, null));
 
         final GLDrawableFactory factory = GLDrawableFactory.getFactory(caps.getGLProfile());
         final GLDrawable drawable = factory.createGLDrawable(window);
@@ -113,6 +114,8 @@ public class TestGLContextDrawableSwitch10NEWT extends UITestCase {
 
         drawable.setRealized(true);
         Assert.assertTrue(drawable.isRealized());
+        Assert.assertEquals(drawable.getSurfaceWidth(), window.getSurfaceWidth());
+        Assert.assertEquals(drawable.getSurfaceHeight(), window.getSurfaceHeight());
 
         final GLAutoDrawableDelegate glad = new GLAutoDrawableDelegate(drawable, null, window, false, null) {
             @Override
@@ -123,6 +126,7 @@ public class TestGLContextDrawableSwitch10NEWT extends UITestCase {
         };
 
         window.setWindowDestroyNotifyAction( new Runnable() {
+            @Override
             public void run() {
                 glad.windowDestroyNotifyOp();
             } } );
@@ -160,7 +164,7 @@ public class TestGLContextDrawableSwitch10NEWT extends UITestCase {
     private void testGLADDelegateImpl(final GLCapabilities caps) throws InterruptedException {
         final GLEventListenerCounter glelCounter = new GLEventListenerCounter();
         final SnapshotGLEventListener snapshotGLEventListener = new SnapshotGLEventListener();
-        final Animator animator = new Animator();
+        final Animator animator = new Animator(0 /* w/o AWT */);
         animator.start();
 
         final GLEventListenerState glls1;

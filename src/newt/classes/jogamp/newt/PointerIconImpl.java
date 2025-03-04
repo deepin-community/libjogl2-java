@@ -29,6 +29,7 @@ package jogamp.newt;
 
 import java.nio.ByteBuffer;
 
+import com.jogamp.nativewindow.NativeWindowException;
 import com.jogamp.nativewindow.util.DimensionImmutable;
 import com.jogamp.nativewindow.util.PixelFormat;
 import com.jogamp.nativewindow.util.PixelRectangle;
@@ -53,8 +54,10 @@ public class PointerIconImpl implements PointerIcon {
         this.size = size;
         this.pixels = pixels;
         this.hotspot = hotspot;
-
         this.handle=handle;
+        if( 0 == handle ) {
+            throw new IllegalArgumentException("0 native handle: "+this);
+        }
     }
     public PointerIconImpl(final DisplayImpl display, final PixelRectangle pixelrect, final PointImmutable hotspot, final long handle) {
         this.display = display;
@@ -63,6 +66,9 @@ public class PointerIconImpl implements PointerIcon {
         this.pixels = pixelrect.getPixels();
         this.hotspot = hotspot;
         this.handle=handle;
+        if( 0 == handle ) {
+            throw new IllegalArgumentException("0 native handle: "+this);
+        }
     }
 
     @Override
@@ -84,21 +90,17 @@ public class PointerIconImpl implements PointerIcon {
         return hashCode;
     }
 
+    /**
+     * @return the native handle of this pointer icon, maybe {@code null}
+     */
     public synchronized final long getHandle() { return handle; }
-    public synchronized final long validatedHandle() {
-        synchronized(display.pointerIconList) {
-            if( !display.pointerIconList.contains(this) ) {
-                display.pointerIconList.add(this);
-            }
-        }
+    /**
+     * @return the {@link #getHandle()} if not {@code null}, otherwise throws NativeWindowException
+     * @throws NativeWindowException if {@link #getHandle()} is {@code null}
+     */
+    public synchronized final long validatedHandle() throws NativeWindowException  {
         if( 0 == handle ) {
-            try {
-                handle = display.createPointerIconImpl(pixelformat, size.getWidth(), size.getHeight(), pixels, hotspot.getX(), hotspot.getY());
-                return handle;
-            } catch (final Exception e) {
-                e.printStackTrace();
-                return 0;
-            }
+            throw new NativeWindowException("PointerIconImpl has null handle: "+this);
         } else {
             return handle;
         }
@@ -111,40 +113,35 @@ public class PointerIconImpl implements PointerIcon {
     public final ByteBuffer getPixels() { return pixels; }
     @Override
     public synchronized final boolean isValid() { return 0 != handle; }
-    @Override
-    public synchronized final boolean validate() {
-        if( 0 == handle ) {
-            return 0 != validatedHandle();
-        }
-        return true;
-    }
 
     @Override
     public synchronized void destroy() {
         if(Display.DEBUG) {
             System.err.println("PointerIcon.destroy: "+this+", "+display+", "+Display.getThreadName());
         }
-        if( 0 != handle ) {
+        if( 0 != handle ) { // early out
             synchronized(display.pointerIconList) {
                 display.pointerIconList.remove(this);
             }
             display.runOnEDTIfAvail(false, new Runnable() {
                 public void run() {
-                    if( !display.isNativeValidAsync() ) {
+                    if( display.isNativeValidAsync() ) {
                         destroyOnEDT(display.getHandle());
                     }
                 } } );
         }
     }
 
-    /** No checks, assume execution on EDT */
+    /** assume execution on EDT */
     synchronized void destroyOnEDT(final long dpy) {
         final long h = handle;
         handle = 0;
-        try {
-            display.destroyPointerIconImpl(dpy, h);
-        } catch (final Exception e) {
-            e.printStackTrace();
+        if( 0 != h ) { // avoid double free
+            try {
+                display.destroyPointerIconImpl(dpy, h);
+            } catch (final Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 

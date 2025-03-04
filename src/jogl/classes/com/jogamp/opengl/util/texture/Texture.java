@@ -1,6 +1,6 @@
-/*
+/**
+ * Copyright (c) 2010-2023 JogAmp Community. All rights reserved.
  * Copyright (c) 2005 Sun Microsystems, Inc. All Rights Reserved.
- * Copyright (c) 2010 JogAmp Community. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -37,16 +37,24 @@
 
 package com.jogamp.opengl.util.texture;
 
-import java.nio.*;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 
-import com.jogamp.opengl.*;
-import com.jogamp.opengl.glu.*;
+import com.jogamp.common.util.Bitfield;
 import com.jogamp.nativewindow.NativeWindowFactory;
-
-import jogamp.opengl.*;
-
+import com.jogamp.opengl.GL;
+import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.GL2ES1;
+import com.jogamp.opengl.GL2ES2;
+import com.jogamp.opengl.GLES2;
+import com.jogamp.opengl.GLException;
 import com.jogamp.opengl.GLExtensions;
-import com.jogamp.opengl.util.texture.spi.*;
+import com.jogamp.opengl.glu.GLU;
+import com.jogamp.opengl.util.texture.spi.DDSImage;
+
+import jogamp.opengl.Debug;
 
 /**
  * Represents an OpenGL texture object. Contains convenience routines
@@ -169,6 +177,8 @@ public class Texture {
     private int imageTarget;
     /** The GL texture ID. */
     private int texID;
+    /** Owning texture texID */
+    private final boolean ownsTextureID;
     /** The width of the texture. */
     private int texWidth;
     /** The height of the texture. */
@@ -210,6 +220,7 @@ public class Texture {
 
     public Texture(final GL gl, final TextureData data) throws GLException {
         this.texID = 0;
+        this.ownsTextureID = true;
         this.target = 0;
         this.imageTarget = 0;
         updateImage(gl, data);
@@ -223,6 +234,7 @@ public class Texture {
      */
     public Texture(final int target) {
         this.texID = 0;
+        this.ownsTextureID = true;
         this.target = target;
         this.imageTarget = target;
     }
@@ -234,7 +246,10 @@ public class Texture {
      * it. Attempts to update such textures' contents will yield
      * undefined results.
      *
-     * @param textureID the OpenGL texture object to wrap
+     * @param textureID the valid OpenGL texture object to wrap
+     * @param ownsTextureID pass {@code true} if this {@link Texture} instance takes ownership of {@code textureID} texture
+     *        and {@link GL#glDeleteTextures(int, int[], int) deletes the texture} at {@link #destroy(GL)}.
+     *        Otherwise, if {@code false}, {@code textureID} texture will not be {@link GL#glDeleteTextures(int, int[], int) deleted} at {@link #destroy(GL)}.
      * @param target the OpenGL texture target, eg GL.GL_TEXTURE_2D,
      *               GL2.GL_TEXTURE_RECTANGLE
      * @param texWidth the width of the texture in pixels
@@ -250,11 +265,13 @@ public class Texture {
      *                           in order to properly display the
      *                           texture
      */
-    public Texture(final int textureID, final int target,
+    public Texture(final int textureID, final boolean ownsTextureID,
+                   final int target,
                    final int texWidth, final int texHeight,
                    final int imgWidth, final int imgHeight,
                    final boolean mustFlipVertically) {
         this.texID = textureID;
+        this.ownsTextureID = ownsTextureID;
         this.target = target;
         this.imageTarget = target;
         this.mustFlipVertically = mustFlipVertically;
@@ -264,6 +281,9 @@ public class Texture {
         this.imgWidth = imgWidth;
         this.imgHeight = imgHeight;
         this.updateTexCoords();
+        if ( 0 == texID ) {
+            throw new GLException("External texture ID invalid: texID "+textureID);
+        }
     }
 
     /**
@@ -340,15 +360,16 @@ public class Texture {
     }
 
     /**
-     * Destroys the native resources used by this texture object.
+     * Destroys and {@code null}s the {@link #getTextureObject() underlying native texture} used by this {@link Texture} instance
+     * if {@link #ownsTexture() owned}, otherwise just {@code null}s the {@link #getTextureObject() underlying native texture}.
      *
      * @throws GLException if any OpenGL-related errors occurred
      */
     public void destroy(final GL gl) throws GLException {
-        if(0!=texID) {
+        if( 0 != texID && ownsTextureID ) {
             gl.glDeleteTextures(1, new int[] {texID}, 0);
-            texID = 0;
         }
+        texID = 0;
     }
 
     /**
@@ -538,7 +559,7 @@ public class Texture {
         data.setHaveGL12(gl.isExtensionAvailable(GLExtensions.VERSION_1_2));
 
         // Indicates whether both width and height are power of two
-        final boolean isPOT = isPowerOfTwo(imgWidth) && isPowerOfTwo(imgHeight);
+        final boolean isPOT = Bitfield.Util.isPowerOf2(imgWidth) && Bitfield.Util.isPowerOf2(imgHeight);
 
         // Note that automatic mipmap generation doesn't work for
         // GL_ARB_texture_rectangle
@@ -553,8 +574,8 @@ public class Texture {
             // two. It also doesn't really matter exactly what the texture
             // width and height are because the texture coords are always
             // between 0.0 and 1.0.
-            imgWidth = nextPowerOfTwo(imgWidth);
-            imgHeight = nextPowerOfTwo(imgHeight);
+            imgWidth = Bitfield.Util.roundToPowerOf2(imgWidth);
+            imgHeight = Bitfield.Util.roundToPowerOf2(imgHeight);
             texWidth = imgWidth;
             texHeight = imgHeight;
             texTarget = GL.GL_TEXTURE_2D;
@@ -628,8 +649,8 @@ public class Texture {
             if (data.getBorder() != 0) {
                 throw new RuntimeException("Scaling up a non-power-of-two texture which has a border won't work");
             }
-            texWidth = nextPowerOfTwo(imgWidth);
-            texHeight = nextPowerOfTwo(imgHeight);
+            texWidth = Bitfield.Util.roundToPowerOf2(imgWidth);
+            texHeight = Bitfield.Util.roundToPowerOf2(imgHeight);
             texTarget = GL.GL_TEXTURE_2D;
         }
         texParamTarget = texTarget;
@@ -938,9 +959,10 @@ public class Texture {
      * </p>
      * @see #getTextureObject(GL)
      */
-    public int getTextureObject() {
-        return texID;
-    }
+    public int getTextureObject() { return texID; }
+
+    /** Returns whether {@link #getTextureObject()} is owned by this {@link Texture} instance. */
+    public final boolean ownsTexture() { return ownsTextureID; }
 
     /** Returns an estimate of the amount of texture memory in bytes
         this Texture consumes. It should only be treated as an estimate;
@@ -967,31 +989,6 @@ public class Texture {
     //----------------------------------------------------------------------
     // Internals only below this point
     //
-
-    /**
-     * Returns true if the given value is a power of two.
-     *
-     * @return true if the given value is a power of two, false otherwise
-     */
-    private static boolean isPowerOfTwo(final int val) {
-        return ((val & (val - 1)) == 0);
-    }
-
-    /**
-     * Returns the nearest power of two that is larger than the given value.
-     * If the given value is already a power of two, this method will simply
-     * return that value.
-     *
-     * @param val the value
-     * @return the next power of two
-     */
-    private static int nextPowerOfTwo(final int val) {
-        int ret = 1;
-        while (ret < val) {
-            ret <<= 1;
-        }
-        return ret;
-    }
 
     private void updateTexCoords() {
         if ( GL2.GL_TEXTURE_RECTANGLE_ARB == imageTarget ) {
@@ -1154,7 +1151,7 @@ public class Texture {
 
     private boolean validateTexID(final GL gl, final boolean throwException) {
         if( 0 == texID ) {
-            if( null != gl ) {
+            if( null != gl && ownsTextureID ) {
                 final int[] tmp = new int[1];
                 gl.glGenTextures(1, tmp, 0);
                 texID = tmp[0];
@@ -1162,7 +1159,11 @@ public class Texture {
                     throw new GLException("Create texture ID invalid: texID "+texID+", glerr 0x"+Integer.toHexString(gl.glGetError()));
                 }
             } else if ( throwException ) {
-                throw new GLException("No GL context given, can't create texture ID");
+                if( !ownsTextureID ) {
+                    throw new GLException("Invalid external texture ID");
+                } else {
+                    throw new GLException("No GL context given, can't create texture ID");
+                }
             }
         }
         return 0 != texID;

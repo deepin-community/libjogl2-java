@@ -1,6 +1,6 @@
-/*
+/**
+ * Copyright (c) 2010-2023 JogAmp Community. All rights reserved.
  * Copyright (c) 2003 Sun Microsystems, Inc. All Rights Reserved.
- * Copyright (c) 2010 JogAmp Community. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,9 +33,6 @@
  * You acknowledge that this software is not designed or intended for use
  * in the design, construction, operation or maintenance of any nuclear
  * facility.
- *
- * Sun gratefully acknowledges that this software was originally authored
- * and developed by Kenneth Bradley Russell and Christopher John Kline.
  */
 
 package jogamp.opengl;
@@ -257,6 +254,17 @@ public abstract class GLDrawableImpl implements GLDrawable {
   protected int getDefaultDrawFramebuffer() { return 0; }
   /** Callback for special implementations, allowing GLContext to fetch a custom default read framebuffer. Defaults to zero. */
   protected int getDefaultReadFramebuffer() { return 0; }
+
+  /** Callback for special implementations, allowing GLContext to fetch a custom default draw buffer of current framebuffer. */
+  protected int getDefaultDrawBuffer(final GL gl) {
+      if( gl.isGLES() || getChosenGLCapabilities().getDoubleBuffered() ) {
+          // Note-1: Neither ES1 nor ES2 supports selecting the read buffer via glDrawBuffer
+          // Note-2: ES3 only supports GL_BACK, GL_NONE or GL_COLOR_ATTACHMENT0+i
+          return GL.GL_BACK;
+      }
+      return GL.GL_FRONT;
+  }
+
   /** Callback for special implementations, allowing GLContext to fetch a custom default read buffer of current framebuffer. */
   protected int getDefaultReadBuffer(final GL gl, final boolean hasDedicatedDrawableRead) {
       if( gl.isGLES() || hasDedicatedDrawableRead || getChosenGLCapabilities().getDoubleBuffered() ) {

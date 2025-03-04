@@ -1,4 +1,4 @@
-variousFixes.diff
+jar_paths.patch
 #disableOneDir.diff
 swt.diff
 #otherArchsoswin.diff
@@ -15,8 +15,16 @@ arm-build.diff
 disable-applet.diff
 alpha.diff
 
-add-ports.diff
-clang_FTBFS.patch
+ppc64.patch
+#clang_FTBFS.patch
 disable-test-compilation.patch
-fix-mesa-detection.diff
+#fix-mesa-detection.diff
 java11.patch
+openjfx_jars.patch
+cc_attributes_in_build.patch
+jni_include_files.patch
+skip_parts_of_build.patch
+skip_Win_and_Mac.patch
+spelling.patch
+hardening.patch
+mips64el-build.patch

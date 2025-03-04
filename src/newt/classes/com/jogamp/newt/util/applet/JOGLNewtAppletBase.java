@@ -28,7 +28,6 @@
 package com.jogamp.newt.util.applet;
 
 import java.lang.reflect.Field;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import com.jogamp.nativewindow.NativeWindow;
@@ -43,6 +42,7 @@ import com.jogamp.opengl.GLPipelineFactory;
 import jogamp.newt.Debug;
 
 import com.jogamp.common.util.InterruptSource;
+import com.jogamp.common.util.SecurityUtil;
 import com.jogamp.newt.Window;
 import com.jogamp.newt.event.KeyEvent;
 import com.jogamp.newt.event.KeyListener;
@@ -56,9 +56,13 @@ import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.AnimatorBase;
 
 
-/** Shows how to deploy an applet using JOGL. This demo must be
-    referenced from a web page via an &lt;applet&gt; tag. */
-
+/**
+ * Shows how to deploy an applet using JOGL.
+ * This demo must be referenced from a web page via an &lt;applet&gt; tag.
+ * <p>
+ * The demo code uses {@link NEWTDemoListener} functionality.
+ * </p>
+ */
 public class JOGLNewtAppletBase implements KeyListener, GLEventListener {
     public static final boolean DEBUG = Debug.debug("Applet");
 
@@ -115,7 +119,7 @@ public class JOGLNewtAppletBase implements KeyListener, GLEventListener {
         Object instance = null;
 
         try {
-            final Class<?> clazz = AccessController.doPrivileged(new PrivilegedAction<Class<?>>() {
+            final Class<?> clazz = SecurityUtil.doPrivileged(new PrivilegedAction<Class<?>>() {
                 @Override
                 public Class<?> run() {
                     final ClassLoader cl = Thread.currentThread().getContextClassLoader();
@@ -203,8 +207,7 @@ public class JOGLNewtAppletBase implements KeyListener, GLEventListener {
             glWindow.setUpdateFPSFrames(FPSCounter.DEFAULT_FRAMES_PER_INTERVAL, System.err);
 
             // glAnimator = new FPSAnimator(canvas, 60);
-            glAnimator = new Animator();
-            glAnimator.setModeBits(false, AnimatorBase.MODE_EXPECT_AWT_RENDERING_THREAD); // No AWT thread involved!
+            glAnimator = new Animator(0 /* w/o AWT */);
             glAnimator.setThreadGroup(tg);
             glAnimator.add(glWindow);
             glAnimator.setUpdateFPSFrames(FPSCounter.DEFAULT_FRAMES_PER_INTERVAL, null);
@@ -308,7 +311,8 @@ public class JOGLNewtAppletBase implements KeyListener, GLEventListener {
        if(e.getKeyChar()=='r' && 0==e.getModifiers() && null!=parentWin) {
            e.setConsumed(true);
            glWindow.invokeOnNewThread(null, false, new Runnable() {
-               public void run() {
+               @Override
+            public void run() {
                    if(null == glWindow.getParent()) {
                         glWindow.reparentWindow(parentWin, -1, -1, 0 /* hints */);
                   } else {

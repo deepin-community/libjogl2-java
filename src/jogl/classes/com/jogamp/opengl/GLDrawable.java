@@ -1,6 +1,6 @@
-/*
+/**
+ * Copyright (c) 2010-2023 JogAmp Community. All rights reserved.
  * Copyright (c) 2003 Sun Microsystems, Inc. All Rights Reserved.
- * Copyright (c) 2010 JogAmp Community. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,9 +33,6 @@
  * You acknowledge that this software is not designed or intended for use
  * in the design, construction, operation or maintenance of any nuclear
  * facility.
- *
- * Sun gratefully acknowledges that this software was originally authored
- * and developed by Kenneth Bradley Russell and Christopher John Kline.
  */
 
 package com.jogamp.opengl;
@@ -134,7 +131,7 @@ public interface GLDrawable extends NativeSurfaceHolder {
   public void setRealized(boolean realized);
 
   /**
-   * Returns <code>true</code> if this drawable is realized, otherwise <code>true</code>.
+   * Returns <code>true</code> if this drawable is realized, otherwise <code>false</code>.
    * <p>
    * A drawable can be realized and unrealized via {@link #setRealized(boolean)}.
    * </p>

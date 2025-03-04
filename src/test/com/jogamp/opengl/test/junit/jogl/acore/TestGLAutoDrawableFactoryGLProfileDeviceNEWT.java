@@ -48,8 +48,8 @@ import org.junit.runners.MethodSorters;
 
 import com.jogamp.opengl.JoglVersion;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
-import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
 import com.jogamp.opengl.test.junit.util.GLEventListenerCounter;
+import com.jogamp.opengl.test.junit.util.GLTestUtil;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 
 /**
@@ -104,14 +104,14 @@ public class TestGLAutoDrawableFactoryGLProfileDeviceNEWT extends UITestCase {
 
         // 1 - szStep = 2
         Assert.assertTrue("Size not reached: Expected "+(widthStep*szStep)+"x"+(heightStep*szStep)+", Is "+glad.getSurfaceWidth()+"x"+glad.getSurfaceHeight(),
-                          AWTRobotUtil.waitForSize(glad, widthStep*szStep, heightStep*szStep));
+                          GLTestUtil.waitForSize(glad, widthStep*szStep, heightStep*szStep, null));
         glad.display();
 
         // 2, 3 (resize + display)
         szStep = 1;
         glad.setSurfaceSize(widthStep*szStep, heightStep*szStep);
         Assert.assertTrue("Size not reached: Expected "+(widthStep*szStep)+"x"+(heightStep*szStep)+", Is "+glad.getSurfaceWidth()+"x"+glad.getSurfaceHeight(),
-                          AWTRobotUtil.waitForSize(glad, widthStep*szStep, heightStep*szStep));
+                          GLTestUtil.waitForSize(glad, widthStep*szStep, heightStep*szStep, null));
         glad.display();
 
         Thread.sleep(50);
@@ -129,21 +129,21 @@ public class TestGLAutoDrawableFactoryGLProfileDeviceNEWT extends UITestCase {
 
     @Test
     public void test00AvailableInfo() {
-        GLDrawableFactory f = GLDrawableFactory.getDesktopFactory();
+        GLDrawableFactory f = GLDrawableFactory.getFactory(false);
         if(null != f) {
             System.err.println(JoglVersion.getDefaultOpenGLInfo(f.getDefaultDevice(), null, true).toString());
         }
-        f = GLDrawableFactory.getEGLFactory();
+        f = GLDrawableFactory.getFactory(true);
         if(null != f) {
             System.err.println(JoglVersion.getDefaultOpenGLInfo(f.getDefaultDevice(), null, true).toString());
         }
     }
 
     @Test
-    public void test01ES2OnEGL() throws InterruptedException {
-        final GLDrawableFactory factory = GLDrawableFactory.getEGLFactory();
+    public void test01ES2OnMobile() throws InterruptedException {
+        final GLDrawableFactory factory = GLDrawableFactory.getFactory(true);
         if( null == factory ) {
-            System.err.println("EGL Factory n/a");
+            System.err.println("Mobile Factory n/a");
             return;
         }
         final AbstractGraphicsDevice prodDevice = factory.getDefaultDevice();
@@ -163,10 +163,10 @@ public class TestGLAutoDrawableFactoryGLProfileDeviceNEWT extends UITestCase {
     }
 
     @Test
-    public void test02GLOnEGL() throws InterruptedException {
-        final GLDrawableFactory factory = GLDrawableFactory.getEGLFactory();
+    public void test02GLOnMobile() throws InterruptedException {
+        final GLDrawableFactory factory = GLDrawableFactory.getFactory(true);
         if( null == factory ) {
-            System.err.println("EGL Factory n/a");
+            System.err.println("Mobile Factory n/a");
             return;
         }
         final AbstractGraphicsDevice prodDevice = factory.getDefaultDevice();
@@ -189,7 +189,7 @@ public class TestGLAutoDrawableFactoryGLProfileDeviceNEWT extends UITestCase {
 
     @Test
     public void test11ES2OnDesktop() throws InterruptedException {
-        final GLDrawableFactory deskFactory = GLDrawableFactory.getDesktopFactory();
+        final GLDrawableFactory deskFactory = GLDrawableFactory.getFactory(false);
         if( null == deskFactory ) {
             System.err.println("Desktop Factory n/a");
             return;
@@ -217,7 +217,7 @@ public class TestGLAutoDrawableFactoryGLProfileDeviceNEWT extends UITestCase {
 
     @Test
     public void test12GLOnDesktop() throws InterruptedException {
-        final GLDrawableFactory factory = GLDrawableFactory.getDesktopFactory();
+        final GLDrawableFactory factory = GLDrawableFactory.getFactory(false);
         if( null == factory ) {
             System.err.println("Desktop Factory n/a");
             return;

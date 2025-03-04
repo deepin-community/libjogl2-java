@@ -1,5 +1,5 @@
 /**
- * Copyright 2010 JogAmp Community. All rights reserved.
+ * Copyright 2010-2023 JogAmp Community. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
  * permitted provided that the following conditions are met:
@@ -31,53 +31,38 @@ import java.nio.FloatBuffer;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2ES2;
+import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.GLUniformData;
 
-import jogamp.graph.curve.opengl.shader.AttributeNames;
 import jogamp.graph.curve.opengl.shader.UniformNames;
 
 import com.jogamp.graph.curve.Region;
 import com.jogamp.graph.curve.opengl.GLRegion;
 import com.jogamp.graph.curve.opengl.RegionRenderer;
 import com.jogamp.graph.curve.opengl.RenderState;
-import com.jogamp.opengl.util.GLArrayDataServer;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
 import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureCoords;
 import com.jogamp.opengl.util.texture.TextureSequence;
 
-public class VBORegionSPES2 extends GLRegion {
+public final class VBORegionSPES2 extends GLRegion {
     private final RenderState.ProgramLocal rsLocal;
 
-    private GLArrayDataServer gca_VerticesAttr = null;
-    private GLArrayDataServer gca_CurveParamsAttr = null;
-    private GLArrayDataServer gca_ColorsAttr;
-    private GLArrayDataServer indicesBuffer = null;
+    // Pass-1:
     private final GLUniformData gcu_ColorTexUnit;
     private final float[] colorTexBBox; // x0, y0, x1, y1
     private final GLUniformData gcu_ColorTexBBox;
     private ShaderProgram spPass1 = null;
 
-    public VBORegionSPES2(final int renderModes, final TextureSequence colorTexSeq) {
-        super(renderModes, colorTexSeq);
+    public VBORegionSPES2(final GLProfile glp, final int renderModes, final TextureSequence colorTexSeq,
+                          final int initialVerticesCount, final int initialIndicesCount)
+    {
+        super(glp, renderModes, colorTexSeq);
 
         rsLocal = new RenderState.ProgramLocal();
 
-        final int initialElementCount = 256;
-        indicesBuffer = GLArrayDataServer.createData(3, GL.GL_SHORT, initialElementCount, GL.GL_STATIC_DRAW, GL.GL_ELEMENT_ARRAY_BUFFER);
+        initBuffer(initialVerticesCount, initialIndicesCount);
 
-        gca_VerticesAttr = GLArrayDataServer.createGLSL(AttributeNames.VERTEX_ATTR_NAME, 3, GL.GL_FLOAT,
-                                                        false, initialElementCount, GL.GL_STATIC_DRAW);
-
-        gca_CurveParamsAttr = GLArrayDataServer.createGLSL(AttributeNames.CURVEPARAMS_ATTR_NAME, 3, GL.GL_FLOAT,
-                                                           false, initialElementCount, GL.GL_STATIC_DRAW);
-
-        if( hasColorChannel() ) {
-            gca_ColorsAttr = GLArrayDataServer.createGLSL(AttributeNames.COLOR_ATTR_NAME, 4, GL.GL_FLOAT,
-                                                          false, initialElementCount, GL.GL_STATIC_DRAW);
-        } else {
-            gca_ColorsAttr = null;
-        }
         if( hasColorTexture() ) {
             gcu_ColorTexUnit = new GLUniformData(UniformNames.gcu_ColorTexUnit, colorTexSeq.getTextureUnit());
             colorTexBBox = new float[4];
@@ -90,67 +75,22 @@ public class VBORegionSPES2 extends GLRegion {
     }
 
     @Override
-    protected final void clearImpl(final GL2ES2 gl) {
-        if(DEBUG_INSTANCE) {
-            System.err.println("VBORegionSPES2 Clear: " + this);
-        }
-        if( null != indicesBuffer ) {
-            indicesBuffer.seal(gl, false);
-            indicesBuffer.rewind();
-        }
-        if( null != gca_VerticesAttr ) {
-            gca_VerticesAttr.seal(gl, false);
-            gca_VerticesAttr.rewind();
-        }
-        if( null != gca_CurveParamsAttr ) {
-            gca_CurveParamsAttr.seal(gl, false);
-            gca_CurveParamsAttr.rewind();
-        }
-        if( null != gca_ColorsAttr ) {
-            gca_ColorsAttr.seal(gl, false);
-            gca_ColorsAttr.rewind();
-        }
+    public void setTextureUnit(final int pass2TexUnit) {
+        // nop
     }
 
     @Override
-    protected final void pushVertex(final float[] coords, final float[] texParams, final float[] rgba) {
-        gca_VerticesAttr.putf(coords[0]);
-        gca_VerticesAttr.putf(coords[1]);
-        gca_VerticesAttr.putf(coords[2]);
-
-        gca_CurveParamsAttr.putf(texParams[0]);
-        gca_CurveParamsAttr.putf(texParams[1]);
-        gca_CurveParamsAttr.putf(texParams[2]);
-
-        if( null != gca_ColorsAttr ) {
-            if( null != rgba ) {
-                gca_ColorsAttr.putf(rgba[0]);
-                gca_ColorsAttr.putf(rgba[1]);
-                gca_ColorsAttr.putf(rgba[2]);
-                gca_ColorsAttr.putf(rgba[3]);
-            } else {
-                throw new IllegalArgumentException("Null color given for COLOR_CHANNEL rendering mode");
-            }
-        }
-    }
+    protected final void clearImpl(final GL2ES2 gl) { }
 
     @Override
-    protected final void pushIndex(final int idx) {
-        indicesBuffer.puts((short)idx);
-    }
+    protected void updateImpl(final GL2ES2 gl, final int curRenderModes) {
+        final boolean hasColorChannel = Region.hasColorChannel( curRenderModes );
+        final boolean hasColorTexture = Region.hasColorTexture( curRenderModes );
 
-    @Override
-    protected void updateImpl(final GL2ES2 gl) {
         // seal buffers
-        gca_VerticesAttr.seal(gl, true);
-        gca_VerticesAttr.enableBuffer(gl, false);
-        gca_CurveParamsAttr.seal(gl, true);
-        gca_CurveParamsAttr.enableBuffer(gl, false);
-        if( null != gca_ColorsAttr ) {
-            gca_ColorsAttr.seal(gl, true);
-            gca_ColorsAttr.enableBuffer(gl, false);
-        }
-        if( null != gcu_ColorTexUnit && colorTexSeq.isTextureAvailable() ) {
+        vpc_ileave.seal(gl, true);
+        vpc_ileave.enableBuffer(gl, false);
+        if( hasColorTexture && null != gcu_ColorTexUnit && colorTexSeq.isTextureAvailable() ) {
             final TextureSequence.TextureFrame frame = colorTexSeq.getLastTexture();
             final Texture tex = frame.getTexture();
             final TextureCoords tc = tex.getImageTexCoords();
@@ -172,8 +112,7 @@ public class VBORegionSPES2 extends GLRegion {
         indicesBuffer.enableBuffer(gl, false);
         if(DEBUG_INSTANCE) {
             System.err.println("VBORegionSPES2 idx "+indicesBuffer);
-            System.err.println("VBORegionSPES2 ver "+gca_VerticesAttr);
-            System.err.println("VBORegionSPES2 tex "+gca_CurveParamsAttr);
+            System.err.println("VBORegionSPES2 vpc "+vpc_ileave);
         }
     }
 
@@ -181,17 +120,20 @@ public class VBORegionSPES2 extends GLRegion {
     /**
      * <p>
      * Since multiple {@link Region}s may share one
-     * {@link ShaderProgram}, the uniform data must always be updated.
+     * {@link ShaderProgram} managed and owned by {@link RegionRendered}, the uniform data must always be updated.
      * </p>
      *
      * @param gl
      * @param renderer
-     * @param renderModes
+     * @param curRenderModes
      * @param quality
      */
-    public void useShaderProgram(final GL2ES2 gl, final RegionRenderer renderer, final int renderModes, final int quality) {
+    public void useShaderProgram(final GL2ES2 gl, final RegionRenderer renderer, final int curRenderModes, final int quality) {
+        final boolean hasColorChannel = Region.hasColorChannel( curRenderModes );
+        final boolean hasColorTexture = Region.hasColorTexture( curRenderModes ) && null != colorTexSeq;
+
         final RenderState rs = renderer.getRenderState();
-        final boolean updateLocGlobal = renderer.useShaderProgram(gl, renderModes, true, quality, 0, colorTexSeq);
+        final boolean updateLocGlobal = renderer.useShaderProgram(gl, curRenderModes, true, quality, 0, colorTexSeq);
         final ShaderProgram sp = renderer.getRenderState().getShaderProgram();
         final boolean updateLocLocal = !sp.equals(spPass1);
         spPass1 = sp;
@@ -201,12 +143,12 @@ public class VBORegionSPES2 extends GLRegion {
         if( updateLocLocal ) {
             rs.updateAttributeLoc(gl, true, gca_VerticesAttr, throwOnError);
             rs.updateAttributeLoc(gl, true, gca_CurveParamsAttr, throwOnError);
-            if( null != gca_ColorsAttr ) {
+            if( hasColorChannel && null != gca_ColorsAttr ) {
                 rs.updateAttributeLoc(gl, true, gca_ColorsAttr, throwOnError);
             }
         }
-        rsLocal.update(gl, rs, updateLocLocal, renderModes, true, throwOnError);
-        if( null != gcu_ColorTexUnit ) {
+        rsLocal.update(gl, rs, updateLocLocal, curRenderModes, true, throwOnError);
+        if( hasColorTexture && null != gcu_ColorTexUnit ) {
             rs.updateUniformLoc(gl, updateLocLocal, gcu_ColorTexUnit, throwOnError);
             rs.updateUniformLoc(gl, updateLocLocal, gcu_ColorTexBBox, throwOnError);
         }
@@ -214,28 +156,26 @@ public class VBORegionSPES2 extends GLRegion {
 
 
     @Override
-    protected void drawImpl(final GL2ES2 gl, final RegionRenderer renderer, final int[/*1*/] sampleCount) {
-        final int renderModes = getRenderModes();
-        useShaderProgram(gl, renderer, renderModes, getQuality());
+    protected void drawImpl(final GL2ES2 gl, final RegionRenderer renderer, final int curRenderModes, final int[/*1*/] sampleCount) {
+        final boolean hasColorChannel = Region.hasColorChannel( curRenderModes );
+        final boolean hasColorTexture = Region.hasColorTexture( curRenderModes );
 
-        if( 0 >= indicesBuffer.getElementCount() ) {
+        useShaderProgram(gl, renderer, curRenderModes, getQuality());
+
+        if( 0 >= indicesBuffer.getElemCount() ) {
             if(DEBUG_INSTANCE) {
                 System.err.printf("VBORegionSPES2.drawImpl: Empty%n");
             }
             return; // empty!
         }
-        gca_VerticesAttr.enableBuffer(gl, true);
-        gca_CurveParamsAttr.enableBuffer(gl, true);
-        if( null != gca_ColorsAttr ) {
-            gca_ColorsAttr.enableBuffer(gl, true);
-        }
+        vpc_ileave.enableBuffer(gl, true);
         indicesBuffer.bindBuffer(gl, true); // keeps VBO binding
 
         if( renderer.getRenderState().isHintMaskSet(RenderState.BITHINT_BLENDING_ENABLED) ) {
             gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
         }
 
-        if( null != gcu_ColorTexUnit && colorTexSeq.isTextureAvailable() ) {
+        if( hasColorTexture && null != gcu_ColorTexUnit && colorTexSeq.isTextureAvailable() ) {
             final TextureSequence.TextureFrame frame = colorTexSeq.getNextTexture(gl);
             gl.glActiveTexture(GL.GL_TEXTURE0 + colorTexSeq.getTextureUnit());
             final Texture tex = frame.getTexture();
@@ -244,18 +184,16 @@ public class VBORegionSPES2 extends GLRegion {
             gcu_ColorTexUnit.setData(colorTexSeq.getTextureUnit());
             gl.glUniform(gcu_ColorTexUnit); // Always update, since program maybe used by multiple regions
             gl.glUniform(gcu_ColorTexBBox); // Always update, since program maybe used by multiple regions
-            gl.glDrawElements(GL.GL_TRIANGLES, indicesBuffer.getElementCount() * indicesBuffer.getComponentCount(), GL.GL_UNSIGNED_SHORT, 0);
+            gl.glDrawElements(GL.GL_TRIANGLES, indicesBuffer.getElemCount() * indicesBuffer.getCompsPerElem(), glIdxType(), 0);
+            // gl.glDrawElements(GL.GL_LINE_STRIP, indicesBuffer.getElementCount() * indicesBuffer.getComponentCount(), gl_idx_type, 0);
             tex.disable(gl); // nop on core
         } else {
-            gl.glDrawElements(GL.GL_TRIANGLES, indicesBuffer.getElementCount() * indicesBuffer.getComponentCount(), GL.GL_UNSIGNED_SHORT, 0);
+            gl.glDrawElements(GL.GL_TRIANGLES, indicesBuffer.getElemCount() * indicesBuffer.getCompsPerElem(), glIdxType(), 0);
+            // gl.glDrawElements(GL.GL_LINE_STRIP, indicesBuffer.getElementCount() * indicesBuffer.getComponentCount(), gl_idx_type, 0);
         }
 
         indicesBuffer.bindBuffer(gl, false);
-        if( null != gca_ColorsAttr ) {
-            gca_ColorsAttr.enableBuffer(gl, false);
-        }
-        gca_CurveParamsAttr.enableBuffer(gl, false);
-        gca_VerticesAttr.enableBuffer(gl, false);
+        vpc_ileave.enableBuffer(gl, false);
     }
 
     @Override
@@ -263,22 +201,6 @@ public class VBORegionSPES2 extends GLRegion {
         if(DEBUG_INSTANCE) {
             System.err.println("VBORegionSPES2 Destroy: " + this);
         }
-        if(null != gca_VerticesAttr) {
-            gca_VerticesAttr.destroy(gl);
-            gca_VerticesAttr = null;
-        }
-        if(null != gca_CurveParamsAttr) {
-            gca_CurveParamsAttr.destroy(gl);
-            gca_CurveParamsAttr = null;
-        }
-        if(null != gca_ColorsAttr) {
-            gca_ColorsAttr.destroy(gl);
-            gca_ColorsAttr = null;
-        }
-        if(null != indicesBuffer) {
-            indicesBuffer.destroy(gl);
-            indicesBuffer = null;
-        }
-        spPass1 = null;
+        spPass1 = null; // owned by RegionRenderer
     }
 }

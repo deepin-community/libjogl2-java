@@ -32,8 +32,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.jogamp.common.util.IOUtil;
+import com.jogamp.graph.font.FontScale;
 import com.jogamp.nativewindow.CapabilitiesImmutable;
 import com.jogamp.nativewindow.ScalableSurface;
+import com.jogamp.newt.Window;
 import com.jogamp.newt.Display;
 import com.jogamp.newt.Display.PointerIcon;
 import com.jogamp.newt.event.KeyEvent;
@@ -47,12 +49,37 @@ import com.jogamp.opengl.FPSCounter;
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GLAnimatorControl;
 import com.jogamp.opengl.GLAutoDrawable;
+import com.jogamp.opengl.GLDrawable;
 import com.jogamp.opengl.GLRunnable;
 import com.jogamp.opengl.util.Gamma;
 import com.jogamp.opengl.util.PNGPixelRect;
 
 import jogamp.newt.driver.PNGIcon;
 
+/**
+ * NEWT {@link GLWindow} Demo functionality
+ * <ul>
+ *   <li>SPACE: Toggle animator {@link GLAnimatorControl#pause() pause}/{@link GLAnimatorControl#resume() resume}</li>
+ *   <li>A: Toggle window {@link Window#setAlwaysOnTop(boolean) always on top}</li>
+ *   <li>B: Toggle window {@link Window#setAlwaysOnBottom(boolean) always on bottom}</li>
+ *   <li>C: Toggle different {@link Window#setPointerIcon(PointerIcon) pointer icons}</li>
+ *   <li>D: Toggle window {@link Window#setUndecorated(boolean) decoration on/off}</li>
+ *   <li>F: Toggle window {@link Window#setFullscreen(boolean) fullscreen on/off}</li>
+ *   <li>Three-Finger Double-Tap: Toggle window {@link Window#setFullscreen(boolean) fullscreen on/off}</li>
+ *   <li>G: Increase {@link Gamma#setDisplayGamma(GLDrawable, float, float, float) gamma} by 0.1, +SHIFT decrease gamma by 0.1</li>
+ *   <li>I: Toggle {@link Window#setPointerVisible(boolean) pointer visbility}</li>
+ *   <li>J: Toggle {@link Window#confinePointer(boolean) pointer jail (confine to window)}</li>
+ *   <li>M: Toggle {@link Window#setMaximized(boolean, boolean) window maximized}: Y, +CTRL off, +SHIFT toggle X+Y, +ALT X</li>
+ *   <li>P: Set window {@link Window#setPosition(int, int) position to 100/100}</li>
+ *   <li>Q: Quit</li>
+ *   <li>R: Toggle window {@link Window#setResizable(boolean) resizable}</li>
+ *   <li>S: Toggle window {@link Window#setSticky(boolean) sticky}</li>
+ *   <li>V: Toggle window {@link Window#setVisible(boolean) visibility} for 5s</li>
+ *   <li>V: +CTRL: Rotate {@link GL#setSwapInterval(int) swap interval} -1, 0, 1</li>
+ *   <li>W: {@link Window#warpPointer(int, int) Warp pointer} to center of window</li>
+ *   <li>X: Toggle {@link ScalableSurface#setSurfaceScale(float[]) [{@link ScalableSurface#IDENTITY_PIXELSCALE}, {@link ScalableSurface#AUTOMAX_PIXELSCALE}]</li>
+ * </ul>
+ */
 public class NEWTDemoListener extends WindowAdapter implements KeyListener, MouseListener {
     protected final GLWindow glWindow;
     final PointerIcon[] pointerIcons;
@@ -62,16 +89,21 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
     float contrast = 1f;
     boolean confinedFixedCenter = false;
 
+    /**
+     * Creates a new instance with given pointer icons, which are not used if {@code null}.
+     * @param glWin the GLWindow instance to use
+     * @param pointerIcons if {@code null} don't use multiple pointer icons
+     */
     public NEWTDemoListener(final GLWindow glWin, final PointerIcon[] pointerIcons) {
         this.glWindow = glWin;
-        if( null != pointerIcons ) {
-            this.pointerIcons = pointerIcons;
-        } else {
-            this.pointerIcons = createPointerIcons(glWindow.getScreen().getDisplay());
-        }
+        this.pointerIcons = pointerIcons;
     }
+    /**
+     * Creates a new instance with {@link #createPointerIcons(Display)} default pointer icons.
+     * @param glWin the GLWindow instance to use
+     */
     public NEWTDemoListener(final GLWindow glWin) {
-        this(glWin, null);
+        this(glWin, createPointerIcons(glWin.getScreen().getDisplay()));
     }
 
     protected void printlnState(final String prelude) {
@@ -86,22 +118,31 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
         if( e.isAutoRepeat() || e.isConsumed() ) {
             return;
         }
+        if( !glWindow.isVisible() ) {
+            printlnState("[key "+e+" but invisible]");
+            return;
+        }
         final int keySymbol = e.getKeySymbol();
         switch(keySymbol) {
             case KeyEvent.VK_SPACE:
                 e.setConsumed(true);
                 glWindow.invokeOnCurrentThread(new Runnable() {
+                    @Override
                     public void run() {
-                        if(glWindow.getAnimator().isPaused()) {
-                            glWindow.getAnimator().resume();
-                        } else {
-                            glWindow.getAnimator().pause();
+                        final GLAnimatorControl anim = glWindow.getAnimator();
+                        if( null != anim ) {
+                            if( anim.isPaused()) {
+                                anim.resume();
+                            } else {
+                                anim.pause();
+                            }
                         }
                     } } );
                 break;
             case KeyEvent.VK_A:
                 e.setConsumed(true);
                 glWindow.invokeOnNewThread(null, false, new Runnable() {
+                    @Override
                     public void run() {
                         printlnState("[set alwaysontop pre]");
                         glWindow.setAlwaysOnTop(!glWindow.isAlwaysOnTop());
@@ -111,6 +152,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
             case KeyEvent.VK_B:
                 e.setConsumed(true);
                 glWindow.invokeOnNewThread(null, false, new Runnable() {
+                    @Override
                     public void run() {
                         printlnState("[set alwaysonbottom pre]");
                         glWindow.setAlwaysOnBottom(!glWindow.isAlwaysOnBottom());
@@ -120,6 +162,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
             case KeyEvent.VK_C:
                 e.setConsumed(true);
                 glWindow.invokeOnNewThread(null, false, new Runnable() {
+                    @Override
                     public void run() {
                         if( null != pointerIcons ) {
                             printlnState("[set pointer-icon pre]");
@@ -139,6 +182,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
             case KeyEvent.VK_D:
                 e.setConsumed(true);
                 glWindow.invokeOnNewThread(null, false, new Runnable() {
+                    @Override
                     public void run() {
                         printlnState("[set undecorated pre]");
                         glWindow.setUndecorated(!glWindow.isUndecorated());
@@ -149,6 +193,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
                 e.setConsumed(true);
                 quitAdapterOff();
                 glWindow.invokeOnNewThread(null, false, new Runnable() {
+                    @Override
                     public void run() {
                         printlnState("[set fullscreen pre]");
                         if( glWindow.isFullscreen() ) {
@@ -167,6 +212,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
             case KeyEvent.VK_G:
                 e.setConsumed(true);
                 glWindow.invokeOnNewThread(null, false, new Runnable() {
+                    @Override
                     public void run() {
                         final float newGamma = gamma + ( e.isShiftDown() ? -0.1f : 0.1f );
                         System.err.println("[set gamma]: "+gamma+" -> "+newGamma);
@@ -178,6 +224,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
             case KeyEvent.VK_I:
                 e.setConsumed(true);
                 glWindow.invokeOnNewThread(null, false, new Runnable() {
+                    @Override
                     public void run() {
                         printlnState("[set pointer-visible pre]");
                         glWindow.setPointerVisible(!glWindow.isPointerVisible());
@@ -187,6 +234,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
             case KeyEvent.VK_J:
                 e.setConsumed(true);
                 glWindow.invokeOnNewThread(null, false, new Runnable() {
+                    @Override
                     public void run() {
                         printlnState("[set pointer-confined pre]", "warp-center: "+e.isShiftDown());
                         final boolean confine = !glWindow.isPointerConfined();
@@ -202,6 +250,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
             case KeyEvent.VK_M:
                 e.setConsumed(true);
                 glWindow.invokeOnNewThread(null, false, new Runnable() {
+                    @Override
                     public void run() {
                         // none:  max-v
                         // alt:   max-h
@@ -230,24 +279,26 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
                         printlnState("[set maximize post]", "max[vert "+vert+", horz "+horz+"]");
                     } } );
                 break;
-            case KeyEvent.VK_Q:
-                if( quitAdapterEnabled && 0 == e.getModifiers() ) {
-                    System.err.println("QUIT Key "+Thread.currentThread());
-                    quitAdapterShouldQuit = true;
-                }
-                break;
             case KeyEvent.VK_P:
                 e.setConsumed(true);
                 glWindow.invokeOnNewThread(null, false, new Runnable() {
+                    @Override
                     public void run() {
                         printlnState("[set position pre]");
                         glWindow.setPosition(100, 100);
                         printlnState("[set position post]");
                     } } );
                 break;
+            case KeyEvent.VK_Q:
+                if( quitAdapterEnabled && 0 == e.getModifiers() ) {
+                    System.err.println("QUIT Key "+Thread.currentThread());
+                    quitAdapterShouldQuit = true;
+                }
+                break;
             case KeyEvent.VK_R:
                 e.setConsumed(true);
                 glWindow.invokeOnNewThread(null, false, new Runnable() {
+                    @Override
                     public void run() {
                         printlnState("[set resizable pre]");
                         glWindow.setResizable(!glWindow.isResizable());
@@ -257,6 +308,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
             case KeyEvent.VK_S:
                 e.setConsumed(true);
                 glWindow.invokeOnNewThread(null, false, new Runnable() {
+                    @Override
                     public void run() {
                         printlnState("[set sticky pre]");
                         glWindow.setSticky(!glWindow.isSticky());
@@ -293,6 +345,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
                     });
                 } else {
                     glWindow.invokeOnNewThread(null, false, new Runnable() {
+                        @Override
                         public void run() {
                             final boolean wasVisible = glWindow.isVisible();
                             {
@@ -316,6 +369,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
             case KeyEvent.VK_W:
                 e.setConsumed(true);
                 glWindow.invokeOnNewThread(null, false, new Runnable() {
+                    @Override
                     public void run() {
                         printlnState("[set pointer-pos pre]");
                         glWindow.warpPointer(glWindow.getSurfaceWidth()/2, glWindow.getSurfaceHeight()/2);
@@ -403,6 +457,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
     public boolean shouldQuit() { return quitAdapterShouldQuit; }
     public void doQuit() { quitAdapterShouldQuit=true; }
 
+    @Override
     public void windowDestroyNotify(final WindowEvent e) {
         if( quitAdapterEnabled && quitAdapterEnabled2 ) {
             System.err.println("QUIT Window "+Thread.currentThread());
@@ -420,9 +475,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
         final CapabilitiesImmutable reqCaps = win.getRequestedCapabilities();
         final CapabilitiesImmutable caps = null != chosenCaps ? chosenCaps : reqCaps;
         final String capsA = caps.isBackgroundOpaque() ? "opaque" : "transl";
-        final float[] sDPI = win.getPixelsPerMM(new float[2]);
-        sDPI[0] *= 25.4f;
-        sDPI[1] *= 25.4f;
+        final float[] sDPI = FontScale.ppmmToPPI( win.getPixelsPerMM(new float[2]) );
         final float[] minSurfacePixelScale = win.getMinimumSurfaceScale(new float[2]);
         final float[] maxSurfacePixelScale = win.getMaximumSurfaceScale(new float[2]);
         final float[] reqSurfacePixelScale = win.getRequestedSurfaceScale(new float[2]);
@@ -440,7 +493,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
             disp.createNative();
             {
                 PointerIcon _pointerIcon = null;
-                final IOUtil.ClassResources res = new IOUtil.ClassResources(new String[] { "newt/data/cross-grey-alpha-16x16.png" }, disp.getClass().getClassLoader(), null);
+                final IOUtil.ClassResources res = new IOUtil.ClassResources(new String[] { "jogamp/newt/assets/cross-grey-alpha-16x16.png" }, disp.getClass().getClassLoader(), null);
                 try {
                     _pointerIcon = disp.createPointerIcon(res, 8, 8);
                     pointerIcons.add(_pointerIcon);
@@ -451,7 +504,7 @@ public class NEWTDemoListener extends WindowAdapter implements KeyListener, Mous
             }
             {
                 PointerIcon _pointerIcon = null;
-                final IOUtil.ClassResources res = new IOUtil.ClassResources(new String[] { "newt/data/pointer-grey-alpha-16x24.png" }, disp.getClass().getClassLoader(), null);
+                final IOUtil.ClassResources res = new IOUtil.ClassResources(new String[] { "jogamp/newt/assets/pointer-grey-alpha-16x24.png" }, disp.getClass().getClassLoader(), null);
                 try {
                     _pointerIcon = disp.createPointerIcon(res, 0, 0);
                     pointerIcons.add(_pointerIcon);

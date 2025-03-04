@@ -42,6 +42,7 @@
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 #include <X11/Xatom.h>
+#include <X11/extensions/XInput2.h>
 
 #include <X11/extensions/Xrandr.h>
 
@@ -74,6 +75,14 @@ extern jmethodID visibleChangedID;
 extern jmethodID insetsVisibleChangedID;
 
 typedef struct {
+    int id;
+    int x;
+    int y;
+} XITouchPosition;
+
+#define XI_TOUCHCOORD_COUNT 10
+
+typedef struct {
     Window window;
     jobject jwindow;
     Atom * allAtoms;
@@ -85,12 +94,14 @@ typedef struct {
     Bool maxVert;
     /** flag whether window is mapped */
     Bool isMapped;
+    int xiTouchDeviceId;
+    XITouchPosition xiTouchCoords[XI_TOUCHCOORD_COUNT];
 } JavaWindow;
 
 JavaWindow * getJavaWindowProperty(JNIEnv *env, Display *dpy, Window window, jlong javaObjectAtom, Bool showWarning);
 
 Status NewtWindows_getRootAndParent (Display *dpy, Window w, Window * root_return, Window * parent_return);
-Bool NewtWindows_updateInsets(Display *dpy, JavaWindow * w, int *left, int *right, int *top, int *bottom);
+Bool NewtWindows_updateInsets(Display *dpy, JavaWindow * w, Bool wait, int *left, int *right, int *top, int *bottom);
 Bool NewtWindows_updateMaximized(Display *dpy, JavaWindow * w, uint32_t netWMState);
 
 #define _MASK_NET_WM_STATE                   ( 1 <<  0 )

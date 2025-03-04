@@ -57,7 +57,8 @@ import com.jogamp.newt.awt.NewtCanvasAWT;
 import com.jogamp.newt.opengl.GLWindow;
 import com.jogamp.opengl.JoglVersion;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
-import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
+import com.jogamp.opengl.test.junit.util.NewtTestUtil;
+import com.jogamp.opengl.test.junit.util.GLTestUtil;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 
 /**
@@ -145,8 +146,8 @@ public class TestGLAutoDrawableNewtCanvasAWTOnOffscrnCapsAWT extends UITestCase 
             Assume.assumeNoException( throwable );
         }
 
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(glad, true));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(glad, true));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(glad, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(glad, true, null));
         System.out.println("Window: "+glad.getClass().getName());
 
         // Check caps of NativeWindow config w/o GL
@@ -210,7 +211,7 @@ public class TestGLAutoDrawableNewtCanvasAWTOnOffscrnCapsAWT extends UITestCase 
         // 1 - szStep = 2
         final int[] expSurfaceSize = glad.getNativeSurface().convertToPixelUnits(new int[] { widthStep*szStep, heightStep*szStep });
         Assert.assertTrue("Surface Size not reached: Expected "+expSurfaceSize[0]+"x"+expSurfaceSize[1]+", Is "+glad.getSurfaceWidth()+"x"+glad.getSurfaceHeight(),
-                          AWTRobotUtil.waitForSize(glad, expSurfaceSize[0], expSurfaceSize[1]));
+                          GLTestUtil.waitForSize(glad, expSurfaceSize[0], expSurfaceSize[1], null));
         snapshotGLEventListener.setMakeSnapshot();
         glad.display();
 
@@ -221,7 +222,7 @@ public class TestGLAutoDrawableNewtCanvasAWTOnOffscrnCapsAWT extends UITestCase 
         expSurfaceSize[1] = heightStep*szStep;
         glad.getNativeSurface().convertToPixelUnits(expSurfaceSize);
         Assert.assertTrue("Surface Size not reached: Expected "+expSurfaceSize[0]+"x"+expSurfaceSize[1]+", Is "+glad.getSurfaceWidth()+"x"+glad.getSurfaceHeight(),
-                          AWTRobotUtil.waitForSize(glad, expSurfaceSize[0], expSurfaceSize[1]));
+                          GLTestUtil.waitForSize(glad, expSurfaceSize[0], expSurfaceSize[1], null));
         glad.display();
         snapshotGLEventListener.setMakeSnapshot();
         glad.display();
@@ -233,7 +234,7 @@ public class TestGLAutoDrawableNewtCanvasAWTOnOffscrnCapsAWT extends UITestCase 
         expSurfaceSize[1] = heightStep*szStep;
         glad.getNativeSurface().convertToPixelUnits(expSurfaceSize);
         Assert.assertTrue("Surface Size not reached: Expected "+expSurfaceSize[0]+"x"+expSurfaceSize[1]+", Is "+glad.getSurfaceWidth()+"x"+glad.getSurfaceHeight(),
-                          AWTRobotUtil.waitForSize(glad, expSurfaceSize[0], expSurfaceSize[1]));
+                          GLTestUtil.waitForSize(glad, expSurfaceSize[0], expSurfaceSize[1], null));
         glad.display();
         snapshotGLEventListener.setMakeSnapshot();
         glad.display();
@@ -254,18 +255,6 @@ public class TestGLAutoDrawableNewtCanvasAWTOnOffscrnCapsAWT extends UITestCase 
         glad.destroy();
         System.out.println("Fin: "+nca);
         System.out.println("Fin: "+glad);
-    }
-
-    @Test
-    public void testAvailableInfo() {
-        GLDrawableFactory f = GLDrawableFactory.getDesktopFactory();
-        if(null != f) {
-            System.err.println(JoglVersion.getDefaultOpenGLInfo(f.getDefaultDevice(), null, true).toString());
-        }
-        f = GLDrawableFactory.getEGLFactory();
-        if(null != f) {
-            System.err.println(JoglVersion.getDefaultOpenGLInfo(f.getDefaultDevice(), null, true).toString());
-        }
     }
 
     @Test

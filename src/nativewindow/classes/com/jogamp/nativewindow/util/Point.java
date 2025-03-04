@@ -102,9 +102,25 @@ public class Point implements Cloneable, PointImmutable {
         return x + " / " + y;
     }
 
-    public final void set(final int x, final int y) { this.x = x; this.y = y; }
-    public final void setX(final int x) { this.x = x; }
-    public final void setY(final int y) { this.y = y; }
+    /**
+     * Set this instance's x- and y-component.
+     * @param x value for x-component
+     * @param y value for y-component
+     * @return this instance for scaling
+     */
+    public final Point set(final int x, final int y) { this.x = x; this.y = y; return this; }
+    /**
+     * Set this instance's x--component.
+     * @param x value for x-component
+     * @return this instance for scaling
+     */
+    public final Point setX(final int x) { this.x = x; return this; }
+    /**
+     * Set this instance's y-component.
+     * @param y value for y-component
+     * @return this instance for scaling
+     */
+    public final Point setY(final int y) { this.y = y; return this; }
 
     /**
      * Translate this instance's x- and y-components,
@@ -115,6 +131,18 @@ public class Point implements Cloneable, PointImmutable {
     public final Point translate(final Point pd) {
         x += pd.x ;
         y += pd.y ;
+        return this;
+    }
+
+    /**
+     * Translate this instance's x- and y-components,
+     * i.e. add the values of the given delta point to them.
+     * @param pd delta point
+     * @return this instance for scaling
+     */
+    public final Point translate(final PointImmutable pd) {
+        x += pd.getX() ;
+        y += pd.getY() ;
         return this;
     }
 

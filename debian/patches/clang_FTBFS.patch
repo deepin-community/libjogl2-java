@@ -1,11 +1,10 @@
 Description: fix FTBFS with clang instead of gcc [-Wreturn-type]
 Author: Nicolas Sévelin-Radiguet <nicosr@free.fr>
+Forwarded: sgothel@jausoft.com
 Last-Update: 2014-09-02
-Index: libjogl2-java/src/newt/native/bcm_vc_iv.c
-===================================================================
---- libjogl2-java.orig/src/newt/native/bcm_vc_iv.c
-+++ libjogl2-java/src/newt/native/bcm_vc_iv.c
-@@ -357,7 +357,7 @@ JNIEXPORT jlong JNICALL Java_jogamp_newt
+--- a/src/newt/native/bcm_vc_iv.c
++++ b/src/newt/native/bcm_vc_iv.c
+@@ -353,7 +353,7 @@
     VC_RECT_T src_rect;
  
     if( 0 == display ) {

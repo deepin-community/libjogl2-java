@@ -33,6 +33,7 @@ import jogamp.opengl.FPSCounterImpl;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Locale;
 
 import com.jogamp.opengl.GLAnimatorControl;
 import com.jogamp.opengl.GLAutoDrawable;
@@ -128,10 +129,28 @@ public abstract class AnimatorBase implements GLAnimatorControl {
      * Creates a new, empty Animator instance
      * while expecting an AWT rendering thread if AWT is available.
      *
+     * @see #AnimatorBase(int)
      * @see GLProfile#isAWTAvailable()
+     * @see #setModeBits(boolean, int)
      */
     public AnimatorBase() {
-        modeBits = MODE_EXPECT_AWT_RENDERING_THREAD; // default!
+        this( MODE_EXPECT_AWT_RENDERING_THREAD ); // default!
+    }
+
+    /**
+     * Creates a new, empty Animator instance
+     * with given modeBits.
+     * <p>
+     * Passing {@link #MODE_EXPECT_AWT_RENDERING_THREAD} is considered default.
+     * However, passing {@code 0} is recommended if not using AWT in your application.
+     * </p>
+     *
+     * @see AnimatorBase#MODE_EXPECT_AWT_RENDERING_THREAD
+     * @see GLProfile#isAWTAvailable()
+     * @see #setModeBits(boolean, int)
+     */
+    public AnimatorBase(final int modeBits) {
+        this.modeBits = modeBits;
         drawablesEmpty = true;
     }
 
@@ -151,7 +170,7 @@ public abstract class AnimatorBase implements GLAnimatorControl {
      */
     protected final synchronized void initImpl(final boolean force) {
         if( force || null == impl ) {
-            final String seqSuffix = String.format("#%02d", seqInstanceNumber++);
+            final String seqSuffix = String.format((Locale)null, "#%02d", seqInstanceNumber++);
             if( useAWTAnimatorImpl( modeBits ) ) {
                 try {
                     impl = (AnimatorImpl) awtAnimatorImplClazz.newInstance();

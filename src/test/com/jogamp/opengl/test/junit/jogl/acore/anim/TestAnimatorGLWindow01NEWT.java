@@ -34,7 +34,8 @@ import com.jogamp.opengl.GLCapabilities;
 
 import com.jogamp.newt.opengl.GLWindow;
 import com.jogamp.opengl.util.Animator;
-import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
+import com.jogamp.opengl.test.junit.util.NewtTestUtil;
+import com.jogamp.opengl.test.junit.util.GLTestUtil;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
 
@@ -45,8 +46,8 @@ import org.junit.runners.MethodSorters;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestAnimatorGLWindow01NEWT extends UITestCase {
-    static final int width = 640;
-    static final int height = 480;
+    static final int width = 400;
+    static final int height = 400;
 
     protected GLWindow createGLWindow(final GLCapabilities caps, final int x, final int y, final GearsES2 gears) throws InterruptedException {
         final GLWindow glWindow = GLWindow.create(caps);
@@ -81,7 +82,7 @@ public class TestAnimatorGLWindow01NEWT extends UITestCase {
     @Test
     public void test01SyncedOneAnimator() throws InterruptedException, InvocationTargetException {
         final GLCapabilities caps = new GLCapabilities(null);
-        final Animator animator = new Animator();
+        final Animator animator = new Animator(0 /* w/o AWT */);
         animator.start();
         Assert.assertEquals(true, animator.isStarted());
         Assert.assertEquals(true, animator.isPaused());
@@ -108,19 +109,19 @@ public class TestAnimatorGLWindow01NEWT extends UITestCase {
         c2.setVisible(true);
         c3.setVisible(true);
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c1, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(c1, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(c1, true));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(c1, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(c1, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(c1, true, null));
         Assert.assertTrue("Gears1 not initialized", g1.waitForInit(true));
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c2, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(c2, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(c2, true));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(c2, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(c2, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(c2, true, null));
         Assert.assertTrue("Gears2 not initialized", g2.waitForInit(true));
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c3, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(c3, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(c3, true));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(c3, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(c3, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(c3, true, null));
         Assert.assertTrue("Gears3 not initialized", g3.waitForInit(true));
 
         try {
@@ -153,15 +154,15 @@ public class TestAnimatorGLWindow01NEWT extends UITestCase {
         c2.destroy();
         c3.destroy();
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c3, false));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(c1, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(c2, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(c3, false, null));
     }
 
     @Test
     public void test02AsyncEachAnimator() throws InterruptedException, InvocationTargetException {
         final GLCapabilities caps = new GLCapabilities(null);
-        final Animator a1 = new Animator();
+        final Animator a1 = new Animator(0 /* w/o AWT */);
         final GearsES2 g1 = new GearsES2(0);
         final GLWindow c1 = createGLWindow(caps, 0, 0, g1);
         a1.add(c1);
@@ -171,7 +172,7 @@ public class TestAnimatorGLWindow01NEWT extends UITestCase {
         Assert.assertEquals(true, a1.isAnimating());
         c1.setVisible(true);
 
-        final Animator a2 = new Animator();
+        final Animator a2 = new Animator(0 /* w/o AWT */);
         final GearsES2 g2 = new GearsES2(0);
         final GLWindow c2 = createGLWindow(caps, c1.getX()+width, c1.getY()+0, g2);
         a2.add(c2);
@@ -181,7 +182,7 @@ public class TestAnimatorGLWindow01NEWT extends UITestCase {
         Assert.assertEquals(true, a2.isAnimating());
         c2.setVisible(true);
 
-        final Animator a3 = new Animator();
+        final Animator a3 = new Animator(0 /* w/o AWT */);
         final GearsES2 g3 = new GearsES2(0);
         final GLWindow c3 = createGLWindow(caps, c1.getX()+0, c1.getY()+height, g3);
         a3.add(c3);
@@ -191,19 +192,19 @@ public class TestAnimatorGLWindow01NEWT extends UITestCase {
         Assert.assertEquals(true, a3.isAnimating());
         c3.setVisible(true);
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c1, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(c1, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(c1, true));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(c1, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(c1, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(c1, true, null));
         Assert.assertTrue("Gears1 not initialized", g1.waitForInit(true));
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c2, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(c2, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(c2, true));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(c2, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(c2, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(c2, true, null));
         Assert.assertTrue("Gears2 not initialized", g2.waitForInit(true));
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c3, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(c3, true));
-        Assert.assertTrue(AWTRobotUtil.waitForContextCreated(c3, true));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(c3, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(c3, true, null));
+        Assert.assertTrue(GLTestUtil.waitForContextCreated(c3, true, null));
         Assert.assertTrue("Gears3 not initialized", g3.waitForInit(true));
 
         try {
@@ -242,9 +243,9 @@ public class TestAnimatorGLWindow01NEWT extends UITestCase {
         c2.destroy();
         c3.destroy();
 
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c1, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c2, false));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(c3, false));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(c1, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(c2, false, null));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(c3, false, null));
     }
 
     static long duration = 3*500; // ms

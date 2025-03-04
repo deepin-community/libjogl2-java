@@ -1,6 +1,6 @@
 /*
+ * Copyright (c) 2010-2023 JogAmp Community. All rights reserved.
  * Copyright (c) 2003 Sun Microsystems, Inc. All Rights Reserved.
- * Copyright (c) 2010 JogAmp Community. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,9 +33,6 @@
  * You acknowledge that this software is not designed or intended for use
  * in the design, construction, operation or maintenance of any nuclear
  * facility.
- *
- * Sun gratefully acknowledges that this software was originally authored
- * and developed by Kenneth Bradley Russell and Christopher John Kline.
  */
 
 package com.jogamp.opengl;
@@ -47,20 +44,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import com.jogamp.common.os.Platform;
+import com.jogamp.common.util.Bitfield;
+import com.jogamp.common.util.VersionNumber;
+import com.jogamp.common.util.VersionNumberString;
+import com.jogamp.common.util.locks.LockFactory;
+import com.jogamp.common.util.locks.RecursiveLock;
 import com.jogamp.nativewindow.AbstractGraphicsDevice;
 import com.jogamp.nativewindow.NativeSurface;
 
 import jogamp.opengl.Debug;
 import jogamp.opengl.GLContextImpl;
 import jogamp.opengl.GLContextShareSet;
-
-import com.jogamp.common.os.Platform;
-import com.jogamp.common.util.VersionNumber;
-import com.jogamp.common.util.VersionNumberString;
-import com.jogamp.common.util.locks.LockFactory;
-import com.jogamp.common.util.locks.RecursiveLock;
-import com.jogamp.opengl.GLExtensions;
-import com.jogamp.opengl.GLRendererQuirks;
 
 /** Abstraction for an OpenGL rendering context. In order to perform
     OpenGL rendering, a context must be "made current" on the current
@@ -105,10 +100,6 @@ public abstract class GLContext {
    * </p>
    */
   public static final boolean PROFILE_ALIASING = !Debug.isPropertyDefined("jogl.debug.GLContext.NoProfileAliasing", true);
-
-  protected static final boolean FORCE_NO_FBO_SUPPORT = Debug.isPropertyDefined("jogl.fbo.force.none", true);
-  protected static final boolean FORCE_MIN_FBO_SUPPORT = Debug.isPropertyDefined("jogl.fbo.force.min", true);
-  protected static final boolean FORCE_NO_COLOR_RENDERBUFFER = Debug.isPropertyDefined("jogl.fbo.force.nocolorrenderbuffer", true);
 
   /** Reflects property jogl.debug.DebugGL. If true, the debug pipeline is enabled at context creation. */
   public static final boolean DEBUG_GL = Debug.isPropertyDefined("jogl.debug.DebugGL", true);
@@ -1370,12 +1361,36 @@ public abstract class GLContext {
   /**
    * Returns the default color buffer within the current bound
    * {@link #getDefaultReadFramebuffer()}, i.e. GL_READ_FRAMEBUFFER​,
+   * which will be used as the target (output) for (fragment shader) draw commands,
+   * settable via {@link GL2ES2#glDrawBuffers(int, int[], int)} or {@link GL2#glDrawBuffer(int)}.
+   * <p>
+   * For offscreen framebuffer objects this is {@link GL#GL_COLOR_ATTACHMENT0},
+   * otherwise this is {@link GL#GL_FRONT} for non-ES profile and single buffer configurations
+   * and {@link GL#GL_BACK} for double buffer configurations or ES profiles.
+   * </p>
+   * <p>
+   * Note-1: Neither ES1 nor ES2 supports selecting the draw buffer at all
+   * and {@link GL#GL_BACK} is the default.
+   * </p>
+   * <p>
+   * Note-2: ES3 only supports {@link GL#GL_BACK}, {@link GL#GL_NONE} or {@link GL#GL_COLOR_ATTACHMENT0}+i
+   * via {@link GL2ES2#glDrawBuffers(int, int[], int)}.
+   * </p>
+   * <p>
+   * Method is only thread-safe while context is {@link #makeCurrent() made current}.
+   * </p>
+   */
+  public abstract int getDefaultDrawBuffer();
+
+  /**
+   * Returns the default color buffer within the current bound
+   * {@link #getDefaultReadFramebuffer()}, i.e. GL_READ_FRAMEBUFFER​,
    * which will be used as the source for pixel reading commands,
    * like {@link GL#glReadPixels(int, int, int, int, int, int, java.nio.Buffer) glReadPixels} etc.
    * <p>
    * For offscreen framebuffer objects this is {@link GL#GL_COLOR_ATTACHMENT0},
-   * otherwise this is {@link GL#GL_FRONT} for single buffer configurations
-   * and {@link GL#GL_BACK} for double buffer configurations.
+   * otherwise this is {@link GL#GL_FRONT} for non-ES profile and single buffer configurations
+   * and {@link GL#GL_BACK} for double buffer configurations or ES profiles.
    * </p>
    * <p>
    * Note-1: Neither ES1 nor ES2 supports selecting the read buffer via glReadBuffer
@@ -1505,7 +1520,7 @@ public abstract class GLContext {
       /* 1.*/ { 0, 1, 2, 3, 4, 5 },
       /* 2.*/ { 0, 1 },
       /* 3.*/ { 0, 1, 2, 3 },
-      /* 4.*/ { 0, 1, 2, 3, 4, 5 } };
+      /* 4.*/ { 0, 1, 2, 3, 4, 5, 6 } };
 
   public static final int ES_VERSIONS[][] = {
       /* 0.*/ { -1 },
@@ -1533,6 +1548,15 @@ public abstract class GLContext {
   /**
    * Returns true, if the major.minor is not inferior to the lowest
    * valid version and does not exceed the highest known major number by more than one.
+   * Otherwise returns false.
+   * <p>
+   * Returns false if more than one bit of the following list in {@code ctxProfile} is set
+   * <ul>
+   *   <li>{@link GLContext#CTX_PROFILE_ES}</li>
+   *   <li>{@link GLContext#CTX_PROFILE_CORE}</li>
+   *   <li>{@link GLContext#CTX_PROFILE_COMPAT}</li>
+   * </ul>
+   * </p>
    * <p>
    * The minor version number is ignored by the upper limit validation
    * and the major version number may exceed by one.
@@ -1548,6 +1572,9 @@ public abstract class GLContext {
    */
   public static final boolean isValidGLVersion(final int ctxProfile, final int major, final int minor) {
       if( 1>major || 0>minor ) {
+          return false;
+      }
+      if ( 1 < Bitfield.Util.bitCount( ctxProfile & ( CTX_PROFILE_ES | CTX_PROFILE_CORE | CTX_PROFILE_COMPAT ) ) ) {
           return false;
       }
       if( 0 != ( CTX_PROFILE_ES & ctxProfile ) ) {
@@ -1638,8 +1665,11 @@ public abstract class GLContext {
       ctp[0]          = ( bits32 & 0x0000FFFF )        ;
       return new VersionNumber(major, minor, 0);
   }
+  protected static int getCTPFromBits(final int bits32) {
+      return ( bits32 & 0x0000FFFF );
+  }
 
-  private static void validateProfileBits(final int bits, final String argName) {
+  protected static void validateProfileBits(final int bits, final String argName) {
     int num = 0;
     if( 0 != ( CTX_PROFILE_COMPAT & bits ) ) { num++; }
     if( 0 != ( CTX_PROFILE_CORE   & bits ) ) { num++; }
@@ -1698,28 +1728,6 @@ public abstract class GLContext {
   protected static String getDeviceVersionAvailableKey(final AbstractGraphicsDevice device, final int major, final int profile) {
       final String r = device.getUniqueID() + "-" + toHexString(composeBits(major, profile, 0));
       return r.intern();
-  }
-
-  /**
-   * @deprecated Use {@link GLContextImpl#mapAvailableGLVersion(AbstractGraphicsDevice, int, int, VersionNumber, int)}
-   */
-  protected static Integer mapAvailableGLVersion(final AbstractGraphicsDevice device,
-                                                 final int reqMajor, final int profile, final int resMajor, final int resMinor, int resCtp)
-  {
-    validateProfileBits(profile, "profile");
-    validateProfileBits(resCtp, "resCtp");
-
-    if(FORCE_NO_FBO_SUPPORT) {
-        resCtp &= ~CTX_IMPL_FBO ;
-    }
-    if(DEBUG) {
-        System.err.println(getThreadName() + ": createContextARB-MapGLVersions MAP "+device+": "+reqMajor+" ("+GLContext.getGLProfile(new StringBuilder(), profile).toString()+ ") -> "+getGLVersion(resMajor, resMinor, resCtp, null));
-    }
-    final String objectKey = getDeviceVersionAvailableKey(device, reqMajor, profile);
-    final Integer val = Integer.valueOf(composeBits(resMajor, resMinor, resCtp));
-    synchronized(deviceVersionAvailable) {
-        return deviceVersionAvailable.put( objectKey, val );
-    }
   }
 
   protected static StringBuilder dumpAvailableGLVersions(StringBuilder sb) {

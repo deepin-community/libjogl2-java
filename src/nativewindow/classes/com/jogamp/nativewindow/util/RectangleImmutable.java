@@ -28,27 +28,38 @@
 
 package com.jogamp.nativewindow.util;
 
+import java.util.List;
+
 import com.jogamp.common.type.WriteCloneable;
 
-/** Immutable Rectangle interface */
+/** Immutable Rectangle interface, with its position on the top-left. */
 public interface RectangleImmutable extends WriteCloneable, Comparable<RectangleImmutable> {
 
     int getHeight();
 
     int getWidth();
 
+    /** x-position, left of rectangle. */
     int getX();
 
+    /** y-position, top of rectangle. */
     int getY();
 
-    /** Returns the union of this rectangle and the given rectangle. */
-    RectangleImmutable union(final RectangleImmutable r);
-    /** Returns the union of this rectangleand the given coordinates. */
-    RectangleImmutable union(final int rx1, final int ry1, final int rx2, final int ry2);
-    /** Returns the intersection of this rectangleand the given rectangle. */
-    RectangleImmutable intersection(RectangleImmutable r);
-    /** Returns the intersection of this rectangleand the given coordinates. */
-    RectangleImmutable intersection(final int rx1, final int ry1, final int rx2, final int ry2);
+    /** Returns a new {@link Rectangle} instance containing the union of this rectangle and the given rectangle. */
+    Rectangle union(final RectangleImmutable r);
+    /** Returns a new {@link Rectangle} instance containing the union of this rectangle and the given coordinates. */
+    Rectangle union(final int rx1, final int ry1, final int rx2, final int ry2);
+    /**
+     * Calculates the union of the given rectangles, stores it in this instance and returns this instance.
+     * @param rectangles given list of rectangles
+     * @return this instance holding the union of given rectangles.
+     */
+    Rectangle union(final List<RectangleImmutable> rectangles);
+
+    /** Returns a new {@link Rectangle} instance containing the intersection of this rectangle and the given rectangle. */
+    Rectangle intersection(RectangleImmutable r);
+    /** Returns a new {@link Rectangle} instance containing the intersection of this rectangle and the given coordinates. */
+    Rectangle intersection(final int rx1, final int ry1, final int rx2, final int ry2);
     /**
      * Returns the coverage of given rectangle w/ this this one, i.e. between <code>0.0</code> and <code>1.0</code>.
      * <p>
@@ -60,6 +71,8 @@ public interface RectangleImmutable extends WriteCloneable, Comparable<Rectangle
      * </p>
      */
     float coverage(RectangleImmutable r);
+
+    boolean contains(RectangleImmutable r);
 
     /**
      * <p>

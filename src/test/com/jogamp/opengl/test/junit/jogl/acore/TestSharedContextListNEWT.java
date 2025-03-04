@@ -39,7 +39,7 @@ import com.jogamp.opengl.GLOffscreenAutoDrawable;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.util.Animator;
 
-import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
+import com.jogamp.opengl.test.junit.util.NewtTestUtil;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 import com.jogamp.opengl.test.junit.jogl.demos.gl2.Gears;
 
@@ -106,8 +106,8 @@ public class TestSharedContextListNEWT extends UITestCase {
         animator.add(glWindow);
 
         glWindow.setVisible(true);
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(glWindow, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(glWindow, true));
+        Assert.assertTrue(NewtTestUtil.waitForRealized(glWindow, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(glWindow, true, null));
         glWindow.setPosition(x, y);
 
         return glWindow;
@@ -116,7 +116,7 @@ public class TestSharedContextListNEWT extends UITestCase {
     @Test
     public void test01() throws InterruptedException {
         initShared();
-        final Animator animator = new Animator();
+        final Animator animator = new Animator(0 /* w/o AWT */);
         final GLWindow f1 = runTestGL(animator, 0, 0, true, false);
         final InsetsImmutable insets = f1.getInsets();
         final GLWindow f2 = runTestGL(animator, f1.getX()+width+insets.getTotalWidth(),

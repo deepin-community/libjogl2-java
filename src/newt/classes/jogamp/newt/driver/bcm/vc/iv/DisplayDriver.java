@@ -52,7 +52,7 @@ public class DisplayDriver extends DisplayImpl {
     static final PNGPixelRect defaultPointerIconImage;
 
     static {
-        NEWTJNILibLoader.loadNEWT();
+        NEWTJNILibLoader.loadNEWTHead();
         GLProfile.initSingleton();
 
         if (!DisplayDriver.initIDs()) {
@@ -67,7 +67,7 @@ public class DisplayDriver extends DisplayImpl {
 
         PNGPixelRect image = null;
         if( DisplayImpl.isPNGUtilAvailable() ) {
-            final IOUtil.ClassResources res = new IOUtil.ClassResources(new String[] { "newt/data/pointer-grey-alpha-16x24.png" }, DisplayDriver.class.getClassLoader(), null);
+            final IOUtil.ClassResources res = new IOUtil.ClassResources(new String[] { defaultPointerIconPath }, DisplayDriver.class.getClassLoader(), null);
             try {
                 final URLConnection urlConn = res.resolve(0);
                 if( null != urlConn ) {
@@ -108,7 +108,11 @@ public class DisplayDriver extends DisplayImpl {
         }
         if( null != defaultPointerIcon ) {
             final LinuxMouseTracker lmt = LinuxMouseTracker.getSingleton();
-            setPointerIconActive(defaultPointerIcon.getHandle(), lmt.getLastX(), lmt.getLastY());
+            if( null != lmt ) {
+                setPointerIconActive(defaultPointerIcon.getHandle(), lmt.getLastX(), lmt.getLastY());
+            } else {
+                setPointerIconActive(defaultPointerIcon.getHandle(), 0, 0);
+            }
         }
     }
     private PointerIconImpl defaultPointerIcon = null;

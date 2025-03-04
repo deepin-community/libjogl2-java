@@ -1,3 +1,100 @@
+libjogl2-java (2.5.0+dfsg-3.1) unstable; urgency=medium
+
+  * Non-maintainer upload
+  * Build without JFX support (Closes: #1082873)
+
+ -- Bastian Germann <bage@debian.org>  Fri, 27 Sep 2024 08:31:10 +0200
+
+libjogl2-java (2.5.0+dfsg-3) unstable; urgency=medium
+
+  * Really building on mips64el
+  * Exporting LC_ALL=C.UTF-8 in d/rules
+
+ -- Pierre Gruet <pgt@debian.org>  Mon, 08 Jul 2024 09:47:21 +0200
+
+libjogl2-java (2.5.0+dfsg-2) unstable; urgency=medium
+
+  * Building against g++-14 by deactivating clang_FTBFS patch (Closes: #1075174)
+  * Raising Standards version to 4.7.0 (no change)
+  * Patching the build system to build on mips64el
+
+ -- Pierre Gruet <pgt@debian.org>  Sat, 06 Jul 2024 23:49:19 +0200
+
+libjogl2-java (2.5.0+dfsg-1) unstable; urgency=medium
+
+  * New upstream version 2.5.0+dfsg
+  * Refreshing patches
+  * Fixing the clean target (Closes: #1046349)
+  * Refreshing d/copyright
+  * Raising minimal gluegen2 version in the (Build-)Depends
+
+ -- Pierre Gruet <pgt@debian.org>  Mon, 11 Sep 2023 21:55:13 +0200
+
+libjogl2-java (2.4.0+dfsg-1) unstable; urgency=medium
+
+  * Adding myself as uploader (Closes: #783518)
+  * Aligning dependencies in d/control
+  * Building for any architecture a priori
+  * Correcting syntax in the override of dh_auto_clean
+  * Forwarding patches
+
+ -- Pierre Gruet <pgt@debian.org>  Wed, 21 Jun 2023 21:21:24 +0200
+
+libjogl2-java (2.4.0+dfsg-1~exp1) experimental; urgency=medium
+
+  * Team upload
+  * Updating the versioned dependency on libgluegen2-rt-java
+
+ -- Pierre Gruet <pgt@debian.org>  Wed, 19 Apr 2023 17:05:49 +0200
+
+libjogl2-java (2.4.0+dfsg-1~exp0) experimental; urgency=medium
+
+  * Team upload
+  * New upstream version 2.4.0+dfsg
+  * Refreshing patches
+  * Raising Standards version to 4.6.2:
+    - Using machine-readable copyright format
+    - Repacking through debian/copyright
+    - Removing obsolete target get-orig-source
+    - Setting Rules-Requires-Root: no
+    - Building with dh instead of cdbs
+  * Raising debian/watch version to 4
+  * Raising Java version in debian/ant.properties
+  * Revising build-dependencies, dropping debian/compat
+  * Updating the list of .so that are installed in the -jni package
+  * Passing the path to the openjfx jars for the build
+  * Omitting flags to the cc ant task that are not understood
+  * Customizing OpenJDK header files to have them fit for the combination of
+    gluegen and jogl
+  * Skipping an useless gluegen invocation in the build
+  * Skipping ant tasks related to Windows, MacOs and iOS
+  * Dropping obsolete B-D on libgl1-mesa-dev
+  * Hardening by passing CFLAGS, CPPFLAGS and LDFLAGS to the relevant cc ant
+    tasks
+  * Adding missing patch headers
+  * Fixing spelling issue : occured
+  * Marking libjogl2-java-doc and libjogl2-toolkits as Multi-Arch: foreign
+
+  [ Debian Janitor ]
+  * Trim trailing whitespace.
+  * Bump debhelper from deprecated 9 to 10.
+
+ -- Pierre Gruet <pgt@debian.org>  Tue, 18 Apr 2023 21:24:42 +0200
+
+libjogl2-java (2.3.2+dfsg-10) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Manuel A. Fernandez Montecelo ]
+  * Build for riscv64:  (Closes: #1025373)
+    - enable in d/control
+    - add debian/patches/riscv64-port.diff
+
+  [ tony mancill ]
+  * Update Vcs URLs to point to Salsa
+
+ -- tony mancill <tmancill@debian.org>  Sat, 03 Dec 2022 13:34:08 -0800
+
 libjogl2-java (2.3.2+dfsg-9) unstable; urgency=medium
 
   * Team upload.
@@ -76,7 +173,7 @@ libjogl2-java (2.2.4+dfsg-1) unstable; urgency=medium
 
   * Team upload.
   * Modify orig-tar.sh and repack the upstream tarball to remove source
-    file under a license restriction w.r.t. venue (CC BY-NC 3.0): 
+    file under a license restriction w.r.t. venue (CC BY-NC 3.0):
     src/test/com/jogamp/opengl/test/junit/jogl/demos/es2/shader/landscape.fp
     - Thanks to Rebecca N. Palmer. (Closes: #767384)
 
@@ -252,7 +349,7 @@ libjogl2-java (2.0-rc8-1~exp2) experimental; urgency=low
  -- Sylvestre Ledru <sylvestre@debian.org>  Wed, 13 Jun 2012 13:54:44 +0200
 
 libjogl2-java (2.0-rc8-1~exp1) experimental; urgency=low
-  
+
   * New upstream release
   * Set the exact version of the dependency between libjogl2-java
     and libjogl2-jni
@@ -344,7 +441,7 @@ libjogl2-java (2.0-rc3-1) unstable; urgency=low
   * libjogl2-java, libjogl2-jni and libjogl2-java-doc added
     (better match of the version 1)
   * Massive cleanup of the package list. Upstream decided to simplify all the
-    jar packages. 
+    jar packages.
     See: http://bit.ly/qBNO7V
 
  -- Sylvestre Ledru <sylvestre@debian.org>  Thu, 06 Oct 2011 15:53:38 +0200
@@ -388,5 +485,3 @@ libjogl2-java (2.0-rc1-1) unstable; urgency=low
   * New upstream release (Closes: #614819)
 
  -- Sylvestre Ledru <sylvestre@debian.org>  Tue, 01 Mar 2011 14:12:56 +0100
-
-

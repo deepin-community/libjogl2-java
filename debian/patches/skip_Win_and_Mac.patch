@@ -1,0 +1,183 @@
+Description: skipping parts related to Windows, MacOS and iOS, as the needed
+ non-free JDK headers have been removed from gluegen anyway.
+Author: Pierre Gruet <pgt@debian.org>
+Forwarded: not-needed
+Last-Update: 2023-04-16
+
+--- a/make/build-nativewindow.xml
++++ b/make/build-nativewindow.xml
+@@ -112,7 +112,7 @@
+             </and>
+         </condition>
+ 
+-        <property name="java.excludes.all" value="${java.excludes.awt}" />
++	<property name="java.excludes.all" value="${java.excludes.awt} jogamp/nativewindow/drm/** jogamp/nativewindow/macosx/** jogamp/nativewindow/windows/** jogamp/nativewindow/jawt/macosx/** jogamp/nativewindow/jawt/windows/**" />
+         <echo message="java.excludes.all: ${java.excludes.all}" />
+     </target>
+ 
+@@ -297,7 +297,7 @@
+ 
+         <antcall target="java.generate.cleantemp" inheritRefs="true" />
+ 
+-        <echo message="Generating platform-specifics: DRM" />
++        <!--<echo message="Generating platform-specifics: DRM" />
+         <dirset id="stub.includes.fileset.drm" dir="." includes="${stub.includes}/drm/* ${stub.includes.gluegen}/gluegen/**" />
+         <gluegen src="${stub.includes}/drm/drm-gbm-lib.c"
+                  outputRootDir="${build.nativewindow}"
+@@ -308,7 +308,7 @@
+                  debug="false"
+                  dumpCPP="false">
+             <classpath refid="gluegen.classpath" />
+-        </gluegen>
++        </gluegen>-->
+ 
+         <echo message="Generating platform-specifics: X11" />
+         <antcall target="java.generate.platforms" inheritRefs="true">
+@@ -319,7 +319,7 @@
+             <param name="jni.platform.sub"                       value="linux" />
+         </antcall>
+ 
+-        <echo message="Generating platform-specifics: Win32" />
++        <!--<echo message="Generating platform-specifics: Win32" />
+         <antcall target="java.generate.platforms" inheritRefs="true">
+             <param name="window.os.system"                       value="win32"/>
+             <param name="windowlib.os.cfg"                       value="${config.nativewindow}/win32-lib.cfg" />
+@@ -334,7 +334,7 @@
+           <param name="jawt.cfg"                             value="${config.nativewindow}/jawt-macosx.cfg" />
+           <param name="jawt.platform.header"                 value="${stub.includes.gluegen}/jni/macosx/jawt_md.h" />
+           <param name="jni.platform.sub"                     value="macosx" />
+-        </antcall>
++        </antcall>-->
+     
+         <echo message="Generating platform-specifics: iOS (nop)" /> <!-- actually nothing gets generated -->
+         <antcall target="java.generate.platforms" inheritRefs="true">
+@@ -1050,7 +1050,7 @@
+                linker.cfg.id="${linker.cfg.id.oswin}"/>
+     </target>
+ 
+-    <target name="c.build.nativewindow.windowlib" depends="c.build.nativewindow.windowlib.drmgbm, c.build.nativewindow.windowlib.x11, c.build.nativewindow.windowlib.windows, c.build.nativewindow.windowlib.macosx, c.build.nativewindow.windowlib.ios"/>
++    <target name="c.build.nativewindow.windowlib" depends="c.build.nativewindow.windowlib.x11"/>
+ 
+     <target name="c.manifest" if="isVC8Family">
+       <!-- exec mt, the Microsoft Manifest Tool, to include DLL manifests in order to resolve the location of msvcr80.dll -->
+--- a/src/nativewindow/classes/com/jogamp/nativewindow/NativeWindowFactory.java
++++ b/src/nativewindow/classes/com/jogamp/nativewindow/NativeWindowFactory.java
+@@ -784,8 +784,8 @@
+         final String nwt = NativeWindowFactory.getNativeWindowType(true);
+         if( NativeWindowFactory.TYPE_X11 == nwt ) {
+             return jogamp.nativewindow.x11.X11Lib.GetRelativeLocation(nw.getDisplayHandle(), nw.getScreenIndex(), nw.getWindowHandle(), 0, 0, 0);
+-        } else if( NativeWindowFactory.TYPE_WINDOWS == nwt ) {
+-            return jogamp.nativewindow.windows.GDIUtil.GetRelativeLocation(nw.getWindowHandle(), 0, 0, 0);
++//        } else if( NativeWindowFactory.TYPE_WINDOWS == nwt ) {
++//            return jogamp.nativewindow.windows.GDIUtil.GetRelativeLocation(nw.getWindowHandle(), 0, 0, 0);
+         } else if( NativeWindowFactory.TYPE_MACOSX == nwt ) {
+             return jogamp.nativewindow.macosx.OSXUtil.GetLocationOnScreen(nw.getWindowHandle(), 0, 0);
+         } else if( NativeWindowFactory.TYPE_IOS == nwt ) {
+--- a/make/build-jogl.xml
++++ b/make/build-jogl.xml
+@@ -228,7 +228,7 @@
+         <property name="java.excludes.fixme" 
+                   value="jogamp/opengl/gl2/fixme/** com/jogamp/audio/windows/waveout/TestSpatialization.java" />
+ 
+-        <property name="java.excludes.all" value="${java.excludes.fixme} ${java.excludes.awt} ${java.excludes.swt}" />
++        <property name="java.excludes.all" value="${java.excludes.fixme} ${java.excludes.awt} ${java.excludes.swt} jogamp/opengl/macosx/** jogamp/opengl/ios/** jogamp/opengl/windows/**" />
+         <echo message="java.excludes.all: ${java.excludes.all}" />
+     </target>
+ 
+@@ -872,7 +872,7 @@
+             <param name="glext.platform.header"                  value="${stub.includes}/x11/glxext.c" />
+         </antcall>
+ 
+-        <antcall target="java.generate.gl.platforms" inheritRefs="true">
++        <!--<antcall target="java.generate.gl.platforms" inheritRefs="true">
+             <param name="window.os.system"                       value="win32"/>
+             <param name="window.os1.cfg"                         value="${config.jogl}/wgl-win32.cfg" />
+             <param name="glext.platform.cfg"                     value="${config.jogl}/wglext.cfg" />
+@@ -889,9 +889,7 @@
+         <antcall target="java.generate.gl.platforms" inheritRefs="true">
+           <param name="window.os.system"                     value="ios"/>
+           <param name="window.os1.cfg"                       value="${config.jogl}/eagl-ios.cfg" />
+-          <!-- param name="glext.platform.cfg"                   value="${config.jogl}/eagl-ext.cfg" /-->
+-          <!-- param name="glext.platform.header"                value="${stub.includes}/ios/eagl-ext.c" /-->
+-        </antcall>
++        </antcall>-->
+     
+         <!-- Generate GLU class -->
+         <antcall target="java.generate.glu.base"   inheritrefs="true" />
+--- a/src/jogl/classes/jogamp/opengl/egl/EGLDrawableFactory.java
++++ b/src/jogl/classes/jogamp/opengl/egl/EGLDrawableFactory.java
+@@ -373,11 +373,11 @@
+                     // Note: defaultDevice.open() triggers eglInitialize(..) which crashed on Windows w/ Chrome/ANGLE, FF/ANGLE!
+                     // Hence opening will happen later, eventually
+                     final long nativeDisplayID;
+-                    if( isDRM_GBM ) { // Bug 1402 related and in case surfaceless is n/a
++                    /*if( isDRM_GBM ) { // Bug 1402 related and in case surfaceless is n/a
+                         nativeDisplayID = jogamp.nativewindow.drm.DRMLib.gbm_create_device(jogamp.nativewindow.drm.DRMUtil.getDrmFd());
+-                    } else {
++                    } else {*/
+                         nativeDisplayID = EGL.EGL_DEFAULT_DISPLAY;
+-                    }
++                    //}
+                     defaultDevice = EGLDisplayUtil.eglCreateEGLGraphicsDevice(nativeDisplayID, defaultConnection, AbstractGraphicsDevice.DEFAULT_UNIT);
+ 
+                     // Init shared resources off thread
+@@ -411,9 +411,9 @@
+         }
+ 
+         if(null != defaultDevice) {
+-            if( isDRM_GBM ) { // Bug 1402 related and in case surfaceless is n/a
++            /*if( isDRM_GBM ) { // Bug 1402 related and in case surfaceless is n/a
+                 jogamp.nativewindow.drm.DRMLib.gbm_device_destroy(defaultDevice.getNativeDisplayID());
+-            }
++            }*/
+             defaultDevice.close();
+             defaultDevice = null;
+         }
+@@ -1143,14 +1143,14 @@
+         final AbstractGraphicsDevice device0 = null != deviceOrig ? deviceOrig : device; // prefer orig for native display ID
+         final UpstreamSurfaceHook ush;
+         final int nativeVisualID;
+-        if( isDRM_GBM ) {
++        /*if( isDRM_GBM ) {
+             ush = new jogamp.nativewindow.drm.GBMDummyUpstreamSurfaceHook(width, height);
+             nativeVisualID = jogamp.nativewindow.drm.DRMUtil.GBM_FORMAT_XRGB8888;
+-        } else {
++        } else {*/
+             ush = new EGLDummyUpstreamSurfaceHook(width, height);
+             chosenCaps = GLGraphicsConfigurationUtil.fixGLPBufferGLCapabilities(chosenCaps); // complete validation in EGLGraphicsConfigurationFactory.chooseGraphicsConfigurationStatic(..) above
+             nativeVisualID = VisualIDHolder.VID_UNDEFINED;
+-        }
++        //}
+         return createMutableSurfaceImpl2(device0, createNewDevice, chosenCaps, requestedCaps, chooser, nativeVisualID, ush);
+     }
+ 
+--- a/make/build-newt.xml
++++ b/make/build-newt.xml
+@@ -203,7 +203,7 @@
+             </and>
+         </condition>
+ 
+-        <property name="java.excludes.all" value="${java.excludes.awt}, ${java.excludes.swt}, ${java.excludes.javafx}, ${java.excludes.applet3}, ${java.excludes.opengl}" />
++        <property name="java.excludes.all" value="${java.excludes.awt}, ${java.excludes.swt}, ${java.excludes.javafx}, ${java.excludes.applet3}, ${java.excludes.opengl} jogamp/newt/driver/egl/gbm/** jogamp/newt/driver/windows/**" />
+         <echo message="java.excludes.all: ${java.excludes.all}" />
+ 
+     </target>
+@@ -1096,7 +1096,7 @@
+       <msvc.manifest objdir="${obj.newt}" dllname="newt" />
+     </target>
+ 
+-    <target name="c.build.newt.natives" depends="c.build.newt.windowlib.head, c.build.newt.windowlib.drmgbm" unless="setup.nonatives">
++    <target name="c.build.newt.natives" depends="c.build.newt.windowlib.head" unless="setup.nonatives">
+     </target>
+ 
+     <target name="c.build.newt" depends="c.configure,c.build.newt.natives">
+--- a/src/newt/classes/jogamp/newt/driver/x11/WindowDriver.java
++++ b/src/newt/classes/jogamp/newt/driver/x11/WindowDriver.java
+@@ -37,7 +37,6 @@
+ import java.nio.Buffer;
+ 
+ import jogamp.nativewindow.SurfaceScaleUtils;
+-import jogamp.nativewindow.windows.GDIUtil;
+ import jogamp.nativewindow.x11.X11Lib;
+ import jogamp.nativewindow.x11.X11Util;
+ import jogamp.newt.DisplayImpl;

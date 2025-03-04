@@ -105,6 +105,7 @@ public abstract class Display {
          * {@inheritDoc}
          * </p>
          */
+        @Override
         boolean isGLOriented();
 
         /**
@@ -145,14 +146,6 @@ public abstract class Display {
          * </p>
          */
         boolean isValid();
-
-        /**
-         * Returns true if instance {@link #isValid()} or validation was successful, otherwise false.
-         * <p>
-         * Validation, i.e. recreation, is required if instance became invalid, see {@link #isValid()}.
-         * </p>
-         */
-        boolean validate();
 
         /**
          * Destroys this instance.
@@ -463,7 +456,8 @@ public abstract class Display {
     }
 
     public static String getThreadName() {
-        return Thread.currentThread().getName();
+        final Thread ct = Thread.currentThread();
+        return "Thread["+toHexString(ct.hashCode()) + ", " + ct.getName()+"]";
     }
 
     public static String toHexString(final int hex) {

@@ -33,7 +33,10 @@ import java.lang.reflect.InvocationTargetException;
 
 import com.jogamp.nativewindow.swt.SWTAccessor;
 import com.jogamp.opengl.swt.GLCanvas;
+import com.jogamp.opengl.test.junit.util.GLTestUtil;
 import com.jogamp.opengl.test.junit.util.MiscUtils;
+import com.jogamp.opengl.test.junit.util.NewtTestUtil;
+import com.jogamp.opengl.test.junit.util.SWTTestUtil;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.AnimatorBase;
@@ -98,12 +101,14 @@ public class TestGearsES2SWT extends UITestCase {
 
     @Before
     public void init() {
-        SWTAccessor.invoke(true, new Runnable() {
+        SWTAccessor.invokeOnOSTKThread(true, new Runnable() {
+            @Override
             public void run() {
                 display = new Display();
                 Assert.assertNotNull( display );
             }});
         display.syncExec(new Runnable() {
+            @Override
             public void run() {
                 shell = new Shell( display );
                 Assert.assertNotNull( shell );
@@ -121,14 +126,16 @@ public class TestGearsES2SWT extends UITestCase {
         Assert.assertNotNull( composite );
         try {
             display.syncExec(new Runnable() {
-               public void run() {
-                composite.dispose();
-                shell.dispose();
-               }});
-            SWTAccessor.invoke(true, new Runnable() {
-               public void run() {
-                display.dispose();
-               }});
+                @Override
+                public void run() {
+                    composite.dispose();
+                    shell.dispose();
+                }});
+            SWTAccessor.invokeOnOSTKThread(true, new Runnable() {
+                @Override
+                public void run() {
+                    display.dispose();
+                }});
         }
         catch( final Throwable throwable ) {
             throwable.printStackTrace();
@@ -148,8 +155,7 @@ public class TestGearsES2SWT extends UITestCase {
         final GearsES2 demo = new GearsES2(swapInterval);
         canvas.addGLEventListener(demo);
 
-        final Animator animator = new Animator();
-        animator.setModeBits(false, AnimatorBase.MODE_EXPECT_AWT_RENDERING_THREAD);
+        final Animator animator = new Animator(0 /* w/o AWT */);
         animator.setExclusiveContext(exclusiveContext);
 
         animator.add(canvas);
@@ -159,49 +165,55 @@ public class TestGearsES2SWT extends UITestCase {
         Assert.assertEquals(exclusiveContext ? animator.getThread() : null, canvas.getExclusiveContextThread());
 
         display.syncExec( new Runnable() {
-           public void run() {
-              shell.setText( getSimpleTestName(".") );
-              shell.setSize( wsize.getWidth(), wsize.getHeight() );
-              if( null != wpos ) {
-                  shell.setLocation( wpos.getX(), wpos.getY() );
-              }
-              shell.open();
-           }
+            @Override
+            public void run() {
+                shell.setText( getSimpleTestName(".") );
+                shell.setSize( wsize.getWidth(), wsize.getHeight() );
+                if( null != wpos ) {
+                    shell.setLocation( wpos.getX(), wpos.getY() );
+                }
+                shell.open();
+            }
         });
 
         animator.setUpdateFPSFrames(60, showFPS ? System.err : null);
 
+        final SWTTestUtil.WaitAction waitAction = new SWTTestUtil.WaitAction(display, true, 16);
+
+        System.err.println("TestGearsES2SWT.test: 2.0: Exception "+(null != waitAction.getException(true)));
+        Assert.assertEquals(true,  GLTestUtil.waitForRealized(canvas, true, waitAction));
+        System.err.println("TestGearsES2SWT.test: 2.1: Exception "+(null != waitAction.getException(true)));
+
         while(animator.isAnimating() && !canvas.isRealized() && animator.getTotalFPSDuration()<duration) {
-            if( !display.readAndDispatch() ) {
-                // blocks on linux .. display.sleep();
-                Thread.sleep(10);
-            }
+            waitAction.run();
         }
+        System.err.println("TestGearsES2SWT.test: 3.0: Exception "+(null != waitAction.getException(true)));
         System.err.println("NW chosen: "+canvas.getDelegatedDrawable().getChosenGLCapabilities());
         System.err.println("GL chosen: "+canvas.getChosenGLCapabilities());
-        System.err.println("window pos/siz: "+canvas.getLocation()+" "+canvas.getSurfaceWidth()+"x"+canvas.getSurfaceHeight());
+        display.syncExec(new Runnable() {
+            @Override
+            public void run() {
+                System.err.println("window pos/siz: "+canvas.getLocation()+" "+canvas.getSurfaceWidth()+"x"+canvas.getSurfaceHeight());
+            } } );
 
         if( null != rwsize ) {
             for(int i=0; i<50; i++) { // 500 ms dispatched delay
-                if( !display.readAndDispatch() ) {
-                    // blocks on linux .. display.sleep();
-                    Thread.sleep(10);
-                }
+                waitAction.run();
             }
+            System.err.println("TestGearsES2SWT.test: 4.0: Exception "+(null != waitAction.getException(true)));
             display.syncExec( new Runnable() {
-               public void run() {
-                  shell.setSize( rwsize.getWidth(), rwsize.getHeight() );
-               }
+                @Override
+                public void run() {
+                    shell.setSize( rwsize.getWidth(), rwsize.getHeight() );
+                }
             });
             System.err.println("window resize pos/siz: "+canvas.getLocation()+" "+canvas.getSurfaceWidth()+"x"+canvas.getSurfaceHeight());
         }
 
         while(animator.isAnimating() && animator.getTotalFPSDuration()<duration) {
-            if( !display.readAndDispatch() ) {
-                // blocks on linux .. display.sleep();
-                Thread.sleep(10);
-            }
+            waitAction.run();
         }
+        System.err.println("TestGearsES2SWT.test: 5.0: Exception "+(null != waitAction.getException(true)));
 
         Assert.assertEquals(exclusiveContext ? animator.getThread() : null, canvas.getExclusiveContextThread());
         animator.stop();
@@ -210,9 +222,10 @@ public class TestGearsES2SWT extends UITestCase {
         Assert.assertEquals(null, canvas.getExclusiveContextThread());
 
         display.syncExec(new Runnable() {
-           public void run() {
-               canvas.dispose();
-           } } );
+            @Override
+            public void run() {
+                canvas.dispose();
+            } } );
     }
 
     @Test

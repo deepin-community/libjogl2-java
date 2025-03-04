@@ -47,6 +47,7 @@ import com.jogamp.newt.awt.NewtCanvasAWT ;
 import com.jogamp.newt.opengl.GLWindow ;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.RedSquareES2;
 import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
+import com.jogamp.opengl.test.junit.util.NewtTestUtil;
 
 /**
  * Test whether or not event modifiers are preserved by NEWT when
@@ -62,8 +63,10 @@ public class TestNewtEventModifiersNewtCanvasAWT extends BaseNewtEventModifiers 
 
     @BeforeClass
     public static void beforeClass() throws Exception {
+        BaseNewtEventModifiers.baseBeforeClass();
 
         SwingUtilities.invokeAndWait( new Runnable() {
+            @Override
             public void run() {
 
                 _testFrame = new JFrame( "Event Modifier Test NewtCanvasAWT" ) ;
@@ -83,9 +86,10 @@ public class TestNewtEventModifiersNewtCanvasAWT extends BaseNewtEventModifiers 
                 _testFrame.setVisible( true ) ;
             }
         } ) ;
-        Assert.assertEquals(true,  AWTRobotUtil.waitForVisible(_testFrame, true));
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(_glWindow, true));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(_glWindow, true));
+        Assert.assertEquals(true,  AWTRobotUtil.waitForVisible(_testFrame, true, null));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(_glWindow, true, null));
+        final GLWindow obj = _glWindow;
+        Assert.assertTrue(NewtTestUtil.waitForRealized(obj, true, null));
 
         AWTRobotUtil.assertRequestFocusAndWait(null, _glWindow, _glWindow, null, null);  // programmatic
         Assert.assertNotNull(_robot);
@@ -99,6 +103,7 @@ public class TestNewtEventModifiersNewtCanvasAWT extends BaseNewtEventModifiers 
     @AfterClass
     public static void afterClass() throws Exception {
         SwingUtilities.invokeAndWait( new Runnable() {
+            @Override
             public void run() {
                 if( null != _testFrame ) {
                     _testFrame.dispose() ;

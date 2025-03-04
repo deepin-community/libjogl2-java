@@ -358,7 +358,7 @@ public class X11GLXContext extends GLContextImpl {
         if ( !glXMakeContextCurrent(display, drawable.getHandle(), drawableRead.getHandle(), contextHandle) ) {
           throw new GLException(getThreadName()+": Error making temp context(0) current: display "+toHexString(display)+", context "+toHexString(contextHandle)+", drawable "+drawable);
         }
-        if( !setGLFunctionAvailability(true, 0, 0, CTX_PROFILE_COMPAT, false /* strictMatch */, null == sharedContext /* withinGLVersionsMapping */) ) { // use GL_VERSION
+        if( !setGLFunctionAvailability(true, 0, 0, 0, false /* strictMatch */, null == sharedContext /* withinGLVersionsMapping */) ) { // use GL_VERSION
             glXReleaseContext(display); // release temp context
             GLX.glXDestroyContext(display, contextHandle);
             contextHandle = 0;
@@ -392,7 +392,7 @@ public class X11GLXContext extends GLContextImpl {
         if ( !glXMakeContextCurrent(display, drawable.getHandle(), drawableRead.getHandle(), temp_ctx) ) {
             throw new GLException(getThreadName()+": Error making temp context(1) current: display "+toHexString(display)+", context "+toHexString(temp_ctx)+", drawable "+drawable);
         }
-        if( !setGLFunctionAvailability(true, 0, 0, CTX_PROFILE_COMPAT, false /* strictMatch */, null == sharedContext /* withinGLVersionsMapping */) ) { // use GL_VERSION
+        if( !setGLFunctionAvailability(true, 0, 0, 0, false /* strictMatch */, null == sharedContext /* withinGLVersionsMapping */) ) { // use GL_VERSION
             glXReleaseContext(display); // release temp context
             GLX.glXDestroyContext(display, temp_ctx);
             throw new GLException("setGLFunctionAvailability !strictMatch failed.2");
@@ -551,24 +551,20 @@ public class X11GLXContext extends GLContextImpl {
                              ", server: "+ GLXUtil.getGLXServerVersionNumber(x11Device));
         }
         if(((X11GLXDrawableFactory)drawable.getFactoryImpl()).isGLXVersionGreaterEqualOneOne(x11Device)) {
-            {
+            /**
+             * Return either glXQueryClientString or glXQueryExtensionsString when getting the GLX extensions
+             * https://github.com/sgothel/jogl/pull/107
+             */
+            if (ns.getScreenIndex() < 0) {
                 final String ret = GLX.glXGetClientString(x11Device.getHandle(), GLX.GLX_EXTENSIONS);
                 if (DEBUG) {
                   System.err.println("GLX extensions (glXGetClientString): " + ret);
                 }
                 sb.append(ret).append(" ");
-            }
-            {
+            } else {
                 final String ret = GLX.glXQueryExtensionsString(x11Device.getHandle(), ns.getScreenIndex());
                 if (DEBUG) {
                   System.err.println("GLX extensions (glXQueryExtensionsString): " + ret);
-                }
-                sb.append(ret).append(" ");
-            }
-            {
-                final String ret = GLX.glXQueryServerString(x11Device.getHandle(), ns.getScreenIndex(), GLX.GLX_EXTENSIONS);
-                if (DEBUG) {
-                  System.err.println("GLX extensions (glXQueryServerString): " + ret);
                 }
                 sb.append(ret).append(" ");
             }

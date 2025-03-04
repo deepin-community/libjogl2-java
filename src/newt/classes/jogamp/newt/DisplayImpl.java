@@ -38,6 +38,7 @@ import com.jogamp.common.ExceptionUtils;
 import com.jogamp.common.nio.Buffers;
 import com.jogamp.common.util.IOUtil;
 import com.jogamp.common.util.InterruptedRuntimeException;
+import com.jogamp.common.util.PropertyAccess;
 import com.jogamp.common.util.ReflectionUtil;
 import com.jogamp.newt.Display;
 import com.jogamp.newt.NewtFactory;
@@ -64,6 +65,8 @@ import com.jogamp.nativewindow.util.Point;
 import com.jogamp.nativewindow.util.PointImmutable;
 
 public abstract class DisplayImpl extends Display {
+    protected static final boolean DISABLE_POINTER_ICON = PropertyAccess.isPropertyDefined("newt.disable.PointerIcon", true);
+    protected static final String defaultPointerIconPath = "jogamp/newt/assets/pointer-grey-alpha-16x24.png";
     private static int serialno = 1;
     private static final boolean pngUtilAvail;
 
@@ -94,7 +97,7 @@ public abstract class DisplayImpl extends Display {
                 if(DEBUG) {
                     System.err.println("destroyAllPointerIconFromList: dpy "+toHexString(dpy)+", # "+i+"/"+count+": "+item+" @ "+getThreadName());
                 }
-                if( null != item && item.isValid() ) {
+                if( null != item ) {
                     item.destroyOnEDT(dpy);
                 }
             }
@@ -121,6 +124,7 @@ public abstract class DisplayImpl extends Display {
         final Exception[] ex = { null };
         final String exStr = "Could not resolve "+pngResource.resourcePaths[0];
         runOnEDTIfAvail(true, new Runnable() {
+            @Override
             public void run() {
                 try {
                     if( !DisplayImpl.this.isNativeValidAsync() ) {
@@ -140,12 +144,8 @@ public abstract class DisplayImpl extends Display {
                     if( DEBUG_POINTER_ICON ) {
                         System.err.println("createPointerIconPNG.0: "+image+", handle: "+toHexString(handle)+", hot "+hotspot);
                     }
-                    if( 0 == handle ) {
-                        throw new IOException(exStr);
-                    }
-                    res[0] = new PointerIconImpl(DisplayImpl.this, image, hotspot, handle);
-                    if( DEBUG_POINTER_ICON ) {
-                        System.err.println("createPointerIconPNG.0: "+res[0]);
+                    if( 0 != handle ) {
+                        res[0] = new PointerIconImpl(DisplayImpl.this, image, hotspot, handle);
                     }
                 } catch (final Exception e) {
                     ex[0] = e;
@@ -161,11 +161,10 @@ public abstract class DisplayImpl extends Display {
             }
             throw new IOException(e);
         }
-        if( null == res[0] ) {
-            throw new IOException(exStr);
-        }
-        synchronized(pointerIconList) {
-            pointerIconList.add(res[0]);
+        if( null != res[0] ) {
+            synchronized(pointerIconList) {
+                pointerIconList.add(res[0]);
+            }
         }
         return res[0];
     }
@@ -201,6 +200,7 @@ public abstract class DisplayImpl extends Display {
         }
         final PointerIconImpl[] res = { null };
         runOnEDTIfAvail(true, new Runnable() {
+            @Override
             public void run() {
                 try {
                     if( !DisplayImpl.this.isNativeValidAsync() ) {
@@ -245,7 +245,11 @@ public abstract class DisplayImpl extends Display {
         if( getNativePointerIconForceDirectNIO() && !Buffers.isDirect(pixels) ) {
             throw new IllegalArgumentException("pixel buffer is not direct "+pixels);
         }
-        return createPointerIconImpl(pixelformat, width, height, pixels, hotX, hotY);
+        if( !DISABLE_POINTER_ICON ) {
+            return createPointerIconImpl(pixelformat, width, height, pixels, hotX, hotY);
+        } else {
+            return 0;
+        }
     }
 
     /**
@@ -272,11 +276,7 @@ public abstract class DisplayImpl extends Display {
     private static Class<?> getDisplayClass(final String type)
         throws ClassNotFoundException
     {
-        final Class<?> displayClass = NewtFactory.getCustomClass(type, "DisplayDriver");
-        if(null==displayClass) {
-            throw new ClassNotFoundException("Failed to find NEWT Display Class <"+type+".DisplayDriver>");
-        }
-        return displayClass;
+        return NewtFactory.getCustomClass(type, "DisplayDriver");
     }
 
     /** Make sure to reuse a Display with the same name */

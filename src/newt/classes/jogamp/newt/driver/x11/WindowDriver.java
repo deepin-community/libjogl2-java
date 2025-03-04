@@ -36,6 +36,8 @@ package jogamp.newt.driver.x11;
 
 import java.nio.Buffer;
 
+import jogamp.nativewindow.SurfaceScaleUtils;
+import jogamp.nativewindow.windows.GDIUtil;
 import jogamp.nativewindow.x11.X11Lib;
 import jogamp.nativewindow.x11.X11Util;
 import jogamp.newt.DisplayImpl;
@@ -53,9 +55,11 @@ import com.jogamp.common.ExceptionUtils;
 import com.jogamp.common.nio.Buffers;
 import com.jogamp.nativewindow.x11.X11GraphicsDevice;
 import com.jogamp.nativewindow.x11.X11GraphicsScreen;
+import com.jogamp.newt.MonitorDevice;
 import com.jogamp.newt.NewtFactory;
 import com.jogamp.newt.event.InputEvent;
 import com.jogamp.newt.event.KeyEvent;
+import com.jogamp.newt.event.MonitorEvent;
 import com.jogamp.newt.event.MouseEvent;
 
 public class WindowDriver extends WindowImpl {
@@ -67,6 +71,8 @@ public class WindowDriver extends WindowImpl {
 
     private static final int defaultIconDataSize;
     private static final Buffer defaultIconData;
+
+    private volatile MonitorDevice last_monitor;
 
     static {
         ScreenDriver.initSingleton();
@@ -94,8 +100,50 @@ public class WindowDriver extends WindowImpl {
     public WindowDriver() {
     }
 
+    /**
+     * Essentially updates {@code hasPixelScale}
+     */
+    private boolean updatePixelScaleByMonitor(final MonitorDevice md, final int[] move_diff, final boolean sendEvent, final boolean defer) {
+        boolean res = false;
+        if( !hasSetPixelScale() && null != md ) {
+            final float newPixelScale[] = { 0, 0 };
+            md.getPixelScale(newPixelScale);
+            if( DEBUG_IMPLEMENTATION ) {
+                System.err.println("Window.updatePixelScaleByMonitor: pixel "+getSurfaceBounds()+", window "+getBounds());
+                System.err.println("Window.updatePixelScaleByMonitor: monitor "+md);
+                System.err.println("Window.updatePixelScaleByMonitor: has "+hasPixelScale[0]+", new "+newPixelScale[0]+" - "+getThreadName());
+            }
+            res = applySoftPixelScale(move_diff, sendEvent, defer, newPixelScale);
+        }
+        return res;
+    }
+
     @Override
-    protected void createNativeImpl() {
+    protected void monitorModeChanged(final MonitorEvent me, final boolean success) {
+        if( last_monitor == me.getMonitor() ) {
+            updatePixelScaleByMonitor(me.getMonitor(), null, false /* sendEvent*/, false /* defer */); // send reshape event itself
+        }
+    }
+
+    @Override
+    public final boolean setSurfaceScale(final float[] pixelScale) {
+        super.setSurfaceScale(pixelScale); // pixelScale -> reqPixelScale
+
+        boolean changed = false;
+        if( isNativeValid() ) {
+            changed = applySoftPixelScale(null, true /* sendEvent */, false /* defer */, reqPixelScale);
+        }
+        if( DEBUG_IMPLEMENTATION ) {
+            System.err.println("WindowDriver.setPixelScale: min["+minPixelScale[0]+", "+minPixelScale[1]+"], max["+
+                                maxPixelScale[0]+", "+maxPixelScale[1]+"], req["+
+                                reqPixelScale[0]+", "+reqPixelScale[1]+"] -> result["+
+                                hasPixelScale[0]+", "+hasPixelScale[1]+"] - changed "+changed+", realized "+isNativeValid());
+        }
+        return changed;
+    }
+
+    @Override
+    protected void createNativeImpl(final boolean[] positionModified) {
         final ScreenDriver screen = (ScreenDriver) getScreen();
         final DisplayDriver display = (DisplayDriver) screen.getDisplay();
         final AbstractGraphicsDevice edtDevice = display.getGraphicsDevice();
@@ -124,11 +172,14 @@ public class WindowDriver extends WindowImpl {
         setGraphicsConfiguration(cfg);
         final int flags = getReconfigureMask(0, true) & STATE_MASK_CREATENATIVE;
         edtDevice.lock();
+
+        final int[] xy_pix = getPixelPosI();
+        final int[] sz_pix = getPixelSizeI();
         try {
             final long[] handles = CreateWindow(getParentWindowHandle(),
                                                 edtDevice.getHandle(), screen.getIndex(), visualID,
-                                                display.getJavaObjectAtom(), display.getWindowDeleteAtom(),
-                                                getX(), getY(), getWidth(), getHeight(), flags,
+                                                display.getJavaObjectAtom(), display.getWindowDeleteAtom(), display.getXiOpcode(),
+                                                xy_pix[0], xy_pix[1], sz_pix[0], sz_pix[1], flags,
                                                 defaultIconDataSize, defaultIconData, DEBUG_IMPLEMENTATION);
             if (null == handles || 2 != handles.length || 0 == handles[0] || 0 == handles[1] ) {
                 throw new NativeWindowException("Error creating window");
@@ -138,6 +189,14 @@ public class WindowDriver extends WindowImpl {
             }
             setWindowHandle(handles[0]);
             javaWindowHandle = handles[1];
+
+            last_monitor = getMainMonitor();
+            boolean changedPixelScale = applySoftPixelScale(null, true /* sendEvent */, false /* defer */, reqPixelScale);
+            if( !changedPixelScale ) {
+                changedPixelScale = updatePixelScaleByMonitor(last_monitor, null, true /* sendEvent */, false /* defer */);
+            }
+            positionModified[0] = changedPixelScale;
+
         } finally {
             edtDevice.unlock();
         }
@@ -151,7 +210,7 @@ public class WindowDriver extends WindowImpl {
             edtDevice.lock();
             try {
                 CloseWindow0(edtDevice.getHandle(), javaWindowHandle /* , display.getKbdHandle() */, // XKB disabled for now
-                             display.getRandREventBase(), display.getRandRErrorBase());
+                             display.getRandREventBase(), display.getRandRErrorBase(), display.getXiOpcode());
             } catch (final Throwable t) {
                 if(DEBUG_IMPLEMENTATION) {
                     final Exception e = new Exception("Warning: closeNativeImpl failed - "+Thread.currentThread().getName(), t);
@@ -160,6 +219,7 @@ public class WindowDriver extends WindowImpl {
             } finally {
                 edtDevice.unlock();
                 javaWindowHandle = 0;
+                last_monitor = null;
             }
         }
         if(null != renderDevice) {
@@ -170,7 +230,20 @@ public class WindowDriver extends WindowImpl {
 
     @Override
     protected final int getSupportedReconfigMaskImpl() {
-        return ( minimumReconfigStateMask | GetSupportedReconfigMask0(javaWindowHandle) ) & STATE_MASK_ALL_RECONFIG;
+        if( 0 == javaWindowHandle ) {
+            return mutableSizePosReconfigStateMask |
+                   STATE_MASK_CHILDWIN |
+                   STATE_MASK_UNDECORATED |
+                   STATE_MASK_ALWAYSONTOP | // optional
+                   STATE_MASK_ALWAYSONBOTTOM | // optional
+                   STATE_MASK_STICKY | // optional
+                   STATE_MASK_MAXIMIZED_VERT | // optional
+                   STATE_MASK_MAXIMIZED_HORZ | // optional
+                   STATE_MASK_POINTERVISIBLE |
+                   STATE_MASK_POINTERCONFINED;
+        } else {
+            return ( mutableSizePosReconfigStateMask | GetSupportedReconfigMask0(javaWindowHandle) ) & STATE_MASK_ALL_RECONFIG;
+        }
     }
 
     @Override
@@ -187,9 +260,13 @@ public class WindowDriver extends WindowImpl {
             _x = x;
             _y = y;
         }
+        final int xy_pix[] = SurfaceScaleUtils.scale(new int[2], _x, _y, hasPixelScale);
+        final int sz_pix[] = SurfaceScaleUtils.scale(new int[2], width, height, hasPixelScale);
+
         if(DEBUG_IMPLEMENTATION) {
-            System.err.println("X11Window reconfig.0: "+x+"/"+y+" -> "+_x+"/"+_y+" "+width+"x"+height+", insets "+_insets+
-                               ", "+getReconfigStateMaskString(flags));
+            System.err.println("X11Window reconfig.0: "+x+"/"+y+" -> "+_x+"/"+_y+" "+width+"x"+height+
+                                " -> pixel["+xy_pix[0]+"/"+xy_pix[1]+" "+sz_pix[0]+"x"+sz_pix[1]+
+                                "], insets "+_insets+", "+getReconfigStateMaskString(flags));
         }
         if( 0 != ( CHANGE_MASK_FULLSCREEN & flags ) ) {
             if( 0 != ( STATE_MASK_FULLSCREEN & flags) &&
@@ -209,7 +286,7 @@ public class WindowDriver extends WindowImpl {
             @Override
             public Object run(final long dpy) {
                 reconfigureWindow0( dpy, getScreenIndex(),
-                                    getParentWindowHandle(), javaWindowHandle, _x, _y, width, height, fflags);
+                                    getParentWindowHandle(), javaWindowHandle, xy_pix[0], xy_pix[1], sz_pix[0], sz_pix[1], fflags);
                 return null;
             }
         });
@@ -244,6 +321,32 @@ public class WindowDriver extends WindowImpl {
             });
         }
         super.focusChanged(defer, focusGained);
+    }
+
+    @Override
+    protected boolean positionChanged(final boolean defer, final boolean windowUnits, final int newX, final int newY) {
+        final boolean res = super.positionChanged(defer, windowUnits, newX, newY);
+
+        if ( res ) {
+            if( isNativeValid() ) {
+                final MonitorDevice new_monitor = getMainMonitor();
+                if( null != last_monitor && !new_monitor.equals(last_monitor) ) {
+                    final int[] move_diff = new int[] { 0, 0 };
+                    MonitorDevice.Orientation orientation = MonitorDevice.Orientation.clone;
+                    // Move from last_monitor -> new_monitor
+                    orientation = new_monitor.getOrientationTo(last_monitor, move_diff);
+                    if(DEBUG_IMPLEMENTATION) {
+                        System.err.println("Info: Window Device Changed (P: "+newX+"/"+newY+
+                                           ", crt_move[orient "+orientation+", diff "+move_diff[0]+"/"+move_diff[1]+") "+
+                                           ", monitor "+last_monitor.getName()+" -> "+new_monitor.getName()+
+                                           " - "+Thread.currentThread().getName());
+                    }
+                    last_monitor = new_monitor;
+                    updatePixelScaleByMonitor(new_monitor, move_diff, true /* sendEvent */, defer);
+                }
+            }
+        }
+        return res;
     }
 
     protected void reparentNotify(final long newParentWindowHandle) {
@@ -331,12 +434,14 @@ public class WindowDriver extends WindowImpl {
 
     @Override
     protected Point getLocationOnScreenImpl(final int x, final int y) {
-        return runWithLockedDisplayDevice( new DisplayImpl.DisplayRunnable<Point>() {
+        final int xy_pix[] = SurfaceScaleUtils.scale(new int[2], x, y, hasPixelScale);
+        final Point res_pix = runWithLockedDisplayDevice( new DisplayImpl.DisplayRunnable<Point>() {
             @Override
             public Point run(final long dpy) {
-                return X11Lib.GetRelativeLocation(dpy, getScreenIndex(), getWindowHandle(), 0 /*root win*/, x, y);
+                return X11Lib.GetRelativeLocation(dpy, getScreenIndex(), getWindowHandle(), 0 /*root win*/, xy_pix[0], xy_pix[1]);
             }
         } );
+        return convertToWindowUnits( res_pix );
     }
 
     @Override
@@ -406,6 +511,19 @@ public class WindowDriver extends WindowImpl {
         }
     }
 
+    public final void sendTouchScreenEvent(final short eventType, final int modifiers,
+                                           final int pActionIdx, final short[] pNames,
+                                           final int[] pX, final int[] pY, final float[] pPressure, final float maxPressure) {
+        final int pCount = pNames.length;
+        final MouseEvent.PointerType[] pTypes = new MouseEvent.PointerType[pCount];
+        for(int i=0; i<pCount; i++) {
+           pTypes[i] = MouseEvent.PointerType.TouchScreen;
+        }
+        doPointerEvent(false /*enqueue*/, false /*wait*/,
+                       pTypes, eventType, modifiers, pActionIdx, true /*normalPNames*/, pNames,
+                       pX, pY, pPressure, maxPressure, new float[] { 0f, 0f, 0f} /*rotationXYZ*/, 1f/*rotationScale*/);
+    }
+
     @Override
     public final void sendKeyEvent(final short eventType, final int modifiers, final short keyCode, final short keySym, final char keyChar) {
         throw new InternalError("XXX: Adapt Java Code to Native Code Changes");
@@ -428,7 +546,7 @@ public class WindowDriver extends WindowImpl {
     protected static native boolean initIDs0();
 
     private long[] CreateWindow(final long parentWindowHandle, final long display, final int screen_index,
-                                final int visualID, final long javaObjectAtom, final long windowDeleteAtom,
+                                final int visualID, final long javaObjectAtom, final long windowDeleteAtom, final int xi_opcode,
                                 final int x, final int y, final int width, final int height, final int flags,
                                 final int pixelDataSize, final Buffer pixels, final boolean verbose) {
         // NOTE: MUST BE DIRECT BUFFER, since _NET_WM_ICON Atom uses buffer directly!
@@ -436,19 +554,19 @@ public class WindowDriver extends WindowImpl {
             throw new IllegalArgumentException("data buffer is not direct "+pixels);
         }
         return CreateWindow0(parentWindowHandle, display, screen_index,
-                             visualID, javaObjectAtom, windowDeleteAtom,
+                             visualID, javaObjectAtom, windowDeleteAtom, xi_opcode,
                              x, y, width, height, flags,
                              pixelDataSize, pixels, Buffers.getDirectBufferByteOffset(pixels), true /* pixels_is_direct */, verbose);
     }
     /** returns long[2] { X11-window-handle, JavaWindow-handle } */
     private native long[] CreateWindow0(long parentWindowHandle, long display, int screen_index,
-                                        int visualID, long javaObjectAtom, long windowDeleteAtom,
+                                        int visualID, long javaObjectAtom, long windowDeleteAtom, int xi_opcode,
                                         int x, int y, int width, int height, int flags,
                                         int pixelDataSize, Object pixels, int pixels_byte_offset, boolean pixels_is_direct,
                                         boolean verbose);
     private static native int GetSupportedReconfigMask0(long javaWindowHandle);
     private native void CloseWindow0(long display, long javaWindowHandle /*, long kbdHandle*/, // XKB disabled for now
-                                     final int randr_event_base, final int randr_error_base);
+                                     final int randr_event_base, final int randr_error_base, final int xi_opcode);
     private static native void reconfigureWindow0(long display, int screen_index, long parentWindowHandle, long javaWindowHandle,
                                                   int x, int y, int width, int height, int flags);
     private static native void requestFocus0(long display, long javaWindowHandle, boolean force);

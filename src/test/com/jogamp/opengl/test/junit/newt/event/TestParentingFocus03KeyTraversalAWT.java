@@ -53,6 +53,7 @@ import com.jogamp.opengl.*;
 import com.jogamp.opengl.util.Animator;
 import com.jogamp.newt.*;
 import com.jogamp.newt.opengl.*;
+import com.jogamp.newt.opengl.util.NEWTDemoListener;
 import com.jogamp.newt.awt.NewtCanvasAWT;
 import com.jogamp.newt.event.KeyAdapter;
 import com.jogamp.newt.event.KeyEvent;
@@ -64,11 +65,18 @@ import jogamp.newt.driver.DriverClearFocus;
 import com.jogamp.opengl.test.junit.util.*;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
 import com.jogamp.opengl.test.junit.newt.parenting.NewtAWTReparentingKeyAdapter;
+import com.jogamp.opengl.test.junit.newt.parenting.NewtReparentingKeyAdapter;
 
 /**
  * Testing focus <i>key</i> traversal of an AWT component tree with {@link NewtCanvasAWT} attached.
  * <p>
  * {@link Frame} [ Button*, {@link NewtCanvasAWT} . {@link GLWindow} ]
+ * </p>
+ * <p>
+ * The demo code uses {@link NewtReparentingKeyAdapter} including {@link NEWTDemoListener} functionality.
+ * </p>
+ * <p>
+ * Manual invocation via main allows setting each tests's duration in milliseconds, e.g.{@code -duration 10000}, and many more, see {@link #main(String[])}
  * </p>
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -203,8 +211,8 @@ public class TestParentingFocus03KeyTraversalAWT extends UITestCase {
                 frame1.validate();
                 frame1.setVisible(true);
             }});
-        Assert.assertEquals(true, AWTRobotUtil.waitForVisible(glWindow1, true));
-        Assert.assertEquals(true, AWTRobotUtil.waitForRealized(glWindow1, true));
+        Assert.assertEquals(true, NewtTestUtil.waitForVisible(glWindow1, true, null));
+        Assert.assertEquals(true, NewtTestUtil.waitForRealized(glWindow1, true, null));
         Assert.assertEquals(newtCanvasAWT1.getNativeWindow(),glWindow1.getParent());
         AWTRobotUtil.clearAWTFocus(robot);
         Assert.assertTrue(AWTRobotUtil.toFrontAndRequestFocus(robot, frame1));
@@ -228,14 +236,14 @@ public class TestParentingFocus03KeyTraversalAWT extends UITestCase {
 
             // bWest -> glWin
             AWTRobotUtil.keyType(0, robot, java.awt.event.KeyEvent.VK_TAB, cWest, null);
-            Assert.assertTrue("Did not gain focus", AWTRobotUtil.waitForFocus(glWindow1, glWindow1FA, bWestFA));
+            Assert.assertTrue("Did not gain focus", NewtTestUtil.waitForFocus(glWindow1, glWindow1FA, bWestFA, null));
             Assert.assertEquals(true,  glWindow1FA.focusGained());
             Assert.assertEquals(true,  bWestFA.focusLost());
             Thread.sleep(durationPerTest/numFocus);
 
             // glWin -> bEast
             AWTRobotUtil.keyType(0, robot, java.awt.event.KeyEvent.VK_TAB, glWindow1, null);
-            Assert.assertTrue("Did not gain focus", AWTRobotUtil.waitForFocus(cEast, bEastFA, glWindow1FA));
+            Assert.assertTrue("Did not gain focus", AWTRobotUtil.waitForFocus(cEast, bEastFA, glWindow1FA, null));
             Assert.assertEquals(true,  bEastFA.focusGained());
             Assert.assertEquals(true,  glWindow1FA.focusLost());
             Thread.sleep(durationPerTest/numFocus);
@@ -245,13 +253,13 @@ public class TestParentingFocus03KeyTraversalAWT extends UITestCase {
             //
             // bEast -> glWin
             AWTRobotUtil.keyType(0, robot, java.awt.event.KeyEvent.VK_BACK_SPACE, cEast, null);
-            Assert.assertTrue("Did not gain focus", AWTRobotUtil.waitForFocus(glWindow1, glWindow1FA, bEastFA));
+            Assert.assertTrue("Did not gain focus", NewtTestUtil.waitForFocus(glWindow1, glWindow1FA, bEastFA, null));
             Assert.assertEquals(true,  glWindow1FA.focusGained());
             Assert.assertEquals(true,  bEastFA.focusLost());
             Thread.sleep(durationPerTest/numFocus);
 
             AWTRobotUtil.keyType(0, robot, java.awt.event.KeyEvent.VK_BACK_SPACE, glWindow1, null);
-            Assert.assertTrue("Did not gain focus", AWTRobotUtil.waitForFocus(cWest, bWestFA, glWindow1FA));
+            Assert.assertTrue("Did not gain focus", AWTRobotUtil.waitForFocus(cWest, bWestFA, glWindow1FA, null));
             Assert.assertEquals(true,  bWestFA.focusGained());
             Assert.assertEquals(true,  glWindow1FA.focusLost());
             Thread.sleep(durationPerTest/numFocus);
@@ -264,7 +272,7 @@ public class TestParentingFocus03KeyTraversalAWT extends UITestCase {
                    }
                 });
             } catch (final Exception ex) { ex.printStackTrace(); }
-            Assert.assertTrue("Did not gain focus", AWTRobotUtil.waitForFocus(glWindow1, glWindow1FA, bWestFA));
+            Assert.assertTrue("Did not gain focus", NewtTestUtil.waitForFocus(glWindow1, glWindow1FA, bWestFA, null));
             Assert.assertEquals(true,  glWindow1FA.focusGained());
             Assert.assertEquals(true,  bWestFA.focusLost());
             Thread.sleep(durationPerTest/numFocus);
@@ -277,7 +285,7 @@ public class TestParentingFocus03KeyTraversalAWT extends UITestCase {
                    }
                 });
             } catch (final Exception ex) { ex.printStackTrace(); }
-            Assert.assertTrue("Did not gain focus", AWTRobotUtil.waitForFocus(cWest, bWestFA, glWindow1FA));
+            Assert.assertTrue("Did not gain focus", AWTRobotUtil.waitForFocus(cWest, bWestFA, glWindow1FA, null));
             Assert.assertEquals(true,  bWestFA.focusGained());
             Assert.assertEquals(true,  glWindow1FA.focusLost());
             Thread.sleep(durationPerTest/numFocus);
@@ -287,7 +295,7 @@ public class TestParentingFocus03KeyTraversalAWT extends UITestCase {
             {
                 // Short: Assert.assertTrue("Did not gain focus", AWTRobotUtil.waitForFocus(glWindow1, glWindow1FA, bWestFA));
                 // More verbose:
-                final boolean ok = AWTRobotUtil.waitForFocus(glWindow1, glWindow1FA, bWestFA);
+                final boolean ok = NewtTestUtil.waitForFocus(glWindow1, glWindow1FA, bWestFA, null);
                 System.err.println("glWindow hasFocus "+glWindow1.hasFocus());
                 System.err.println("glWindow1FA "+glWindow1FA);
                 System.err.println("bWestFA "+bWestFA);

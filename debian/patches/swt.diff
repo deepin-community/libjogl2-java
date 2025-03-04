@@ -1,23 +1,25 @@
-Index: libjogl2-java/make/build-common.xml
-===================================================================
---- libjogl2-java.orig/make/build-common.xml
-+++ libjogl2-java/make/build-common.xml
-@@ -133,15 +133,9 @@
+Description: indicating the path of the swt jar
+Author: Sylvestre Ledru <sylvestre@debian.org>
+Forwarded: not-needed
+Last-Update: 2023-04-17
+
+--- a/make/build-common.xml
++++ b/make/build-common.xml
+@@ -156,15 +156,12 @@
          <condition property="swt.jar" value="${project.root}/make/lib/swt/gtk-freebsd-x86_64/swt.jar">
            <istrue value="${isFreeBSDAMD64}" />
          </condition>
--        <condition property="swt.jar" value="${project.root}/make/lib/swt/gtk-linux-x86_64/swt-debug.jar">
+-        <condition property="swt.jar" value="${project.root}/make/lib/swt/gtk-linux-x86_64/swt.jar">
 -          <istrue value="${isLinuxAMD64}" />
--        </condition>
--        <condition property="swt.jar" value="${project.root}/make/lib/swt/gtk-linux-x86/swt-debug.jar">
--          <istrue value="${isLinuxX86}" />
--        </condition>
--        <condition property="swt.jar" value="${project.root}/make/lib/swt/gtk-linux-x86/swt-debug.jar">
--          <istrue value="${isLinuxARMv6}" /> <!-- FIXME JAU .. hack -->
--        </condition>
 +        <condition property="swt.jar" value="/usr/share/java/swt4.jar">
 +          <istrue value="${isLinux}" />
-+	</condition>
-         <condition property="swt.jar" value="${project.root}/make/lib/swt/gtk-linux-x86/swt-debug.jar">
-           <istrue value="${isAndroid}" /> <!-- FIXME JAU .. hack -->
          </condition>
+         <condition property="swt.jar" value="${project.root}/make/lib/swt/gtk-linux-x86_64/swt.jar">
+           <or>
+               <istrue value="${isWindowsX86}" /> <!-- FIXME JAU .. hack -->
+-              <istrue value="${isLinuxX86}" /> <!-- FIXME JAU .. hack -->
+-              <istrue value="${isLinuxARM64}" /> <!-- FIXME JAU .. hack -->
+-              <istrue value="${isLinuxARMv6}" /> <!-- FIXME JAU .. hack -->
+               <istrue value="${isAndroid}" /> <!-- FIXME JAU .. hack -->
+               <istrue value="${isIOS}" /> <!-- FIXME JAU .. hack -->
+           </or>

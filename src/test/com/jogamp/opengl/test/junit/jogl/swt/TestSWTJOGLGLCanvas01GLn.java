@@ -53,6 +53,7 @@ import com.jogamp.nativewindow.swt.SWTAccessor;
 import com.jogamp.opengl.swt.GLCanvas;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.GearsES2;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.MultisampleDemoES2;
+import com.jogamp.opengl.test.junit.util.SWTTestUtil;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.GLReadBufferUtil;
@@ -66,7 +67,7 @@ import com.jogamp.opengl.util.texture.TextureIO;
  * independent from the already instantiated SWT visual.
  * </p>
  * <p>
- * Note that {@link SWTAccessor#invoke(boolean, Runnable)} is still used to comply w/
+ * Note that {@link SWTAccessor#invokeOnOSTKThread(boolean, Runnable)} is still used to comply w/
  * SWT running on Mac OSX, i.e. to enforce UI action on the main thread.
  * </p>
  * @author Wade Walker, et al.
@@ -91,12 +92,14 @@ public class TestSWTJOGLGLCanvas01GLn extends UITestCase {
 
     @Before
     public void init() {
-        SWTAccessor.invoke(true, new Runnable() {
+        SWTAccessor.invokeOnOSTKThread(true, new Runnable() {
+            @Override
             public void run() {
                 display = new Display();
                 Assert.assertNotNull( display );
             }});
         display.syncExec(new Runnable() {
+            @Override
             public void run() {
                 shell = new Shell( display );
                 Assert.assertNotNull( shell );
@@ -114,14 +117,16 @@ public class TestSWTJOGLGLCanvas01GLn extends UITestCase {
         Assert.assertNotNull( composite );
         try {
             display.syncExec(new Runnable() {
-               public void run() {
-                composite.dispose();
-                shell.dispose();
-               }});
-            SWTAccessor.invoke(true, new Runnable() {
-               public void run() {
-                display.dispose();
-               }});
+                @Override
+                public void run() {
+                    composite.dispose();
+                    shell.dispose();
+                }});
+            SWTAccessor.invokeOnOSTKThread(true, new Runnable() {
+                @Override
+                public void run() {
+                    display.dispose();
+                }});
         }
         catch( final Throwable throwable ) {
             throwable.printStackTrace();
@@ -140,23 +145,28 @@ public class TestSWTJOGLGLCanvas01GLn extends UITestCase {
 
         canvas.addGLEventListener( demo );
         canvas.addGLEventListener(new GLEventListener() {
-           int displayCount = 0;
-           public void init(final GLAutoDrawable drawable) { }
-           public void reshape(final GLAutoDrawable drawable, final int x, final int y, final int width, final int height) { }
-           public void display(final GLAutoDrawable drawable) {
-              if(displayCount < 3) {
-                  snapshot(displayCount++, null, drawable.getGL(), screenshot, TextureIO.PNG, null);
-              }
-           }
-           public void dispose(final GLAutoDrawable drawable) { }
+            int displayCount = 0;
+            @Override
+            public void init(final GLAutoDrawable drawable) { }
+            @Override
+            public void reshape(final GLAutoDrawable drawable, final int x, final int y, final int width, final int height) { }
+            @Override
+            public void display(final GLAutoDrawable drawable) {
+                if(displayCount < 3) {
+                    snapshot(displayCount++, null, drawable.getGL(), screenshot, TextureIO.PNG, null);
+                }
+            }
+            @Override
+            public void dispose(final GLAutoDrawable drawable) { }
         });
 
         display.syncExec(new Runnable() {
-           public void run() {
-            shell.setText( getSimpleTestName(".") );
-            shell.setSize( 640, 480 );
-            shell.open();
-           } } );
+            @Override
+            public void run() {
+                shell.setText( getSimpleTestName(".") );
+                shell.setSize( 640, 480 );
+                shell.open();
+            } } );
 
         final Animator anim = new Animator();
         if(doAnimation) {
@@ -164,14 +174,12 @@ public class TestSWTJOGLGLCanvas01GLn extends UITestCase {
             anim.start();
         }
 
+        final SWTTestUtil.WaitAction waitAction = new SWTTestUtil.WaitAction(display, true, 16);
         final long lStartTime = System.currentTimeMillis();
         final long lEndTime = lStartTime + duration;
         try {
             while( (System.currentTimeMillis() < lEndTime) && !canvas.isDisposed() ) {
-                if( !display.readAndDispatch() ) {
-                    // blocks on linux .. display.sleep();
-                    Thread.sleep(10);
-                }
+                waitAction.run();
             }
         } catch( final Throwable throwable ) {
             throwable.printStackTrace();
@@ -181,9 +189,10 @@ public class TestSWTJOGLGLCanvas01GLn extends UITestCase {
         anim.stop();
 
         display.syncExec(new Runnable() {
-           public void run() {
-               canvas.dispose();
-           } } );
+            @Override
+            public void run() {
+                canvas.dispose();
+            } } );
     }
 
     @Test

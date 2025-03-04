@@ -40,6 +40,7 @@ import org.junit.runners.MethodSorters;
 import com.jogamp.newt.opengl.GLWindow;
 import com.jogamp.opengl.test.junit.jogl.demos.es2.RedSquareES2;
 import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
+import com.jogamp.opengl.test.junit.util.NewtTestUtil;
 
 /**
  * Test whether or not event modifiers are properly delivered by NEWT.
@@ -53,6 +54,8 @@ public class TestNewtEventModifiersNEWTWindowAWT extends BaseNewtEventModifiers 
 
     @BeforeClass
     public static void beforeClass() throws Exception {
+        BaseNewtEventModifiers.baseBeforeClass();
+
         _glWindow = GLWindow.create( new GLCapabilities( GLProfile.getGL2ES2() ) );
         _glWindow.setTitle("Event Modifier Test GLWindow");
         _glWindow.addGLEventListener( new RedSquareES2() ) ;
@@ -61,8 +64,9 @@ public class TestNewtEventModifiersNEWTWindowAWT extends BaseNewtEventModifiers 
         _glWindow.setPosition(TEST_FRAME_X, TEST_FRAME_Y);
         _glWindow.setVisible(true);
 
-        Assert.assertTrue(AWTRobotUtil.waitForVisible(_glWindow, true));
-        Assert.assertTrue(AWTRobotUtil.waitForRealized(_glWindow, true));
+        Assert.assertTrue(NewtTestUtil.waitForVisible(_glWindow, true, null));
+        final GLWindow obj = _glWindow;
+        Assert.assertTrue(NewtTestUtil.waitForRealized(obj, true, null));
 
         AWTRobotUtil.assertRequestFocusAndWait(null, _glWindow, _glWindow, null, null);  // programmatic
         Assert.assertNotNull(_robot);

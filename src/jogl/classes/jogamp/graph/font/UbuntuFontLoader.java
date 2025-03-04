@@ -36,12 +36,12 @@ import com.jogamp.common.os.Platform;
 import com.jogamp.common.util.IOUtil;
 import com.jogamp.common.util.IntObjectHashMap;
 import com.jogamp.common.util.JarUtil;
+import com.jogamp.common.util.SecurityUtil;
 import com.jogamp.common.util.cache.TempJarCache;
 import com.jogamp.graph.font.Font;
 import com.jogamp.graph.font.FontSet;
 import com.jogamp.graph.font.FontFactory;
 
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 public class UbuntuFontLoader implements FontSet {
@@ -49,7 +49,6 @@ public class UbuntuFontLoader implements FontSet {
     // FIXME: Add cache size to limit memory usage
     private static final IntObjectHashMap fontMap = new IntObjectHashMap();
 
-    private static final Uri.Encoded jarSubDir = Uri.Encoded.cast("atomic/");
     private static final Uri.Encoded jarName = Uri.Encoded.cast("jogl-fonts-p0.jar");
 
     private static final String absFontPath = "jogamp/graph/font/fonts/ubuntu/" ;
@@ -136,10 +135,10 @@ public class UbuntuFontLoader implements FontSet {
         if( !attemptedJARLoading ) {
             attemptedJARLoading = true;
             Platform.initSingleton();
-            if( TempJarCache.isInitialized() ) {
+            if( TempJarCache.isInitialized(false) ) {
                 try {
-                    final Uri uri = JarUtil.getRelativeOf(UbuntuFontLoader.class, jarSubDir, jarName);
-                    final Exception e0 = AccessController.doPrivileged(new PrivilegedAction<Exception>() {
+                    final Uri uri = JarUtil.getRelativeOf(UbuntuFontLoader.class, null, jarName);
+                    final Exception e0 = SecurityUtil.doPrivileged(new PrivilegedAction<Exception>() {
                         @Override
                         public Exception run() {
                             try {
@@ -173,7 +172,7 @@ public class UbuntuFontLoader implements FontSet {
         final InputStream stream;
         if( useTempJARCache ) {
             final Exception[] privErr = { null };
-            stream = AccessController.doPrivileged(new PrivilegedAction<InputStream>() {
+            stream = SecurityUtil.doPrivileged(new PrivilegedAction<InputStream>() {
                 @Override
                 public InputStream run() {
                     try {

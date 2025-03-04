@@ -35,6 +35,8 @@ import com.jogamp.graph.curve.tess.Triangulator;
 import com.jogamp.graph.geom.Outline;
 import com.jogamp.graph.geom.Triangle;
 import com.jogamp.graph.geom.Vertex;
+import com.jogamp.graph.geom.plane.Winding;
+import com.jogamp.opengl.math.Vec2f;
 import com.jogamp.opengl.math.VectorUtil;
 
 import jogamp.opengl.Debug;
@@ -79,20 +81,48 @@ public class CDTriangulator2D implements Triangulator {
 
     @Override
     public final void addCurve(final List<Triangle> sink, final Outline polyline, final float sharpness) {
-        Loop loop = null;
-
-        if(!loops.isEmpty()) {
-            loop = getContainerLoop(polyline);
-        }
+        Loop loop = getContainerLoop(polyline);
 
         if(loop == null) {
-            final GraphOutline outline = new GraphOutline(polyline);
+            final Winding winding = Winding.CCW; // -> HEdge.BOUNDARY
+            // Too late: polyline.setWinding(winding);
+            final GraphOutline outline = new GraphOutline(polyline); // , winding);
             final GraphOutline innerPoly = extractBoundaryTriangles(sink, outline, false, sharpness);
             // vertices.addAll(polyline.getVertices());
-            loop = new Loop(innerPoly, VectorUtil.Winding.CCW);
-            loops.add(loop);
+            if( innerPoly.getGraphPoint().size() >= 3 ) {
+                loop = new Loop(innerPoly, winding);
+                loops.add(loop);
+            } else if( DEBUG ) {
+                /*
+                 * Font FreeMono-Bold: ID 0 + 465: Glyph[id 465 'uni020F', advance 600, leftSideBearings 42, kerning[size 0, horiz true, cross true], shape true], OutlineShape@5e8a459[outlines 2, vertices 34]
+                    Drop innerPoly ctrlpts < 3
+                    - innerPo[vertices 2, ctrlpts 2] < 3
+                    - outline[vertices 4, ctrlpts 4]
+                    -   Input[vertices 4]
+                 *
+                 * Font FreeSans-Regular: ID 0 + 409: Glyph[id 409 'Udieresiscaron', advance 720, leftSideBearings 80, kerning[size 0, horiz true, cross false], shape true], OutlineShape@5eb97ced[outlines 3, vertices 33]
+                    Drop innerPoly ctrlpts < 3
+                    - innerPo[vertices 1, ctrlpts 1] < 3
+                    - outline[vertices 1, ctrlpts 1]
+                    -   Input[vertices 1]
+
+                 * Stack:
+                   at jogamp.graph.curve.tess.CDTriangulator2D.addCurve(CDTriangulator2D.java:97)
+                   at com.jogamp.graph.curve.OutlineShape.triangulateImpl(OutlineShape.java:988)
+                   at com.jogamp.graph.curve.OutlineShape.getTriangles(OutlineShape.java:1012)
+                   at com.jogamp.graph.curve.Region.countOutlineShape(Region.java:503)
+                   at com.jogamp.graph.ui.shapes.GlyphShape.<init>(GlyphShape.java:77)
+                 */
+                System.err.println("Drop innerPoly ctrlpts < 3");
+                System.err.println("- innerPo[vertices "+innerPoly.getOutline().getVertexCount()+", ctrlpts "+innerPoly.getGraphPoint().size()+"] < 3");
+                System.err.println("- outline[vertices "+outline.getOutline().getVertexCount()+", ctrlpts "+outline.getGraphPoint().size()+"]");
+                System.err.println("-   Input[vertices "+polyline.getVertexCount()+"]");
+                Thread.dumpStack();
+            }
         } else {
-            final GraphOutline outline = new GraphOutline(polyline);
+            // final Winding winding = Winding.CW; // -> HEdge.HOLE
+            // Not required, handled in Loop.initFromPolyline(): polyline.setWinding(winding);
+            final GraphOutline outline = new GraphOutline(polyline); // , winding);
             final GraphOutline innerPoly = extractBoundaryTriangles(sink, outline, true, sharpness);
             // vertices.addAll(innerPoly.getVertices());
             loop.addConstraintCurve(innerPoly);
@@ -108,22 +138,25 @@ public class CDTriangulator2D implements Triangulator {
             int size = loop.computeLoopSize();
             while(!loop.isSimplex()){
                 final Triangle tri;
+                final boolean delauny;
                 if(numTries > size){
                     tri = loop.cut(false);
+                    delauny = false;
                 }
                 else{
                     tri = loop.cut(true);
+                    delauny = true;
                 }
                 numTries++;
 
                 if(tri != null) {
-                    numTries = 0;
-                    size--;
                     tri.setId(maxTriID++);
                     sink.add(tri);
                     if(DEBUG){
-                        System.err.println("CDTri.gen["+i+"].0: "+tri);
+                        System.err.println("CDTri.gen["+i+"].0: delauny "+delauny+", tries "+numTries+", size "+size+", "+tri);
                     }
+                    numTries = 0;
+                    size--;
                 }
                 if(numTries > size*2){
                     if(DEBUG){
@@ -141,13 +174,13 @@ public class CDTriangulator2D implements Triangulator {
             }
         }
         if( TEST_ENABLED ) {
-            final float[] tempV2 = new float[2];
+            final Vec2f tempV2 = new Vec2f();
             final CDTriangulator2DExpAddOn addOn = new CDTriangulator2DExpAddOn();
             final int sinkSize = sink.size();
             if( TEST_MARK_LINE ) {
                 for(int i=0; i<sinkSize; i++) {
                     final Triangle t0 = sink.get(i);
-                    addOn.markLineInTriangle(t0, tempV2);
+                    addOn.markLineInTriangle(t0);
                 }
             } else if ( TEST_LINE_AA ){
                 for(int i=0; i<sinkSize-1; i+=2) {
@@ -181,7 +214,7 @@ public class CDTriangulator2D implements Triangulator {
 
                 final Triangle t;
                 final boolean holeLike;
-                if(VectorUtil.ccw(v0,v1,v2)) {
+                if(VectorUtil.isCCW(v0,v1,v2)) {
                     holeLike = false;
                     t = new Triangle(v0, v1, v2, boundaryVertices);
                 } else {
@@ -220,12 +253,15 @@ public class CDTriangulator2D implements Triangulator {
     }
 
     private Loop getContainerLoop(final Outline polyline) {
-        final ArrayList<Vertex> vertices = polyline.getVertices();
-        for(int i=0; i < loops.size(); i++) {
-            final Loop loop = loops.get(i);
-            for(int j=0; j < vertices.size(); j++) {
-                if( loop.checkInside( vertices.get(j) ) ) {
-                    return loop;
+        final int count = loops.size();
+        if( 0 < count ) {
+            final ArrayList<Vertex> vertices = polyline.getVertices();
+            for(int i=0; i < count; i++) {
+                final Loop loop = loops.get(i);
+                for(int j=0; j < vertices.size(); j++) {
+                    if( loop.checkInside( vertices.get(j) ) ) {
+                        return loop;
+                    }
                 }
             }
         }

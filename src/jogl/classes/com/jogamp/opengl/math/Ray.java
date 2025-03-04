@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 JogAmp Community. All rights reserved.
+ * Copyright 2014-2023 JogAmp Community. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
  * permitted provided that the following conditions are met:
@@ -47,13 +47,14 @@ import com.jogamp.opengl.math.geom.AABBox;
  * </p>
  */
 public class Ray {
-    /** Origin of Ray, float[3]. */
-    public final float[] orig = new float[3];
+    /** Origin of Ray. */
+    public final Vec3f orig = new Vec3f();
 
-    /** Normalized direction vector of ray, float[3]. */
-    public final float[] dir = new float[3];
+    /** Normalized direction vector of ray. */
+    public final Vec3f dir = new Vec3f();
 
+    @Override
     public String toString() {
-        return "Ray[orig["+orig[0]+", "+orig[1]+", "+orig[2]+"], dir["+dir[0]+", "+dir[1]+", "+dir[2]+"]]";
+        return "Ray[orig["+orig+"], dir["+dir+"]]";
     }
 }

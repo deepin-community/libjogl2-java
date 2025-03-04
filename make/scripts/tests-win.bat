@@ -3,11 +3,11 @@ REM scripts\java-win.bat com.jogamp.newt.opengl.GLWindow
 REM scripts\java-win.bat com.jogamp.awt.GLCanvas
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.acore.TestMainVersionGLWindowNEWT %*
 REM scripts\java-win.bat com.jogamp.oculusvr.OVRVersion %*
-
+REM 
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.gl2.newt.TestGearsNewtAWTWrapper %*
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.gl2.newt.TestGearsNEWT -time 30000
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.gl2.newt.TestGearsNEWT %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es1.newt.TestGearsES1NEWT %*
-scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.newt.TestGearsES2NEWT %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.newt.TestGearsES2NEWT %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.newt.TestGearsES2NEWT -vsync -time 4000 -x 10 -y 10 -width 100 -height 100 -screen 0
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.newt.TestGearsES2NEWT -vsync -time 40000 -width 100 -height 100 -screen 0 %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.gl2.awt.TestGearsAWT %*
@@ -16,13 +16,41 @@ REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.awt.TestGea
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.awt.TestGearsES2GLJPanelsAWT %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.awt.DemoGLJPanelPerf02AWT %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.newt.TestGearsES2NewtCanvasAWT %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestGLCanvasSWTNewtCanvasSWTPosInTabs %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.newt.TestLandscapeES2NewtCanvasAWT %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.newt.TestElektronenMultipliziererNEWT %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.gl3.newt.TestGeomShader01TextureGL3NEWT %*
 
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.av.MovieSimple %*
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.av.MovieCube %*
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.TexCubeES2 %*
+REM
+REM HiDPI
+REM
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.newt.TestGearsES2NEWT %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.newt.TestGearsES2SimpleNEWT %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.awt.TestGearsES2GLJPanelAWT %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.acore.anim.TestAnimatorGLWindow01NEWT %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.acore.anim.TestAnimatorGLJPanel01AWT %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.awt.TestGLJPanelResize01AWT %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.awt.TestGLCanvasResize01AWT %*
+scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.awt.TestGLJPanelReadd01Bug1310AWT %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.awt.TestGearsES2AWT %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.newt.TestGearsES2NewtCanvasAWT %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestGLCanvasSWTNewtCanvasSWTPosInTabs %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.gl2.awt.TestGearsAWT %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.glsl.TestRulerNEWT01 %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.graph.ui.UISceneDemo20 %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.awt.ManualHiDPIBufferedImage01AWT %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.acore.TestSharedContextNewtAWTBug523 %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.acore.TestSingleGLInJSliderNewtAWT %*
+
+
+REM
+REM av demos
+REM
+REM scripts\java-win.bat jogamp.opengl.openal.av.ALDummyUsage %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.av.MovieCube %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.av.MovieSimple %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.av.CrossFadePlayer %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.av.StereoDemo01 %*
 
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.perf.TestPerf001RawInit00NEWT %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.perf.TestPerf001GLJPanelInit01AWT %*
@@ -160,14 +188,14 @@ REM scripts\java-win.bat com.jogamp.opengl.test.junit.newt.parenting.TestParenti
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.newt.parenting.TestTranslucentParentingAWT %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.newt.parenting.TestTranslucentChildWindowBug632NEWT %*
 
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestSWTAccessor02NewtGLWindow %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestSWTAccessor03AWTGLn %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestSWTJOGLGLCanvas01GLn %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestNewtCanvasSWTGLn %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestGLCanvasSWTNewtCanvasSWTPosInTabs %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestNewtCanvasSWTBug628ResizeDeadlock %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestSWTBug643AsyncExec %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.demos.es2.newt.TestGearsES2NewtCanvasSWT %*
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestBug672NewtCanvasSWTSashForm %*
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestBug672NewtCanvasSWTSashFormComposite %*
 
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.newt.TestWindows01NEWT
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.newt.TestWindows02NEWT %*
@@ -210,20 +238,41 @@ REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestSWT02GLn %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestSWTAWT01GLn %*
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.swt.TestSWTJOGLGLCanvas01GLn %*
 
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.javafx.TestNewtCanvasJFXGLn %*
+
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.offscreen.TestOffscreen02BitmapNEWT -time 5000
 
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.offscreen.TestOffscreen02BitmapNEWT
 
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.TestRegionRendererNEWT01
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.TestTextRendererNEWT01
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.glsl.TestGLSLShaderState02NEWT
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.glsl.TestGLSLShaderState02NEWT
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.demos.ui.UINewtDemo01 %*
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.demos.GPUTextNewtDemo %*
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.demos.GPURegionNewtDemo %*
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.demos.GPUUISceneNewtDemo %*
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.demos.GPUUISceneNewtCanvasAWTDemo %*
+REM 
+REM Graph
+REM
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.TestFontScale01NOUI %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.TestRegionRendererNEWT01 %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.TestFontsNEWT00 %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.TestTextRendererNEWTBugXXXX %*
+
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.PerfTextRendererNEWT00 %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.TestTextRendererNEWT01 %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.TestTextRendererNEWT10 %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.TestTextRendererNEWT20 %*
+REM scripts\java-win.bat com.jogamp.opengl.test.junit.graph.TestTextRendererNEWT21 %*
+
+REM scripts\java-win.bat com.jogamp.opengl.demos.graph.GPUTextNewtDemo %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.graph.GPURegionNewtDemo %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.graph.ui.UIShapeDemo01 %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.graph.ui.UITypeDemo01 %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.graph.ui.UISceneDemo00 %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.graph.ui.UISceneDemo01 %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.graph.ui.UISceneDemo02 %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.graph.ui.UISceneDemo03 %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.graph.ui.UISceneDemo10 %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.graph.ui.UISceneDemo11 %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.graph.ui.UISceneDemo20 %*
+
+REM scripts\java-win.bat com.jogamp.opengl.demos.av.MovieCube %*
+REM scripts\java-win.bat com.jogamp.opengl.demos.av.MovieSimple %*
+
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.awt.TestBug461FBOSupersamplingSwingAWT
 REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.glsl.TestRulerNEWT01
 
-REM scripts\java-win.bat com.jogamp.opengl.test.junit.jogl.stereo.StereoDemo01 %*

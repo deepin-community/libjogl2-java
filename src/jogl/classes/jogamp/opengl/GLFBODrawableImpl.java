@@ -76,6 +76,7 @@ public class GLFBODrawableImpl extends GLDrawableImpl implements GLFBODrawable {
 
     // private DoubleBufferMode doubleBufferMode; // TODO: Add or remove TEXTURE (only) DoubleBufferMode support
 
+    private FBObject.Attachment.StorageDefinition colorRenderbufferStorageDef;
     private SwapBufferContext swapBufferContext;
 
     public static interface SwapBufferContext {
@@ -87,19 +88,20 @@ public class GLFBODrawableImpl extends GLDrawableImpl implements GLFBODrawable {
      * @param parent
      * @param surface
      * @param fboCaps the requested FBO capabilities
-     * @param textureUnit
+     * @param textureUnit if valid, i.e. >= 0, signals using a color texturebuffer {@link GLFBODrawable#FBOMODE_USE_TEXTURE}, otherwise a color renderbuffer is used.
      */
     protected GLFBODrawableImpl(final GLDrawableFactoryImpl factory, final GLDrawableImpl parent, final NativeSurface surface,
                                 final GLCapabilitiesImmutable fboCaps, final int textureUnit) {
         super(factory, surface, fboCaps, false);
         this.initialized = false;
-        this.fboModeBits = FBOMODE_USE_TEXTURE;
+        this.fboModeBits = textureUnit>=0 ? FBOMODE_USE_TEXTURE : 0;
 
         this.parent = parent;
         this.origParentChosenCaps = getChosenGLCapabilities(); // just to avoid null, will be reset at initialize(..)
-        this.texUnit = textureUnit;
+        this.texUnit = textureUnit>=0 ? textureUnit : 0;
         this.samples = fboCaps.getNumSamples();
         this.fboResetQuirk = false;
+        this.colorRenderbufferStorageDef = null;
         this.swapBufferContext = null;
     }
 
@@ -111,13 +113,19 @@ public class GLFBODrawableImpl extends GLDrawableImpl implements GLFBODrawable {
 
         final boolean useDepth   = depthBits > 0;
         final boolean useStencil = stencilBits > 0;
+        FBObject.ColorAttachment pCA = null;
 
         fbo.init(gl, width, height, samples);
         if(fbo.getNumSamples() != samples) {
             throw new InternalError("Sample number mismatch: "+samples+", fbos["+idx+"] "+fbo);
         }
         if(samples > 0 || !useTexture) {
-            fbo.attachColorbuffer(gl, 0, useAlpha);
+            final FBObject.ColorAttachment ca = fbo.createColorAttachment(useAlpha);
+            if( null != colorRenderbufferStorageDef ) {
+                ca.setStorageDefinition(colorRenderbufferStorageDef);
+                pCA = ca;
+            }
+            fbo.attachColorbuffer(gl, 0, ca);
         } else {
             fbo.attachTexture2D(gl, 0, useAlpha);
         }
@@ -135,7 +143,11 @@ public class GLFBODrawableImpl extends GLDrawableImpl implements GLFBODrawable {
             {
                 ssink.init(gl, width, height, 0);
                 if( !useTexture ) {
-                    ssink.attachColorbuffer(gl, 0, useAlpha);
+                    final FBObject.ColorAttachment ca = ssink.createColorAttachment(useAlpha);
+                    if( null != colorRenderbufferStorageDef ) {
+                        ca.setStorageDefinition(colorRenderbufferStorageDef);
+                    }
+                    ssink.attachColorbuffer(gl, 0, ca);
                 } else {
                     ssink.attachTexture2D(gl, 0, useAlpha);
                 }
@@ -156,6 +168,14 @@ public class GLFBODrawableImpl extends GLDrawableImpl implements GLFBODrawable {
         // Also remedy for Bug 1020, i.e. OSX/Nvidia's FBO needs to be cleared before blitting,
         // otherwise first MSAA frame lacks antialiasing.
         fbo.bind(gl);
+
+        if( null != pCA ) {
+            // FIXME: Apple iOS EAGLLayer doesn't show any content if the
+            // last bound RENDERBUFFER isn't the color renderbuffer,
+            // i.e. a subsequent bound DEPTH buffer has been attached.
+            gl.glBindRenderbuffer(GL.GL_RENDERBUFFER, pCA.getName());
+        }
+
         if( setupViewportScissors ) {
             // Surfaceless: Set initial viewport/scissors
             gl.glViewport(0, 0, width, height);
@@ -247,6 +267,24 @@ public class GLFBODrawableImpl extends GLDrawableImpl implements GLFBODrawable {
 
     public final void setSwapBufferContext(final SwapBufferContext sbc) {
         swapBufferContext = sbc;
+    }
+
+    /**
+     * Inject custom {@link FBObject.Attachment.StorageDefinition} specialization for the use-case of:
+     * <ul>
+     *   <li>Using a special <i>color renderbuffer storage</i> instead of the default {@link FBObject} <i>internal offscreen</i> storage.</li>
+     * </ul>
+     * @see {@link FBObject.Attachment.StorageDefinition}
+     * @see {@link FBObject.Attachment#setStorageDefinition(FBObject.Attachment.StorageDefinition)}
+     */
+    public final void setColorRenderbufferStorageDef(final FBObject.Attachment.StorageDefinition sd) {
+        colorRenderbufferStorageDef = sd;
+        if(DEBUG) {
+            System.err.println("EAGL.FBODrawable: setColorRenderbufferStorageDef");
+        }
+    }
+    public final boolean hasColorRenderbufferStorageDef(final FBObject.Attachment.StorageDefinition sd) {
+        return sd == colorRenderbufferStorageDef;
     }
 
     private final void reset(final GL gl, final int idx, final int width, final int height, final int samples,
@@ -371,6 +409,11 @@ public class GLFBODrawableImpl extends GLDrawableImpl implements GLFBODrawable {
 
     @Override
     protected final int getDefaultReadFramebuffer() { return initialized ? fbos[fboIFront].getReadFramebuffer() : 0; }
+
+    @Override
+    protected final int getDefaultDrawBuffer(final GL gl) {
+        return initialized ? fbos[fboIBack].getDefaultDrawBuffer() : GL.GL_COLOR_ATTACHMENT0 ;
+    }
 
     @Override
     protected final int getDefaultReadBuffer(final GL gl, final boolean hasDedicatedDrawableRead) {

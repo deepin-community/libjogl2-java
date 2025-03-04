@@ -31,7 +31,9 @@ package com.jogamp.opengl.test.junit.jogl.acore;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.jogamp.common.os.Platform;
 import com.jogamp.common.util.InterruptSource;
+import com.jogamp.junit.util.JunitTracer;
 import com.jogamp.nativewindow.NativeSurface;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
@@ -39,6 +41,7 @@ import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
 
 import org.junit.Test;
+import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
 
@@ -48,7 +51,7 @@ import com.jogamp.opengl.test.junit.util.UITestCase;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestGLContextSurfaceLockNEWT extends UITestCase {
-    static final int demoSize = 64;
+    static final int demoSizePos = 80;
 
     public abstract class MyRunnable implements Runnable {
         final Object postSync;
@@ -73,10 +76,13 @@ public class TestGLContextSurfaceLockNEWT extends UITestCase {
             this.frameCount = frameCount;
         }
 
+        @Override
         public void run() {
             System.err.println("Animatr "+id+", count "+frameCount+": PRE: "+Thread.currentThread().getName());
 
             for(int c=0; c<frameCount; c++) {
+                System.err.println("Animatr "+id+": Action "+c+" / "+frameCount+": "+Thread.currentThread().getName());
+
                 glad.display();
             }
 
@@ -103,12 +109,17 @@ public class TestGLContextSurfaceLockNEWT extends UITestCase {
             this.actionCount = actionCount;
         }
 
+        @Override
         public void run() {
             System.err.println("Resizer "+id+", count "+actionCount+": PRE: "+Thread.currentThread().getName());
 
             for(int c=0; c<actionCount; c++) {
+                final int _c = c;
                 win.runOnEDTIfAvail(true, new Runnable() {
+                    int i = _c;
+                    @Override
                     public void run() {
+                        System.err.println("Resizer "+id+": Action "+i+" / "+actionCount+": "+Thread.currentThread().getName());
                         // Normal resize, may trigger immediate display within lock
                         win.setSize(win.getSurfaceWidth()+1, win.getSurfaceHeight()+1);
 
@@ -188,7 +199,8 @@ public class TestGLContextSurfaceLockNEWT extends UITestCase {
 
         glWindow.addGLEventListener(new GearsES2(0));
         glWindow.addGLEventListener(myEventCounter);
-        glWindow.setSize(demoSize, demoSize);
+        glWindow.setPosition(demoSizePos, demoSizePos);
+        glWindow.setSize(demoSizePos, demoSizePos);
         glWindow.setVisible(true);
 
         final String currentThreadName = Thread.currentThread().getName();
@@ -253,7 +265,18 @@ public class TestGLContextSurfaceLockNEWT extends UITestCase {
         runJOGLTasks(3, 100, 3, 50);
     }
 
+    @BeforeClass
+    public static void beforeClass() throws Exception {
+        if( !manual_test ) {
+            if( Platform.OSType.MACOS == Platform.getOSType() ) {
+                JunitTracer.setTestSupported(false);
+            }
+        }
+    }
+    static boolean manual_test = false;
+
     public static void main(final String args[]) throws IOException {
+        manual_test = true;
         for(int i=0; i<args.length; i++) {
             if(args[i].equals("-time")) {
                 i++;

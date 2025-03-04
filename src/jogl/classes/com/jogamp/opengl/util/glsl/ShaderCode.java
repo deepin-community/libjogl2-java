@@ -72,7 +72,7 @@ import com.jogamp.common.util.VersionNumber;
  * was added since 2.2.1.
  * </p>
  */
-public class ShaderCode {
+public final class ShaderCode {
     public static final boolean DEBUG_CODE = Debug.isPropertyDefined("jogl.debug.GLSLCode", true);
 
     /** Unique resource suffix for {@link GL2ES2#GL_VERTEX_SHADER} in source code: <code>{@value}</code> */
@@ -148,9 +148,9 @@ public class ShaderCode {
         switch (type) {
             case GL2ES2.GL_VERTEX_SHADER:
             case GL2ES2.GL_FRAGMENT_SHADER:
-            case GL3.GL_GEOMETRY_SHADER:
-            case GL3.GL_TESS_CONTROL_SHADER:
-            case GL3.GL_TESS_EVALUATION_SHADER:
+            case GL3ES3.GL_GEOMETRY_SHADER:
+            case GL3ES3.GL_TESS_CONTROL_SHADER:
+            case GL3ES3.GL_TESS_EVALUATION_SHADER:
             case GL3ES3.GL_COMPUTE_SHADER:
                 break;
             default:
@@ -179,9 +179,9 @@ public class ShaderCode {
         switch (type) {
             case GL2ES2.GL_VERTEX_SHADER:
             case GL2ES2.GL_FRAGMENT_SHADER:
-            case GL3.GL_GEOMETRY_SHADER:
-            case GL3.GL_TESS_CONTROL_SHADER:
-            case GL3.GL_TESS_EVALUATION_SHADER:
+            case GL3ES3.GL_GEOMETRY_SHADER:
+            case GL3ES3.GL_TESS_CONTROL_SHADER:
+            case GL3ES3.GL_TESS_EVALUATION_SHADER:
             case GL3ES3.GL_COMPUTE_SHADER:
                 break;
             default:
@@ -386,11 +386,11 @@ public class ShaderCode {
                 return binary?SUFFIX_VERTEX_BINARY:SUFFIX_VERTEX_SOURCE;
             case GL2ES2.GL_FRAGMENT_SHADER:
                 return binary?SUFFIX_FRAGMENT_BINARY:SUFFIX_FRAGMENT_SOURCE;
-            case GL3.GL_GEOMETRY_SHADER:
+            case GL3ES3.GL_GEOMETRY_SHADER:
                 return binary?SUFFIX_GEOMETRY_BINARY:SUFFIX_GEOMETRY_SOURCE;
-            case GL3.GL_TESS_CONTROL_SHADER:
+            case GL3ES3.GL_TESS_CONTROL_SHADER:
                 return binary?SUFFIX_TESS_CONTROL_BINARY:SUFFIX_TESS_CONTROL_SOURCE;
-            case GL3.GL_TESS_EVALUATION_SHADER:
+            case GL3ES3.GL_TESS_EVALUATION_SHADER:
                 return binary?SUFFIX_TESS_EVALUATION_BINARY:SUFFIX_TESS_EVALUATION_SOURCE;
             case GL3ES3.GL_COMPUTE_SHADER:
                 return binary?SUFFIX_COMPUTE_BINARY:SUFFIX_COMPUTE_SOURCE;
@@ -785,11 +785,11 @@ public class ShaderCode {
                 return "VERTEX_SHADER";
             case GL2ES2.GL_FRAGMENT_SHADER:
                 return "FRAGMENT_SHADER";
-            case GL3.GL_GEOMETRY_SHADER:
+            case GL3ES3.GL_GEOMETRY_SHADER:
                 return "GEOMETRY_SHADER";
-            case GL3.GL_TESS_CONTROL_SHADER:
+            case GL3ES3.GL_TESS_CONTROL_SHADER:
                 return "TESS_CONTROL_SHADER";
-            case GL3.GL_TESS_EVALUATION_SHADER:
+            case GL3ES3.GL_TESS_EVALUATION_SHADER:
                 return "TESS_EVALUATION_SHADER";
             case GL3ES3.GL_COMPUTE_SHADER:
             	return "COMPUTE_SHADER";
@@ -815,7 +815,7 @@ public class ShaderCode {
         if(null!=shaderSource) {
             if(DEBUG_CODE) {
                 System.err.println("ShaderCode.compile:");
-                dumpShaderSource(System.err);
+                dumpSource(System.err);
             }
             valid=ShaderUtil.createAndCompileShader(gl, shader, shaderType,
                                                     shaderSource, verboseOut);
@@ -859,7 +859,7 @@ public class ShaderCode {
     }
     @Override
     public String toString() {
-        final StringBuilder buf = new StringBuilder("ShaderCode[id="+id+", type="+shaderTypeStr()+", valid="+valid+", shader: ");
+        final StringBuilder buf = new StringBuilder("ShaderCode[id="+id()+", type="+shaderTypeStr()+", valid="+valid+", "+shader.remaining()+"/"+shader.capacity()+" shader: ");
         for(int i=0; i<shader.remaining(); i++) {
             buf.append(" "+shader.get(i));
         }
@@ -871,15 +871,20 @@ public class ShaderCode {
         return buf.toString();
     }
 
-    public void dumpShaderSource(final PrintStream out) {
+    public void dumpSource(final PrintStream out) {
         if(null==shaderSource) {
             out.println("<no shader source>");
             return;
         }
         final int sourceCount = shaderSource.length;
-        final int shaderCount = (null!=shader)?shader.capacity():0;
+        final int shaderCount = shader.capacity();
+        out.println();
+        out.print("ShaderCode[id="+id()+", type="+shaderTypeStr()+", valid="+valid+", "+shader.remaining()+"/"+shaderCount+" shader: ");
+        if( 0 == shaderCount ) {
+            out.println("none]");
+        }
         for(int i=0; i<shaderCount; i++) {
-            out.println("");
+            out.println();
             out.println("Shader #"+i+"/"+shaderCount+" name "+shader.get(i));
             out.println("--------------------------------------------------------------");
             if(i>=sourceCount) {
@@ -902,6 +907,7 @@ public class ShaderCode {
             }
             out.println("--------------------------------------------------------------");
         }
+        out.println("]");
     }
 
     /**
@@ -922,7 +928,7 @@ public class ShaderCode {
         if(null==shaderSource) {
             throw new IllegalStateException("no shader source");
         }
-        final int shaderCount = (null!=shader)?shader.capacity():0;
+        final int shaderCount = shader.capacity();
         if(0>shaderIdx || shaderIdx>=shaderCount) {
             throw new IndexOutOfBoundsException("shaderIdx not within shader bounds [0.."+(shaderCount-1)+"]: "+shaderIdx);
         }
@@ -1027,7 +1033,7 @@ public class ShaderCode {
         if(null==shaderSource) {
             throw new IllegalStateException("no shader source");
         }
-        final int shaderCount = (null!=shader)?shader.capacity():0;
+        final int shaderCount = shader.capacity();
         if(0>shaderIdx || shaderIdx>=shaderCount) {
             throw new IndexOutOfBoundsException("shaderIdx not within shader bounds [0.."+(shaderCount-1)+"]: "+shaderIdx);
         }
@@ -1098,7 +1104,15 @@ public class ShaderCode {
             while ((line = reader.readLine()) != null) {
                 lineno++;
                 if (line.startsWith("#include ")) {
-                    final String includeFile = line.substring(9).trim();
+                    final String includeFile;
+                    {
+                        String s = line.substring(9).trim();
+                        // Bug 1283: Remove shader include filename quotes if exists at start and end only
+                        if( s.startsWith("\"") && s.endsWith("\"")) {
+                            s = s.substring(1, s.length()-1);
+                        }
+                        includeFile = s;
+                    }
                     URLConnection nextConn = null;
 
                     // Try relative of current shader location
@@ -1330,9 +1344,9 @@ public class ShaderCode {
             // GLSL [ 1.30 .. 1.50 [ needs at least fragement float default precision!
             switch ( shaderType ) {
                 case GL2ES2.GL_VERTEX_SHADER:
-                case GL3.GL_GEOMETRY_SHADER:
-                case GL3.GL_TESS_CONTROL_SHADER:
-                case GL3.GL_TESS_EVALUATION_SHADER:
+                case GL3ES3.GL_GEOMETRY_SHADER:
+                case GL3ES3.GL_TESS_CONTROL_SHADER:
+                case GL3ES3.GL_TESS_EVALUATION_SHADER:
                     defaultPrecision = gl3_default_precision_vp_gp; break;
                 case GL2ES2.GL_FRAGMENT_SHADER:
                     defaultPrecision = gl3_default_precision_fp; break;
@@ -1429,18 +1443,18 @@ public class ShaderCode {
     // Internals only below this point
     //
 
-    protected CharSequence[][] shaderSource = null;
-    protected Buffer     shaderBinary = null;
-    protected int        shaderBinaryFormat = -1;
-    protected IntBuffer  shader = null;
-    protected int        shaderType = -1;
-    protected int        id = -1;
+    private CharSequence[][] shaderSource;
+    private Buffer     shaderBinary;
+    private int        shaderBinaryFormat = -1;
+    private final IntBuffer  shader;
+    private int        shaderType = -1;
+    private int        id = -1;
 
-    protected boolean valid=false;
+    private boolean valid=false;
 
     private static synchronized int getNextID() {
         return nextID++;
     }
-    protected static int nextID = 1;
+    private static int nextID = 1;
 }
 

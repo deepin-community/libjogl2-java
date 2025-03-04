@@ -48,7 +48,7 @@ import jogamp.newt.PointerIconImpl;
 import jogamp.newt.WindowImpl;
 import jogamp.newt.driver.KeyTracker;
 import jogamp.newt.driver.MouseTracker;
-import jogamp.newt.driver.linux.LinuxEventDeviceTracker;
+import jogamp.newt.driver.linux.LinuxKeyEventTracker;
 import jogamp.newt.driver.linux.LinuxMouseTracker;
 import jogamp.newt.driver.x11.X11UnderlayTracker;
 import jogamp.opengl.egl.EGLDisplayUtil;
@@ -73,11 +73,8 @@ public class WindowDriver extends WindowImpl {
             mouseTracker = x11UnderlayTracker;
             keyTracker = x11UnderlayTracker;
         } catch(final ExceptionInInitializerError e) {
-            linuxMouseTracker = LinuxMouseTracker.getSingleton();
-            linuxEventDeviceTracker = LinuxEventDeviceTracker.getSingleton();
-
-            mouseTracker = linuxMouseTracker;
-            keyTracker = linuxEventDeviceTracker;
+            mouseTracker = LinuxMouseTracker.getSingleton();
+            keyTracker = LinuxKeyEventTracker.getSingleton();
         }
 
         layer = -1;
@@ -90,7 +87,7 @@ public class WindowDriver extends WindowImpl {
      *
      * @param screen
      * @param rect the {@link RectangleImmutable} in pixel units
-     * @param definePosSize if {@code true} issue {@link #definePosition(int, int)} and {@link #defineSize(int, int)}
+     * @param definePosSize if {@code true} issue {@link #defineWindowPosition(int, int)} and {@link #defineWindowSize(int, int)}
      *                      if either has changed.
      * @return If position or size has been clamped a new {@link RectangleImmutable} instance w/ clamped values
      *         will be returned, otherwise the given {@code rect} is returned.
@@ -135,10 +132,10 @@ public class WindowDriver extends WindowImpl {
         if( modPos || modSize ) {
             if( definePosSize ) {
                 if( modPos ) {
-                    definePosition(x, y);
+                    defineWindowPosition(x, y);
                 }
                 if( modSize ) {
-                    defineSize(w, h);
+                    defineWindowSize(w, h);
                 }
             }
             return new Rectangle(x, y, w, h);
@@ -155,7 +152,7 @@ public class WindowDriver extends WindowImpl {
     }
 
     @Override
-    protected void createNativeImpl() {
+    protected void createNativeImpl(boolean[] positionModified) {
         if(0!=getParentWindowHandle()) {
             throw new RuntimeException("Window parenting not supported (yet)");
         }
@@ -190,7 +187,7 @@ public class WindowDriver extends WindowImpl {
         eglDevice.open();
         final DefaultGraphicsScreen eglScreen = new DefaultGraphicsScreen(eglDevice, aScreen.getIndex());
 
-        final AbstractGraphicsConfiguration cfg = GraphicsConfigurationFactory.getFactory(getScreen().getDisplay().getGraphicsDevice(), capsRequested).chooseGraphicsConfiguration(
+        final AbstractGraphicsConfiguration cfg = GraphicsConfigurationFactory.getFactory(display.getGraphicsDevice(), capsRequested).chooseGraphicsConfiguration(
                 capsRequested, capsRequested, capabilitiesChooser, eglScreen, VisualIDHolder.VID_UNDEFINED);
         if (null == cfg) {
             throw new NativeWindowException("Error choosing GraphicsConfiguration creating window: "+this);
@@ -213,9 +210,12 @@ public class WindowDriver extends WindowImpl {
         }
         windowHandleClose = nativeWindowHandle;
 
-        addWindowListener(keyTracker);
-        addWindowListener(mouseTracker);
-
+        if( null != keyTracker ) {
+            addWindowListener(keyTracker);
+        }
+        if( null != mouseTracker ) {
+            addWindowListener(mouseTracker);
+        }
 
         focusChanged(false, true);
     }
@@ -225,9 +225,12 @@ public class WindowDriver extends WindowImpl {
         final DisplayDriver display = (DisplayDriver) getScreen().getDisplay();
         final EGLGraphicsDevice eglDevice = (EGLGraphicsDevice) getGraphicsConfiguration().getScreen().getDevice();
 
-        removeWindowListener(mouseTracker);
-        removeWindowListener(keyTracker);
-
+        if( null != mouseTracker ) {
+            removeWindowListener(mouseTracker);
+        }
+        if( null != keyTracker ) {
+            removeWindowListener(keyTracker);
+        }
         if(0!=windowHandleClose) {
             CloseWindow0(display.getBCMHandle(), windowHandleClose);
         }
@@ -249,7 +252,7 @@ public class WindowDriver extends WindowImpl {
 
     @Override
     protected final int getSupportedReconfigMaskImpl() {
-        return minimumReconfigStateMask |
+        return mutableSizePosReconfigStateMask |
                // STATE_MASK_UNDECORATED |
                // STATE_MASK_ALWAYSONTOP |
                // STATE_MASK_ALWAYSONBOTTOM |
@@ -288,21 +291,27 @@ public class WindowDriver extends WindowImpl {
     @Override
     protected void setPointerIconImpl(final PointerIconImpl pi) {
         final DisplayDriver display = (DisplayDriver) getScreen().getDisplay();
-        display.setPointerIconActive(null != pi ? pi.validatedHandle() : 0, mouseTracker.getLastX(), mouseTracker.getLastY());
+        if( null != mouseTracker ) {
+            display.setPointerIconActive(null != pi ? pi.validatedHandle() : 0, mouseTracker.getLastX(), mouseTracker.getLastY());
+        } else {
+            display.setPointerIconActive(null != pi ? pi.validatedHandle() : 0, 0, 0);
+        }
     }
 
     @Override
     protected boolean setPointerVisibleImpl(final boolean pointerVisible) {
         final DisplayDriver display = (DisplayDriver) getScreen().getDisplay();
-        display.setActivePointerIconVisible(pointerVisible, mouseTracker.getLastX(), mouseTracker.getLastY());
+        if( null != mouseTracker ) {
+            display.setActivePointerIconVisible(pointerVisible, mouseTracker.getLastX(), mouseTracker.getLastY());
+        } else {
+            display.setActivePointerIconVisible(pointerVisible, 0, 0);
+        }
         return true;
     }
 
     //----------------------------------------------------------------------
     // Internals only
     //
-    private LinuxMouseTracker linuxMouseTracker;
-    private LinuxEventDeviceTracker linuxEventDeviceTracker;
     private X11UnderlayTracker x11UnderlayTracker;
 
     private MouseTracker mouseTracker;

@@ -42,9 +42,9 @@ import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Toolkit;
+import java.awt.geom.AffineTransform;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Map;
@@ -63,8 +63,11 @@ import jogamp.nativewindow.jawt.x11.X11SunJDKReflection;
 import jogamp.nativewindow.macosx.OSXUtil;
 import jogamp.nativewindow.x11.X11Lib;
 
+import com.jogamp.common.ExceptionUtils;
 import com.jogamp.common.os.Platform;
 import com.jogamp.common.util.PropertyAccess;
+import com.jogamp.common.util.SecurityUtil;
+import com.jogamp.common.util.UnsafeUtil;
 import com.jogamp.common.util.VersionNumber;
 import com.jogamp.common.util.locks.LockFactory;
 import com.jogamp.common.util.locks.RecursiveLock;
@@ -77,11 +80,10 @@ public class JAWTUtil {
   /** OSX JAWT version option to use CALayer */
   public static final int JAWT_MACOSX_USE_CALAYER = 0x80000000;
 
-  /** OSX JAWT CALayer availability on Mac OS X >= 10.6 Update 4 (recommended) */
-  public static final VersionNumber JAWT_MacOSXCALayerMinVersion = new VersionNumber(10,6,4);
-
   /** OSX JAWT CALayer required with Java >= 1.7.0 (implies OS X >= 10.7  */
-  public static final VersionNumber JAWT_MacOSXCALayerRequiredForJavaVersion = Platform.Version17;
+  private static final int MacOS_JVM_1_7_COMPARE;
+  /** OSX JAWT CALayer availability on Mac OS X >= 10.6 Update 4 (recommended) */
+  private static final int MacOS_10_6_4_COMPARE;
 
   // See whether we're running in headless mode
   private static final boolean headlessMode;
@@ -91,41 +93,49 @@ public class JAWTUtil {
   private static final Method isQueueFlusherThread;
   private static final boolean j2dExist;
 
-  private static final Method  sunToolkitAWTLockMethod;
-  private static final Method  sunToolkitAWTUnlockMethod;
-  private static final boolean hasSunToolkitAWTLock;
+  private static final Method  stkAWTLockMID;
+  private static final Method  stkAWTUnlockMID;
+  private static final boolean hasSTKAWTLock;
+  private static final Method stkDisableBackgroundEraseMID;
 
   private static final RecursiveLock jawtLock;
   private static final ToolkitLock jawtToolkitLock;
 
-  private static final Method getScaleFactorMethod;
-  private static final Method getCGDisplayIDMethodOnOSX;
+  private static final Method gdGetScaleFactorMID;
+  private static final Method gdGetCGDisplayIDMIDOnOSX;
 
-  private static class PrivilegedDataBlob1 {
-    PrivilegedDataBlob1() {
-        ok = false;
-    }
-    Method sunToolkitAWTLockMethod;
-    Method sunToolkitAWTUnlockMethod;
-    Method getScaleFactorMethod;
-    Method getCGDisplayIDMethodOnOSX;
+  private static class SunToolkitData {
+    SunToolkitData() { }
+    // default initialization to null, false
+    Method awtLockMID;
+    Method awtUnlockMID;
+    Method disableBackgroundEraseMID;
+    boolean ok;
+  }
+  private static class GraphicsDeviceData {
+    GraphicsDeviceData() { }
+    // default initialization to null, false
+    Method getScaleFactorMID;
+    Method getCGDisplayIDMIDOnOSX;
     boolean ok;
   }
 
   /**
    * Returns true if this platform's JAWT implementation supports offscreen layer.
+   *
+   * Currently only JAWT on MacOS >= 10.6.4 supports offscreen rendering.
    */
   public static boolean isOffscreenLayerSupported() {
-    return PlatformPropsImpl.OS_TYPE == Platform.OSType.MACOS &&
-           PlatformPropsImpl.OS_VERSION_NUMBER.compareTo(JAWTUtil.JAWT_MacOSXCALayerMinVersion) >= 0;
+    return PlatformPropsImpl.OS_TYPE == Platform.OSType.MACOS && MacOS_10_6_4_COMPARE >= 0;
   }
 
   /**
    * Returns true if this platform's JAWT implementation requires using offscreen layer.
+   *
+   * Currently only JAWT on MacOS with JVM >= 1.7 supports offscreen rendering.
    */
   public static boolean isOffscreenLayerRequired() {
-    return PlatformPropsImpl.OS_TYPE == Platform.OSType.MACOS &&
-           PlatformPropsImpl.JAVA_VERSION_NUMBER.compareTo(JAWT_MacOSXCALayerRequiredForJavaVersion)>=0;
+    return PlatformPropsImpl.OS_TYPE == Platform.OSType.MACOS && MacOS_JVM_1_7_COMPARE >= 0;
   }
 
   /**
@@ -229,14 +239,11 @@ public class JAWTUtil {
    */
   public static int getOSXCALayerQuirks() {
     int res = 0;
-    if( PlatformPropsImpl.OS_TYPE == Platform.OSType.MACOS &&
-        PlatformPropsImpl.OS_VERSION_NUMBER.compareTo(JAWTUtil.JAWT_MacOSXCALayerMinVersion) >= 0 ) {
-
+    if( PlatformPropsImpl.OS_TYPE == Platform.OSType.MACOS && MacOS_10_6_4_COMPARE >= 0 ) {
         /** Knowing impl. all expose the SIZE bug */
         res |= JAWT_OSX_CALAYER_QUIRK_SIZE;
 
-        final int c = PlatformPropsImpl.JAVA_VERSION_NUMBER.compareTo(PlatformPropsImpl.Version17);
-        if( c < 0 || c == 0 && PlatformPropsImpl.JAVA_VERSION_UPDATE < 40 ) {
+        if( MacOS_JVM_1_7_COMPARE < 0 || MacOS_JVM_1_7_COMPARE == 0 && PlatformPropsImpl.JAVA_VERSION_UPDATE < 40 ) {
             res |= JAWT_OSX_CALAYER_QUIRK_POSITION;
         } else {
             res |= JAWT_OSX_CALAYER_QUIRK_LAYOUT;
@@ -260,7 +267,7 @@ public class JAWTUtil {
 
     if(isOffscreenLayerRequired()) {
         if(PlatformPropsImpl.OS_TYPE == Platform.OSType.MACOS) {
-            if(PlatformPropsImpl.OS_VERSION_NUMBER.compareTo(JAWTUtil.JAWT_MacOSXCALayerMinVersion) >= 0) {
+            if(MacOS_10_6_4_COMPARE >= 0) {
                 jawt_version_flags_offscreen |= JAWTUtil.JAWT_MACOSX_USE_CALAYER;
                 tryOffscreenLayer = true;
                 tryOnscreen = false;
@@ -317,6 +324,14 @@ public class JAWTUtil {
         // Thread.dumpStack();
     }
 
+    if( PlatformPropsImpl.OS_TYPE == Platform.OSType.MACOS ) {
+        MacOS_JVM_1_7_COMPARE = PlatformPropsImpl.JAVA_VERSION_NUMBER.compareTo(new VersionNumber(1, 7, 0));
+        MacOS_10_6_4_COMPARE = PlatformPropsImpl.OS_VERSION_NUMBER.compareTo(new VersionNumber(10,6,4));
+    } else {
+        MacOS_JVM_1_7_COMPARE = -1;
+        MacOS_10_6_4_COMPARE = -1;
+    }
+
     headlessMode = GraphicsEnvironment.isHeadless();
 
     if( headlessMode ) {
@@ -324,12 +339,12 @@ public class JAWTUtil {
         jawtLockObject = null;
         isQueueFlusherThread = null;
         j2dExist = false;
-        sunToolkitAWTLockMethod = null;
-        sunToolkitAWTUnlockMethod = null;
-        hasSunToolkitAWTLock = false;
-        // hasSunToolkitAWTLock = false;
-        getScaleFactorMethod = null;
-        getCGDisplayIDMethodOnOSX = null;
+        stkAWTLockMID = null;
+        stkAWTUnlockMID = null;
+        hasSTKAWTLock = false;
+        stkDisableBackgroundEraseMID = null;
+        gdGetScaleFactorMID = null;
+        gdGetCGDisplayIDMIDOnOSX = null;
     } else {
         // Non-headless case
         JAWTJNILibLoader.initSingleton(); // load libjawt.so
@@ -350,49 +365,78 @@ public class JAWTUtil {
         isQueueFlusherThread = isQueueFlusherThreadTmp;
         j2dExist = j2dExistTmp;
 
-        final PrivilegedDataBlob1 pdb1 = (PrivilegedDataBlob1) AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            @Override
-            public Object run() {
-                final PrivilegedDataBlob1 d = new PrivilegedDataBlob1();
+        // Always enforce using sun.awt.SunToolkit's awtLock even on JVM >= Java_9,
+        // as we have no other official means to synchronize native UI locks especially for X11
+        {
+            final SunToolkitData std = SecurityUtil.doPrivileged(new PrivilegedAction<SunToolkitData>() {
+                @Override
+                public SunToolkitData run() {
+                    return UnsafeUtil.doWithoutIllegalAccessLogger(new PrivilegedAction<SunToolkitData>() {
+                        @Override
+                        public SunToolkitData run() {
+                            final SunToolkitData d = new SunToolkitData();
+                            try {
+                                final Class<?> sunToolkitClass = Class.forName("sun.awt.SunToolkit");
+                                d.awtLockMID = sunToolkitClass.getDeclaredMethod("awtLock");
+                                d.awtLockMID.setAccessible(true);
+                                d.awtUnlockMID = sunToolkitClass.getDeclaredMethod("awtUnlock");
+                                d.awtUnlockMID.setAccessible(true);
+                                d.disableBackgroundEraseMID = sunToolkitClass.getDeclaredMethod("disableBackgroundErase", java.awt.Component.class);
+                                d.disableBackgroundEraseMID.setAccessible(true);
+                                d.ok=true;
+                            } catch (final Exception e) {
+                                // Either not a Sun JDK or the interfaces have changed since [Java 1.4.2 / 1.5 -> Java 11]
+                                if(DEBUG) {
+                                    System.err.println("JAWTUtil stk.0: "+e.getMessage());
+                                }
+                            }
+                            return d;
+                        }}); }});
+            stkAWTLockMID = std.awtLockMID;
+            stkAWTUnlockMID = std.awtUnlockMID;
+            stkDisableBackgroundEraseMID = std.disableBackgroundEraseMID;
+            boolean _hasSunToolkitAWTLock = false;
+            if ( std.ok ) {
                 try {
-                    final Class<?> sunToolkitClass = Class.forName("sun.awt.SunToolkit");
-                    d.sunToolkitAWTLockMethod = sunToolkitClass.getDeclaredMethod("awtLock", new Class[]{});
-                    d.sunToolkitAWTLockMethod.setAccessible(true);
-                    d.sunToolkitAWTUnlockMethod = sunToolkitClass.getDeclaredMethod("awtUnlock", new Class[]{});
-                    d.sunToolkitAWTUnlockMethod.setAccessible(true);
-                    d.ok=true;
+                    stkAWTLockMID.invoke(null, (Object[])null);
+                    stkAWTUnlockMID.invoke(null, (Object[])null);
+                    _hasSunToolkitAWTLock = true;
                 } catch (final Exception e) {
-                    // Either not a Sun JDK or the interfaces have changed since 1.4.2 / 1.5
-                }
-                try {
-                    final GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
-                    final Class<?> gdClass = gd.getClass();
-                    d.getScaleFactorMethod = gdClass.getDeclaredMethod("getScaleFactor");
-                    d.getScaleFactorMethod.setAccessible(true);
-                    if( Platform.OSType.MACOS == PlatformPropsImpl.OS_TYPE ) {
-                        d.getCGDisplayIDMethodOnOSX = gdClass.getDeclaredMethod("getCGDisplayID");
-                        d.getCGDisplayIDMethodOnOSX.setAccessible(true);
+                    if(DEBUG) {
+                        System.err.println("JAWTUtil stk.awtLock.1: "+e.getMessage());
                     }
-                } catch (final Throwable t) {}
-                return d;
+                }
             }
-        });
-        sunToolkitAWTLockMethod = pdb1.sunToolkitAWTLockMethod;
-        sunToolkitAWTUnlockMethod = pdb1.sunToolkitAWTUnlockMethod;
-        getScaleFactorMethod = pdb1.getScaleFactorMethod;
-        getCGDisplayIDMethodOnOSX = pdb1.getCGDisplayIDMethodOnOSX;
-
-        boolean _hasSunToolkitAWTLock = false;
-        if ( pdb1.ok ) {
-            try {
-                sunToolkitAWTLockMethod.invoke(null, (Object[])null);
-                sunToolkitAWTUnlockMethod.invoke(null, (Object[])null);
-                _hasSunToolkitAWTLock = true;
-            } catch (final Exception e) {
-            }
+            hasSTKAWTLock = _hasSunToolkitAWTLock;
         }
-        hasSunToolkitAWTLock = _hasSunToolkitAWTLock;
-        // hasSunToolkitAWTLock = false;
+        if( PlatformPropsImpl.JAVA_9 ) {
+            gdGetScaleFactorMID = null;
+            gdGetCGDisplayIDMIDOnOSX = null;
+        } else {
+            final GraphicsDeviceData gdd = (GraphicsDeviceData) SecurityUtil.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                public Object run() {
+                    final GraphicsDeviceData d = new GraphicsDeviceData();
+                    try {
+                        final GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+                        final Class<?> gdClass = gd.getClass();
+                        d.getScaleFactorMID = gdClass.getDeclaredMethod("getScaleFactor");
+                        d.getScaleFactorMID.setAccessible(true);
+                        if( Platform.OSType.MACOS == PlatformPropsImpl.OS_TYPE ) {
+                            d.getCGDisplayIDMIDOnOSX = gdClass.getDeclaredMethod("getCGDisplayID");
+                            d.getCGDisplayIDMIDOnOSX.setAccessible(true);
+                        }
+                    } catch (final Throwable t) {
+                        if(DEBUG) {
+                            System.err.println("JAWTUtil scaleFactor: "+t.getMessage());
+                        }
+                    }
+                    return d;
+                }
+            });
+            gdGetScaleFactorMID = gdd.getScaleFactorMID;
+            gdGetCGDisplayIDMIDOnOSX = gdd.getCGDisplayIDMIDOnOSX;
+        }
     }
 
     jawtLock = LockFactory.createRecursiveLock();
@@ -445,7 +489,7 @@ public class JAWTUtil {
     }
 
     if (DEBUG) {
-        System.err.println("JAWTUtil: Has sun.awt.SunToolkit.awtLock/awtUnlock " + hasSunToolkitAWTLock);
+        System.err.println("JAWTUtil: Has sun.awt.SunToolkit: awtLock/awtUnlock " + hasSTKAWTLock + ", disableBackgroundErase "+(null!=stkDisableBackgroundEraseMID));
         System.err.println("JAWTUtil: Has Java2D " + j2dExist);
         System.err.println("JAWTUtil: Is headless " + headlessMode);
         final int hints = ( null != desktophints ) ? desktophints.size() : 0 ;
@@ -499,9 +543,9 @@ public class JAWTUtil {
     jawtLock.lock();
     if( 1 == jawtLock.getHoldCount() ) {
         if(!headlessMode && !isJava2DQueueFlusherThread()) {
-            if(hasSunToolkitAWTLock) {
+            if(hasSTKAWTLock) {
                 try {
-                    sunToolkitAWTLockMethod.invoke(null, (Object[])null);
+                    stkAWTLockMID.invoke(null, (Object[])null);
                 } catch (final Exception e) {
                   throw new NativeWindowException("SunToolkit.awtLock failed", e);
                 }
@@ -528,9 +572,9 @@ public class JAWTUtil {
     if(ToolkitLock.TRACE_LOCK) { System.err.println("JAWTUtil-ToolkitLock.unlock(): "+jawtLock); }
     if( 1 == jawtLock.getHoldCount() ) {
         if(!headlessMode && !isJava2DQueueFlusherThread()) {
-            if(hasSunToolkitAWTLock) {
+            if(hasSTKAWTLock) {
                 try {
-                    sunToolkitAWTUnlockMethod.invoke(null, (Object[])null);
+                    stkAWTUnlockMID.invoke(null, (Object[])null);
                 } catch (final Exception e) {
                   throw new NativeWindowException("SunToolkit.awtUnlock failed", e);
                 }
@@ -550,29 +594,61 @@ public class JAWTUtil {
     return jawtToolkitLock;
   }
 
-  public static final int getMonitorDisplayID(final GraphicsDevice device) {
-      int displayID = 0;
-      if( null != getCGDisplayIDMethodOnOSX ) {
-          // OSX specific
+  /**
+   * Calls {@code sun.awt.SunToolkit.disableBackgroundErase(Component component)} if available.
+   * <p>
+   * Disables the AWT's erasing of the given native Component's background since Java SE 6.
+   * This feature can also be enabled by setting the system property
+   * {@code sun.awt.noerasebackground} = {@code true}.
+   * </p>
+   * @param component
+   * @return {@code true} if available and successful, otherwise {@code false}
+   */
+  public static boolean disableBackgroundErase(final java.awt.Component component) {
+      if( null != stkDisableBackgroundEraseMID ) {
           try {
-              final Object res = getCGDisplayIDMethodOnOSX.invoke(device);
+              stkDisableBackgroundEraseMID.invoke(component.getToolkit(), component);
+              return true;
+          } catch (final Exception e) {
+              if( DEBUG ) {
+                  ExceptionUtils.dumpThrowable("JAWTUtil", e);
+              }
+          }
+      }
+      return false;
+  }
+
+  /**
+   * Queries the Monitor's display ID of the given device
+   * <p>
+   * Currently only supported for OSX on Java<9
+   * </p>
+   * @param device for which the display id is being queried
+   * @return {@code null} if not supported (Java9+ or !OSX), otherwise the monitor displayID
+   */
+  public static final Integer getMonitorDisplayID(final GraphicsDevice device) {
+      if( null != gdGetCGDisplayIDMIDOnOSX ) {
+          // OSX specific for Java<9
+          try {
+              final Object res = gdGetCGDisplayIDMIDOnOSX.invoke(device);
               if (res instanceof Integer) {
-                  displayID = ((Integer)res).intValue();
+                  return (Integer)res;
               }
           } catch (final Throwable t) {}
       }
-      return displayID;
+      return null;
   }
 
   /**
    * Returns the pixel scale factor of the given {@link GraphicsDevice}, if supported.
    * <p>
-   * If the component does not support pixel scaling the default
-   * <code>one</code> is returned.
+   * This method is generally supported on Java9+
    * </p>
    * <p>
-   * Note: Currently only supported on OSX since 1.7.0_40 for HiDPI retina displays
+   * If the component does not support pixel scaling
+   * or SKIP_AWT_HIDPI is set, the default value <code>one</code> is returned.
    * </p>
+   *
    * @param device the {@link GraphicsDevice} instance used to query the pixel scale
    * @param minScale current and output min scale values
    * @param maxScale current and output max scale values
@@ -585,29 +661,38 @@ public class JAWTUtil {
       minScale[1] = 1f;
       float sx = 1f;
       float sy = 1f;
+      boolean gotSXZ = false;
       if( !SKIP_AWT_HIDPI ) {
-          if( null != getCGDisplayIDMethodOnOSX ) {
-              // OSX specific, preserving double type
+          if( null != gdGetCGDisplayIDMIDOnOSX ) {
+              // OSX specific for Java < 9, preserving double type
               try {
-                  final Object res = getCGDisplayIDMethodOnOSX.invoke(device);
+                  final Object res = gdGetCGDisplayIDMIDOnOSX.invoke(device);
                   if (res instanceof Integer) {
                       final int displayID = ((Integer)res).intValue();
-                      sx = (float) OSXUtil.GetPixelScaleByDisplayID(displayID);
+                      sx = OSXUtil.GetScreenPixelScaleByDisplayID(displayID);
                       sy = sx;
+                      gotSXZ = true;
                   }
               } catch (final Throwable t) {}
           }
-          if( null != getScaleFactorMethod ) {
-              // Generic (?)
+          if( !gotSXZ && null != gdGetScaleFactorMID ) {
+              // Generic for Java < 9
               try {
-                  final Object res = getScaleFactorMethod.invoke(device);
+                  final Object res = gdGetScaleFactorMID.invoke(device);
                   if (res instanceof Integer) {
                       sx = ((Integer)res).floatValue();
                   } else if ( res instanceof Double) {
                       sx = ((Double)res).floatValue();
                   }
                   sy = sx;
+                  gotSXZ = true;
               } catch (final Throwable t) {}
+          }
+          if( !gotSXZ ) {
+              final GraphicsConfiguration gc = device.getDefaultConfiguration();
+              final AffineTransform tx = gc.getDefaultTransform();
+              sx = (float)tx.getScaleX();
+              sy = (float)tx.getScaleY();
           }
       }
       changed = maxScale[0] != sx || maxScale[1] != sy;
@@ -619,14 +704,14 @@ public class JAWTUtil {
   /**
    * Returns the pixel scale factor of the given {@link GraphicsConfiguration}'s {@link GraphicsDevice}, if supported.
    * <p>
-   * If the {@link GraphicsDevice} is <code>null</code>, <code>zero</code> is returned.
+   * This method is generally supported on Java9+
    * </p>
    * <p>
-   * If the component does not support pixel scaling the default
-   * <code>one</code> is returned.
+   * If the {@link GraphicsDevice} is <code>null</code>, <code>one</code> is returned.
    * </p>
    * <p>
-   * Note: Currently only supported on OSX since 1.7.0_40 for HiDPI retina displays
+   * If the component does not support pixel scaling
+   * or SKIP_AWT_HIDPI is set, the default value <code>one</code> is returned.
    * </p>
    * @param gc the {@link GraphicsConfiguration} instance used to query the pixel scale
    * @param minScale current and output min scale values

@@ -29,9 +29,7 @@
 
 package com.jogamp.newt.awt;
 
-import java.applet.Applet;
 import java.awt.AWTKeyStroke;
-import java.awt.Canvas;
 import java.awt.Component;
 import java.awt.EventQueue;
 import java.awt.Graphics;
@@ -43,13 +41,12 @@ import java.awt.geom.NoninvertibleTransformException;
 import java.beans.Beans;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.lang.reflect.Method;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Set;
 
 import com.jogamp.nativewindow.CapabilitiesImmutable;
+import com.jogamp.nativewindow.NativeSurface;
 import com.jogamp.nativewindow.NativeWindow;
+import com.jogamp.nativewindow.NativeWindowHolder;
 import com.jogamp.nativewindow.OffscreenLayerOption;
 import com.jogamp.nativewindow.WindowClosingProtocol;
 import com.jogamp.opengl.GLAnimatorControl;
@@ -100,7 +97,7 @@ import com.jogamp.opengl.util.TileRenderer;
  * the underlying JAWT mechanism to composite the image, if supported.
  */
 @SuppressWarnings("serial")
-public class NewtCanvasAWT extends java.awt.Canvas implements WindowClosingProtocol, OffscreenLayerOption, AWTPrintLifecycle {
+public class NewtCanvasAWT extends java.awt.Canvas implements NativeWindowHolder, WindowClosingProtocol, OffscreenLayerOption, AWTPrintLifecycle {
     public static final boolean DEBUG = Debug.debug("Window");
 
     private final Object sync = new Object();
@@ -110,7 +107,7 @@ public class NewtCanvasAWT extends java.awt.Canvas implements WindowClosingProto
     private Window newtChild = null;
     private boolean newtChildAttached = false;
     private boolean isOnscreen = true;
-    private WindowClosingMode newtChildCloseOp;
+    private WindowClosingMode newtChildCloseOp = WindowClosingMode.DISPOSE_ON_CLOSE;
     private final AWTParentWindowAdapter awtWinAdapter;
     private final AWTAdapter awtMouseAdapter;
     private final AWTAdapter awtKeyAdapter;
@@ -420,9 +417,21 @@ public class NewtCanvasAWT extends java.awt.Canvas implements WindowClosingProto
         return newtChild;
     }
 
-    /** @return this AWT Canvas NativeWindow representation, may be null in case {@link #removeNotify()} has been called,
-     * or {@link #addNotify()} hasn't been called yet.*/
+    /**
+     * {@inheritDoc}
+     * @return this AWT Canvas {@link NativeWindow} representation, may be null in case {@link #removeNotify()} has been called,
+     * or {@link #addNotify()} hasn't been called yet.
+     */
+    @Override
     public NativeWindow getNativeWindow() { return jawtWindow; }
+
+    /**
+     * {@inheritDoc}
+     * @return this AWT Canvas {@link NativeSurface} representation, may be null in case {@link #removeNotify()} has been called,
+     * or {@link #addNotify()} hasn't been called yet.
+     */
+    @Override
+    public NativeSurface getNativeSurface() { return jawtWindow; }
 
     @Override
     public WindowClosingMode getDefaultCloseOperation() {
@@ -448,11 +457,12 @@ public class NewtCanvasAWT extends java.awt.Canvas implements WindowClosingProto
     /** See {@link #setSkipJAWTDestroy(boolean)}. */
     public final boolean getSkipJAWTDestroy() { return skipJAWTDestroy; }
 
+    @SuppressWarnings("removal")
     private final void determineIfApplet() {
         isApplet = false;
         Component c = this;
         while(!isApplet && null != c) {
-            isApplet = c instanceof Applet;
+            isApplet = c instanceof java.applet.Applet;
             c = c.getParent();
         }
     }
@@ -579,7 +589,7 @@ public class NewtCanvasAWT extends java.awt.Canvas implements WindowClosingProto
              * This code order also allows recreation, ie re-adding the GLCanvas.
              */
             // before native peer is valid: X11
-            disableBackgroundErase();
+            JAWTUtil.disableBackgroundErase(this);
 
             // Query AWT GraphicsDevice from parent tree, default
             final GraphicsConfiguration gc = super.getGraphicsConfiguration();
@@ -597,7 +607,7 @@ public class NewtCanvasAWT extends java.awt.Canvas implements WindowClosingProto
             super.addNotify();
 
             // after native peer is valid: Windows
-            disableBackgroundErase();
+            JAWTUtil.disableBackgroundErase(this);
 
             synchronized(sync) {
                 determineIfApplet();
@@ -626,20 +636,16 @@ public class NewtCanvasAWT extends java.awt.Canvas implements WindowClosingProto
             }
         }
     }
-    private final boolean updatePixelScale(final GraphicsConfiguration gc) {
-        if( jawtWindow.updatePixelScale(gc, true) ) {
+
+    /** Propagates AWT pixelScale to NEWT */
+    private final boolean updatePixelScale(final GraphicsConfiguration gc, final boolean force) {
+        if( jawtWindow.updatePixelScale(gc, false) || jawtWindow.hasPixelScaleChanged() || force ) {
+            jawtWindow.hasPixelScaleChanged(); // clear
+            final float[] hasPixelScale = jawtWindow.getCurrentSurfaceScale(new float[2]);
             final Window cWin = newtChild;
             final Window dWin = cWin.getDelegatedWindow();
             if( dWin instanceof WindowImpl ) {
-                final float[] maxPixelScale = jawtWindow.getMaximumSurfaceScale(new float[2]);
-                final float[] minPixelScale = jawtWindow.getMinimumSurfaceScale(new float[2]);
-                ((WindowImpl)dWin).pixelScaleChangeNotify(minPixelScale, maxPixelScale, true);
-                // ((WindowImpl)dWin).sizeChangedNotify(true /* defer */, getWidth(), getHeight(), true /* force */);
-            } else {
-                final float[] reqPixelScale = jawtWindow.getRequestedSurfaceScale(new float[2]);
-                if( jawtWindow.setSurfaceScale(reqPixelScale) ) {
-                    // jawtWindow.getRequestedSurfaceScale(reqPixelScale);
-                }
+                ((WindowImpl)dWin).setSurfaceScale(hasPixelScale);
             }
             return true;
         }
@@ -748,7 +754,7 @@ public class NewtCanvasAWT extends java.awt.Canvas implements WindowClosingProto
                     System.err.println("NewtCanvasAWT.reshape: "+x+"/"+y+" "+width+"x"+height);
                 }
                 if( validateComponent(true) ) {
-                    if( !printActive && updatePixelScale(getGraphicsConfiguration()) ) {
+                    if( !printActive && updatePixelScale(getGraphicsConfiguration(), false /* force */) ) {
                         // NOP
                     } else {
                         // newtChild.setSize(width, height);
@@ -1046,8 +1052,7 @@ public class NewtCanvasAWT extends java.awt.Canvas implements WindowClosingProto
       }
       newtChild.setVisible(false);
       newtChild.setSize(w, h);
-      final float[] reqSurfaceScale = newtChild.getRequestedSurfaceScale(new float[2]);
-      jawtWindow.setSurfaceScale(reqSurfaceScale);
+      updatePixelScale(getGraphicsConfiguration(), true /* force */); // AWT -> NEWT
       newtChild.reparentWindow(jawtWindow, -1, -1, Window.REPARENT_HINT_BECOMES_VISIBLE);
       newtChild.addSurfaceUpdatedListener(jawtWindow);
       if( jawtWindow.isOffscreenLayerSurfaceEnabled() &&
@@ -1104,57 +1109,6 @@ public class NewtCanvasAWT extends java.awt.Canvas implements WindowClosingProto
           System.err.println("NewtCanvasAWT.detachNewtChild.X: win "+newtWinHandleToHexString(newtChild)+", EDTUtil: cur "+newtChild.getScreen().getDisplay().getEDTUtil()+", comp "+this);
       }
     }
-
-  // Disables the AWT's erasing of this Canvas's background on Windows
-  // in Java SE 6. This internal API is not available in previous
-  // releases, but the system property
-  // -Dsun.awt.noerasebackground=true can be specified to get similar
-  // results globally in previous releases.
-  private static boolean disableBackgroundEraseInitialized;
-  private static Method  disableBackgroundEraseMethod;
-  private void disableBackgroundErase() {
-    if (!disableBackgroundEraseInitialized) {
-      try {
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            @Override
-            public Object run() {
-              try {
-                Class<?> clazz = getToolkit().getClass();
-                while (clazz != null && disableBackgroundEraseMethod == null) {
-                  try {
-                    disableBackgroundEraseMethod =
-                      clazz.getDeclaredMethod("disableBackgroundErase",
-                                              new Class[] { Canvas.class });
-                    disableBackgroundEraseMethod.setAccessible(true);
-                  } catch (final Exception e) {
-                    clazz = clazz.getSuperclass();
-                  }
-                }
-              } catch (final Exception e) {
-              }
-              return null;
-            }
-          });
-      } catch (final Exception e) {
-      }
-      disableBackgroundEraseInitialized = true;
-      if(DEBUG) {
-        System.err.println("NewtCanvasAWT: TK disableBackgroundErase method found: "+
-                (null!=disableBackgroundEraseMethod));
-      }
-    }
-    if (disableBackgroundEraseMethod != null) {
-      Throwable t=null;
-      try {
-        disableBackgroundEraseMethod.invoke(getToolkit(), new Object[] { this });
-      } catch (final Exception e) {
-        t = e;
-      }
-      if(DEBUG) {
-        System.err.println("NewtCanvasAWT: TK disableBackgroundErase error: "+t);
-      }
-    }
-  }
 
   protected static String currentThreadName() { return "["+Thread.currentThread().getName()+", isAWT-EDT "+EventQueue.isDispatchThread()+"]"; }
 

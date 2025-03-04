@@ -33,6 +33,7 @@ import java.lang.reflect.InvocationTargetException;
 
 import com.jogamp.junit.util.JunitTracer;
 import com.jogamp.newt.Display;
+import com.jogamp.newt.MonitorDevice;
 import com.jogamp.newt.NewtFactory;
 import com.jogamp.newt.Screen;
 import com.jogamp.newt.Window;
@@ -44,8 +45,8 @@ import com.jogamp.newt.event.WindowAdapter;
 import com.jogamp.newt.opengl.GLWindow;
 import com.jogamp.newt.opengl.util.NEWTDemoListener;
 import com.jogamp.newt.util.EDTUtil;
-import com.jogamp.opengl.test.junit.util.AWTRobotUtil;
 import com.jogamp.opengl.test.junit.util.MiscUtils;
+import com.jogamp.opengl.test.junit.util.NewtTestUtil;
 import com.jogamp.opengl.test.junit.util.UITestCase;
 import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.AnimatorBase;
@@ -58,11 +59,13 @@ import com.jogamp.nativewindow.util.Dimension;
 import com.jogamp.nativewindow.util.Point;
 import com.jogamp.nativewindow.util.PointImmutable;
 import com.jogamp.nativewindow.util.DimensionImmutable;
+import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GLAnimatorControl;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLCapabilitiesImmutable;
 import com.jogamp.opengl.GLEventListener;
+import com.jogamp.opengl.GLPipelineFactory;
 import com.jogamp.opengl.GLProfile;
 
 import jogamp.newt.DefaultEDTUtil;
@@ -74,6 +77,14 @@ import org.junit.Test;
 import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
 
+/**
+ * <p>
+ * The demo code uses {@link NEWTDemoListener} functionality.
+ * </p>
+ * <p>
+ * Manual invocation via main allows setting each tests's duration in milliseconds, e.g.{@code -duration 10000} and many more, see {@link #main(String[])}
+ * </p>
+ */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestGearsES2NEWT extends UITestCase {
     static int screenIdx = 0;
@@ -104,6 +115,8 @@ public class TestGearsES2NEWT extends UITestCase {
     static boolean forceES3 = false;
     static boolean forceGL3 = false;
     static boolean forceGL2 = false;
+    static boolean forceDebug = false;
+    static boolean forceTrace = false;
     static int demoType = 1;
     static boolean traceMouse = false;
     static boolean manualTest = false;
@@ -130,12 +143,13 @@ public class TestGearsES2NEWT extends UITestCase {
         final Screen screen = NewtFactory.createScreen(dpy, screenIdx);
         final GLWindow glWindow = GLWindow.create(screen, caps);
         Assert.assertNotNull(glWindow);
-        glWindow.setSurfaceScale(reqSurfacePixelScale);
-        final float[] valReqSurfacePixelScale = glWindow.getRequestedSurfaceScale(new float[2]);
         glWindow.setSize(wsize.getWidth(), wsize.getHeight());
         if(null != wpos) {
             glWindow.setPosition(wpos.getX(), wpos.getY());
         }
+        glWindow.setSurfaceScale(reqSurfacePixelScale);
+        final float[] valReqSurfacePixelScale = glWindow.getRequestedSurfaceScale(new float[2]);
+
         glWindow.setUndecorated(undecorated);
         glWindow.setAlwaysOnTop(alwaysOnTop);
         glWindow.setAlwaysOnBottom(alwaysOnBottom);
@@ -160,6 +174,33 @@ public class TestGearsES2NEWT extends UITestCase {
         } else {
             demo = null;
         }
+        if( forceDebug || forceTrace ) {
+            glWindow.addGLEventListener(new GLEventListener() {
+                @Override
+                public void init(final GLAutoDrawable drawable) {
+                    GL _gl = drawable.getGL();
+                    if(forceDebug) {
+                        try {
+                            _gl = _gl.getContext().setGL( GLPipelineFactory.create("com.jogamp.opengl.Debug", null, _gl, null) );
+                        } catch (final Exception e) {e.printStackTrace();}
+                    }
+
+                    if(forceTrace) {
+                        try {
+                            // Trace ..
+                            _gl = _gl.getContext().setGL( GLPipelineFactory.create("com.jogamp.opengl.Trace", null, _gl, new Object[] { System.err } ) );
+                        } catch (final Exception e) {e.printStackTrace();}
+                    }
+                }
+                @Override
+                public void dispose(final GLAutoDrawable drawable) {}
+                @Override
+                public void display(final GLAutoDrawable drawable) {}
+                @Override
+                public void reshape(final GLAutoDrawable drawable, final int x, final int y, final int width, final int height) {}
+            });
+        }
+
         if( null != demo ) {
             glWindow.addGLEventListener(demo);
         }
@@ -168,8 +209,11 @@ public class TestGearsES2NEWT extends UITestCase {
         glWindow.addGLEventListener(snap);
         if(waitForKey) {
             glWindow.addGLEventListener(new GLEventListener() {
+                @Override
                 public void init(final GLAutoDrawable drawable) { }
+                @Override
                 public void dispose(final GLAutoDrawable drawable) { }
+                @Override
                 public void display(final GLAutoDrawable drawable) {
                     final GLAnimatorControl  actrl = drawable.getAnimator();
                     if(waitForKey && actrl.getTotalFPSFrames() == 60*3) {
@@ -178,22 +222,24 @@ public class TestGearsES2NEWT extends UITestCase {
                         waitForKey = false;
                     }
                 }
+                @Override
                 public void reshape(final GLAutoDrawable drawable, final int x, final int y,
                         final int width, final int height) { }
             });
         }
 
-        final Animator animator = useAnimator ? new Animator() : null;
+        final Animator animator = useAnimator ? new Animator(0 /* w/o AWT */) : null;
         if( useAnimator ) {
-            animator.setModeBits(false, AnimatorBase.MODE_EXPECT_AWT_RENDERING_THREAD);
             animator.setExclusiveContext(exclusiveContext);
         }
 
         glWindow.addWindowListener(new WindowAdapter() {
+            @Override
             public void windowResized(final WindowEvent e) {
                 System.err.println("window resized: "+glWindow.getBounds()+" "+glWindow.getSurfaceWidth()+"x"+glWindow.getSurfaceHeight());
                 NEWTDemoListener.setTitle(glWindow);
             }
+            @Override
             public void windowMoved(final WindowEvent e) {
                 System.err.println("window moved:   "+glWindow.getBounds()+" "+glWindow.getSurfaceWidth()+"x"+glWindow.getSurfaceHeight());
                 NEWTDemoListener.setTitle(glWindow);
@@ -269,6 +315,7 @@ public class TestGearsES2NEWT extends UITestCase {
                                     if( edt instanceof DefaultEDTUtil ) {
                                         newtDemoListener.doQuit();
                                         ((DefaultEDTUtil)edt).invokeAndWaitError(new Runnable() {
+                                            @Override
                                             public void run() {
                                                 throw new RuntimeException("XXX Should never ever be seen! - "+Thread.currentThread());
                                             }
@@ -295,13 +342,19 @@ public class TestGearsES2NEWT extends UITestCase {
         System.err.println("Window Supported States: "+glWindow.getSupportedStateMaskString());
         System.err.println("NW chosen: "+glWindow.getDelegatedWindow().getChosenCapabilities());
         System.err.println("GL chosen: "+glWindow.getChosenCapabilities());
-        System.err.println("window pos/siz: "+glWindow.getX()+"/"+glWindow.getY()+" "+glWindow.getSurfaceWidth()+"x"+glWindow.getSurfaceHeight()+", "+glWindow.getInsets());
+        System.err.println("window insets: "+glWindow.getInsets());
+        System.err.println("window bounds (window): "+glWindow.getBounds());
+        System.err.println("window bounds (pixels): "+glWindow.getSurfaceBounds());
 
         final float[] hasSurfacePixelScale1 = glWindow.getCurrentSurfaceScale(new float[2]);
         System.err.println("HiDPI PixelScale: "+reqSurfacePixelScale[0]+"x"+reqSurfacePixelScale[1]+" (req) -> "+
                            valReqSurfacePixelScale[0]+"x"+valReqSurfacePixelScale[1]+" (val) -> "+
                            hasSurfacePixelScale1[0]+"x"+hasSurfacePixelScale1[1]+" (has)");
         NEWTDemoListener.setTitle(glWindow);
+        {
+            final MonitorDevice mm = glWindow.getMainMonitor();
+            System.err.println("Monitor: "+mm);
+        }
 
         snap.setMakeSnapshot();
 
@@ -332,6 +385,7 @@ public class TestGearsES2NEWT extends UITestCase {
                         if( edt instanceof DefaultEDTUtil ) {
                             newtDemoListener.doQuit();
                             ((DefaultEDTUtil)edt).invokeAndWaitError(new Runnable() {
+                                @Override
                                 public void run() {
                                     throw new RuntimeException("XXX Should never ever be seen!");
                                 }
@@ -355,7 +409,7 @@ public class TestGearsES2NEWT extends UITestCase {
             glWindow2[0] = null;
         }
         if( NativeWindowFactory.isAWTAvailable() ) {
-            Assert.assertEquals(true,  AWTRobotUtil.waitForRealized(glWindow, false));
+            Assert.assertEquals(true,  NewtTestUtil.waitForRealized(glWindow, false, null));
         }
     }
 
@@ -468,6 +522,10 @@ public class TestGearsES2NEWT extends UITestCase {
                 forceGL3 = true;
             } else if(args[i].equals("-gl2")) {
                 forceGL2 = true;
+            } else if(args[i].equals("-debug")) {
+                forceDebug = true;
+            } else if(args[i].equals("-trace")) {
+                forceTrace = true;
             } else if(args[i].equals("-mappedBuffers")) {
                 useMappedBuffers = true;
             } else if(args[i].equals("-wait")) {
@@ -556,6 +614,8 @@ public class TestGearsES2NEWT extends UITestCase {
         System.err.println("forceES3 "+forceES3);
         System.err.println("forceGL3 "+forceGL3);
         System.err.println("forceGL2 "+forceGL2);
+        System.err.println("forceDebug "+forceDebug);
+        System.err.println("forceTrace "+forceTrace);
         System.err.println("swapInterval "+swapInterval);
         System.err.println("exclusiveContext "+exclusiveContext);
         System.err.println("useAnimator "+useAnimator);
