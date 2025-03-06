@@ -28,3 +28,4 @@ skip_Win_and_Mac.patch
 spelling.patch
 hardening.patch
 mips64el-build.patch
+add-loongarch64-support.diff

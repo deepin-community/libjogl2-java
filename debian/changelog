@@ -1,3 +1,9 @@
+libjogl2-java (2.5.0+dfsg-3.1deepin1) unstable; urgency=medium
+
+  * add loongarch64 support
+
+ -- lhdjply <lhdjply@126.com>  Thu, 06 Mar 2025 11:03:10 +0800
+
 libjogl2-java (2.5.0+dfsg-3.1) unstable; urgency=medium
 
   * Non-maintainer upload
